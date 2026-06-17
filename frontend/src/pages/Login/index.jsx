@@ -472,6 +472,13 @@ export default function LoginPage() {
               <span className="login-brand-feat-text">팀 채팅</span>
             </div>
           </div>
+
+          {/* 제작자 서명 */}
+          <div className="login-brand-credit">
+            <span className="login-brand-credit-line" />
+            <span className="login-brand-credit-label">Crafted by</span>
+            <span className="login-brand-credit-name">Hong&rsquo;s</span>
+          </div>
         </div>
 
         {/* 오른쪽 폼 패널 */}
