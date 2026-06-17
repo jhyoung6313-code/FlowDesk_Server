@@ -1,0 +1,660 @@
+/* ── CSS 변수 기본값 (Corporate Blue 테마) - themeStore가 런타임에 덮어씀 ── */
+:root {
+  --fd-accent:           #1e3a8a;
+  --fd-accent-light:     #93c5fd;
+  --fd-accent-mid:       #1d4ed8;
+  --fd-accent-dark:      #1e3a8a;
+  --fd-accent-rgb:       29,78,216;
+  --fd-sidebar-bg:       #1e3a8a;
+  --fd-sidebar-text:     rgba(255,255,255,0.6);
+  --fd-sidebar-hover-bg: rgba(255,255,255,0.1);
+  --fd-sidebar-sel-bg:   rgba(255,255,255,0.12);
+  --fd-sidebar-sel-txt:  #ffffff;
+  --fd-sidebar-group:    rgba(255,255,255,0.32);
+  --fd-sidebar-divider:  rgba(255,255,255,0.1);
+  --fd-sidebar-trigger:  #1d4ed8;
+  --fd-sidebar-trig-txt: rgba(255,255,255,0.6);
+  --fd-body-bg-dark:     #0a0f1e;
+  --fd-content-bg-light: #eef2ff;
+  --fd-content-bg-dark:  #0f172a;
+  --fd-login-page-bg:    #eef2ff;
+  --fd-btn-from:         #1e3a8a;
+  --fd-btn-to:           #1e3a8a;
+  --fd-btn-shadow:       rgba(30,58,138,0.3);
+  --fd-logo-a:           #1e3a8a;
+  --fd-logo-b:           #1d4ed8;
+  --fd-logo-icon:        #1d4ed8;
+  --fd-scroll-thumb:     rgba(29,78,216,0.25);
+  --fd-scroll-hover:     rgba(29,78,216,0.4);
+
+  /* ── 가독성 변수 (라이트 기본값) ── */
+  --fd-text-primary:   #1a1a1a;
+  --fd-text-secondary: #4a4a4a;
+  --fd-text-muted:     #6b6b6b;
+  --fd-text-hint:      #999999;
+  --fd-chart-label:    #4a4a4a;
+  --fd-chart-grid:     #e0e0e0;
+  --fd-font-xs:        14px;
+  --fd-font-sm:        15px;
+  --fd-font-base:      17px;
+  --fd-font-lg:        20px;
+}
+
+/* ── 다크모드 텍스트/차트 변수 ── */
+[data-dark="true"] {
+  --fd-text-primary:   rgba(255,255,255,0.88);
+  --fd-text-secondary: rgba(255,255,255,0.65);
+  --fd-text-muted:     rgba(255,255,255,0.45);
+  --fd-text-hint:      rgba(255,255,255,0.30);
+  --fd-chart-label:    rgba(255,255,255,0.60);
+  --fd-chart-grid:     rgba(255,255,255,0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans KR', 'Noto Sans', sans-serif;
+  background-color: var(--fd-body-bg-dark, #0f0d1a);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+img, svg, canvas {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+#root {
+  height: 100vh;
+}
+
+/* FullCalendar 커스텀 */
+.fc .fc-toolbar-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.fc .fc-event {
+  cursor: pointer;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 12px;
+}
+
+.fc-daygrid-event {
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* 스크롤바 */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--fd-scroll-thumb, rgba(124,58,237,0.25));
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--fd-scroll-hover, rgba(124,58,237,0.4));
+}
+
+/* ── RichEditor 플레이스홀더 ── */
+.rich-editor-body:empty::before {
+  content: attr(data-placeholder);
+  color: #bfbfbf;
+  pointer-events: none;
+}
+
+/* ── 사이드바 children flex 레이아웃 ── */
+.flowdesk-sider .ant-layout-sider-children {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+/* ── 사이드바 서브메뉴 ── (펼침 배경은 그룹 틴트 카드가 비치도록 투명) */
+.flowdesk-sider .ant-menu .ant-menu-sub,
+.flowdesk-sider .ant-menu.ant-menu-inline .ant-menu-sub {
+  background: transparent !important;
+}
+.flowdesk-sider .ant-menu .ant-menu-item-divider {
+  border-color: var(--fd-sidebar-divider) !important;
+}
+.flowdesk-sider .ant-menu .ant-menu-item-group-title {
+  color: var(--fd-sidebar-group) !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.5px !important;
+  text-transform: uppercase;
+}
+.flowdesk-sider .ant-layout-sider-zero-width-trigger {
+  background: var(--fd-sidebar-trigger) !important;
+  color: var(--fd-accent-mid) !important;
+}
+
+/* 메뉴 구분선 */
+.flowdesk-sider .ant-menu-item-divider {
+  background-color: var(--fd-sidebar-divider) !important;
+  margin: 6px 16px !important;
+}
+
+/* 메뉴 그룹 제목 */
+.flowdesk-sider .ant-menu-item-group-title {
+  color: var(--fd-sidebar-group) !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.8px !important;
+  text-transform: uppercase;
+}
+
+/* 아이템 호버 트랜지션 */
+.flowdesk-sider .ant-menu-item,
+.flowdesk-sider .ant-menu-submenu-title {
+  transition: background 0.15s ease, color 0.15s ease !important;
+}
+
+/* 선택된 아이템 — 글자/강조선을 그룹색(currentColor)으로, 굵게 */
+.flowdesk-sider .ant-menu-item-selected {
+  position: relative;
+  font-weight: 600 !important;
+}
+.flowdesk-sider .ant-menu-item-selected::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 56%;
+  background: currentColor;
+  border-radius: 0 3px 3px 0;
+  pointer-events: none;
+}
+/* Ant Design 라이트 메뉴 기본 오른쪽 선택선 제거 */
+.flowdesk-sider .ant-menu-light .ant-menu-item-selected::after,
+.flowdesk-sider .ant-menu-item-selected::after {
+  display: none !important;
+}
+
+/* 알림 팝업 클릭 시 강조 행 */
+.task-row-highlight td {
+  background-color: #fffbe6 !important;
+  animation: rowHighlight 3s ease forwards;
+}
+@keyframes rowHighlight {
+  0%   { background-color: #fff1b8; }
+  60%  { background-color: #fff1b8; }
+  100% { background-color: transparent; }
+}
+
+/* 삭제된 업무 행 */
+.task-row-deleted td {
+  opacity: 0.45;
+  text-decoration: line-through;
+  color: #8c8c8c !important;
+}
+.task-row-deleted:hover td {
+  opacity: 0.6;
+}
+
+/* 간트 차트 */
+.gantt-container {
+  overflow: auto;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fff;
+}
+
+[data-dark="true"] .gantt-container {
+  background: #1a1a2e;
+  border-color: rgba(255,255,255,0.1);
+}
+
+.gantt .bar {
+  fill: #1677ff;
+}
+.gantt .bar-progress {
+  fill: #4096ff;
+}
+.gantt .bar-label {
+  fill: #fff;
+  font-size: 12px;
+}
+
+/* ── 전역 가독성 보조 규칙 ── */
+
+/* type="secondary" 텍스트 대비 강화 */
+.ant-typography.ant-typography-secondary,
+span.ant-typography-secondary {
+  color: var(--fd-text-muted) !important;
+}
+
+/* Ant Design 통계/카드/목록 크기 상향 */
+.ant-card-head-title {
+  font-size: var(--fd-font-sm);
+  font-weight: 600;
+}
+.ant-list-item-meta-description {
+  color: var(--fd-text-muted) !important;
+}
+.ant-statistic-title {
+  color: var(--fd-text-muted) !important;
+  font-size: var(--fd-font-xs) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Linear 2026 미니멀리즘 — 라이트 모드
+   원칙: 장식 제거 · 얇은 테두리 · 콘텐츠 밀도 우선
+   사이드바 어둠 vs 콘텐츠 밝음의 강한 대비
+   ═══════════════════════════════════════════════════════ */
+
+/* ── 카드: 얇은 테두리, 그림자 최소화 ── */
+:not([data-dark="true"]) .ant-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04) !important;
+  border-radius: 8px !important;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+:not([data-dark="true"]) .ant-card:hover {
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+}
+:not([data-dark="true"]) .ant-card-head {
+  background: #ffffff !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  min-height: 44px !important;
+}
+:not([data-dark="true"]) .ant-card-head-title {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  letter-spacing: -0.01em;
+}
+
+/* ── 테이블: 클린 헤더, 얇은 구분선 ── */
+:not([data-dark="true"]) .ant-table-wrapper {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+:not([data-dark="true"]) .ant-table {
+  background: #ffffff !important;
+}
+:not([data-dark="true"]) .ant-table-thead > tr > th {
+  background: #f8fafc !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  color: #64748b !important;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 10px 12px !important;
+}
+:not([data-dark="true"]) .ant-table-tbody > tr:hover > td {
+  background: #f8fafc !important;
+}
+:not([data-dark="true"]) .ant-table-tbody > tr > td {
+  border-bottom: 1px solid #f1f5f9 !important;
+  color: #1e293b !important;
+  font-size: 15px !important;
+}
+
+/* ── 탭: 액센트 언더라인만 ── */
+:not([data-dark="true"]) .ant-tabs-tabpane { padding-top: 6px; }
+:not([data-dark="true"]) .ant-tabs-tab {
+  color: #64748b !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+}
+:not([data-dark="true"]) .ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+}
+:not([data-dark="true"]) .ant-tabs-ink-bar {
+  background: var(--fd-accent-mid) !important;
+  height: 2px !important;
+}
+
+/* ── 페이지 타이틀: 클린 볼드, 장식 없음 ── */
+:not([data-dark="true"]) h1.ant-typography,
+:not([data-dark="true"]) h2.ant-typography,
+:not([data-dark="true"]) h3.ant-typography,
+:not([data-dark="true"]) h4.ant-typography,
+:not([data-dark="true"]) h5.ant-typography {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em;
+  border: none !important;
+  padding-left: 0 !important;
+}
+
+/* ── Statistic ── */
+:not([data-dark="true"]) .ant-statistic-title {
+  color: #94a3b8 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+:not([data-dark="true"]) .ant-statistic-content-value {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.02em;
+}
+
+/* ── 리스트: 구분선만 ── */
+:not([data-dark="true"]) .ant-list-item {
+  border-bottom: 1px solid #f1f5f9 !important;
+  transition: background 0.1s;
+}
+:not([data-dark="true"]) .ant-list-item:hover {
+  background: #f8fafc !important;
+}
+
+/* ── FullCalendar ── */
+:not([data-dark="true"]) .fc {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px;
+}
+:not([data-dark="true"]) .fc-toolbar-title {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  font-size: 15px !important;
+  letter-spacing: -0.02em;
+}
+:not([data-dark="true"]) .fc-col-header-cell {
+  background: #f8fafc !important;
+  font-weight: 600 !important;
+  font-size: 14px !important;
+  color: #64748b !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* ── Divider ── */
+:not([data-dark="true"]) .ant-divider {
+  border-color: #f1f5f9 !important;
+}
+
+/* ── Tag: 간결한 캡슐형 ── */
+:not([data-dark="true"]) .ant-tag {
+  font-size: 13px !important;
+  font-weight: 600;
+  border-radius: 4px;
+  padding: 0 6px;
+  line-height: 20px;
+}
+
+/* ── Alert ── */
+:not([data-dark="true"]) .ant-alert {
+  border-radius: 6px;
+  border-left-width: 3px !important;
+  font-size: 13px;
+}
+
+/* ── Select / Input / Picker ── */
+:not([data-dark="true"]) .ant-select-selector,
+:not([data-dark="true"]) .ant-input,
+:not([data-dark="true"]) .ant-input-affix-wrapper,
+:not([data-dark="true"]) .ant-picker {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  border-radius: 6px !important;
+  font-size: 15px !important;
+}
+:not([data-dark="true"]) .ant-input-affix-wrapper:hover,
+:not([data-dark="true"]) .ant-input:hover,
+:not([data-dark="true"]) .ant-select-selector:hover {
+  border-color: #94a3b8 !important;
+}
+:not([data-dark="true"]) .ant-input-affix-wrapper-focused,
+:not([data-dark="true"]) .ant-input:focus,
+:not([data-dark="true"]) .ant-select-focused .ant-select-selector {
+  border-color: var(--fd-accent-mid) !important;
+  box-shadow: 0 0 0 2px rgba(var(--fd-accent-rgb), 0.12) !important;
+}
+
+/* ── Button ── */
+:not([data-dark="true"]) .ant-btn {
+  border-radius: 6px !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  height: 32px !important;
+  padding: 0 12px !important;
+}
+:not([data-dark="true"]) .ant-btn-primary {
+  background: var(--fd-accent-mid) !important;
+  border-color: var(--fd-accent-mid) !important;
+  box-shadow: 0 1px 3px rgba(var(--fd-accent-rgb), 0.3) !important;
+}
+:not([data-dark="true"]) .ant-btn-primary:hover {
+  opacity: 0.88;
+}
+
+/* ── 모달 ── */
+:not([data-dark="true"]) .ant-modal-content {
+  background: #ffffff;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.06);
+  border-radius: 10px !important;
+}
+:not([data-dark="true"]) .ant-modal-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+  padding: 16px 20px 14px !important;
+}
+:not([data-dark="true"]) .ant-modal-title {
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  letter-spacing: -0.02em;
+}
+
+/* ── Drawer ── */
+:not([data-dark="true"]) .ant-drawer-header {
+  background: #ffffff !important;
+  border-bottom: 1px solid #f1f5f9 !important;
+}
+:not([data-dark="true"]) .ant-drawer-title {
+  font-weight: 700 !important;
+  color: #0f172a !important;
+}
+
+/* ── Popover ── */
+:not([data-dark="true"]) .ant-popover-inner {
+  border-radius: 8px !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06) !important;
+}
+
+/* ── Select Dropdown ── */
+:not([data-dark="true"]) .ant-select-dropdown {
+  border-radius: 8px !important;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06) !important;
+  font-size: 15px !important;
+}
+
+/* ── Badge ── */
+:not([data-dark="true"]) .ant-badge-count {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  border-radius: 8px !important;
+}
+
+/* ── Spin ── */
+:not([data-dark="true"]) .ant-spin-dot-item {
+  background: var(--fd-accent-mid) !important;
+}
+
+/* ═══════════════════════════════════════════════════════
+   다크모드 — 커스텀 엘리먼트 오버라이드
+   ConfigProvider darkAlgorithm 이 처리하지 못하는
+   plain div / FullCalendar / Gantt 전용
+   ═══════════════════════════════════════════════════════ */
+
+/* ── 칸반 컬럼 컨테이너 ── */
+[data-dark="true"] .kanban-column {
+  background: rgba(255,255,255,0.03) !important;
+  border-color: rgba(255,255,255,0.07) !important;
+}
+[data-dark="true"] .kanban-column-header {
+  border-bottom-color: rgba(255,255,255,0.07) !important;
+}
+[data-dark="true"] .kanban-column-label {
+  color: rgba(255,255,255,0.35) !important;
+}
+[data-dark="true"] .kanban-column-count {
+  background: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.08) !important;
+  color: rgba(255,255,255,0.35) !important;
+}
+[data-dark="true"] .kanban-empty {
+  color: rgba(255,255,255,0.2) !important;
+}
+[data-dark="true"] .kanban-card {
+  background: #1a1927 !important;
+  border-color: rgba(255,255,255,0.08) !important;
+}
+[data-dark="true"] .kanban-card-overdue {
+  border-color: rgba(239,68,68,0.4) !important;
+  border-left-color: #ef4444 !important;
+}
+
+/* ── 대시보드 섹션 구분선 ── */
+[data-dark="true"] .section-divider {
+  background: rgba(255,255,255,0.07) !important;
+}
+
+/* ── FullCalendar 다크모드 ── */
+[data-dark="true"] .fc {
+  background: transparent;
+  border-color: rgba(255,255,255,0.08) !important;
+  color: rgba(255,255,255,0.88);
+}
+[data-dark="true"] .fc-col-header-cell {
+  background: rgba(255,255,255,0.04) !important;
+  color: rgba(255,255,255,0.45) !important;
+}
+[data-dark="true"] .fc-daygrid-day {
+  background: transparent !important;
+}
+[data-dark="true"] .fc-daygrid-day:hover {
+  background: rgba(255,255,255,0.03) !important;
+}
+[data-dark="true"] .fc-daygrid-day-number {
+  color: rgba(255,255,255,0.6) !important;
+}
+[data-dark="true"] .fc-day-today {
+  background: rgba(var(--fd-accent-rgb), 0.1) !important;
+}
+[data-dark="true"] .fc-toolbar-title {
+  color: rgba(255,255,255,0.88) !important;
+}
+[data-dark="true"] .fc-button {
+  background: rgba(255,255,255,0.06) !important;
+  border-color: rgba(255,255,255,0.1) !important;
+  color: rgba(255,255,255,0.6) !important;
+}
+[data-dark="true"] .fc-button-primary:not(:disabled).fc-button-active,
+[data-dark="true"] .fc-button-primary:not(:disabled):active {
+  background: var(--fd-accent-mid) !important;
+  border-color: var(--fd-accent-mid) !important;
+}
+[data-dark="true"] .fc th,
+[data-dark="true"] .fc td {
+  border-color: rgba(255,255,255,0.06) !important;
+}
+[data-dark="true"] .fc-scrollgrid {
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+/* ── Gantt 다크모드 ── */
+[data-dark="true"] .gantt-container {
+  background: #16152a;
+  border-color: rgba(255,255,255,0.08);
+}
+
+/* ── 알림 팝업 하이라이트 다크모드 ── */
+[data-dark="true"] .task-row-highlight td {
+  background-color: rgba(255,251,230,0.08) !important;
+}
+[data-dark="true"] @keyframes rowHighlight {
+  0%   { background-color: rgba(255,241,184,0.12); }
+  60%  { background-color: rgba(255,241,184,0.12); }
+  100% { background-color: transparent; }
+}
+
+/* ── 채팅: 코드 블록 ── */
+.chat-code-block {
+  background: #1e1e2e;
+  color: #cdd6f4;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin: 6px 0;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  overflow-x: auto;
+  white-space: pre;
+  display: block;
+}
+.chat-code-inline {
+  background: rgba(22,119,255,0.08);
+  color: #c0392b;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: 'JetBrains Mono', 'Consolas', monospace;
+  font-size: 0.9em;
+}
+/* hljs 기본 override */
+.hljs { background: transparent !important; padding: 0 !important; }
+
+/* ── 채팅: 멘션 칩 ── */
+.mention-chip {
+  color: #1677ff;
+  font-weight: 600;
+  background: rgba(22,119,255,0.1);
+  border-radius: 4px;
+  padding: 0 4px;
+  margin: 0 1px;
+  cursor: default;
+  display: inline-block;
+  user-select: none;
+}
+
+/* ── 채팅: 링크 미리보기 카드 ── */
+.link-preview-card {
+  border: 1px solid #e8e8e8;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 8px;
+  max-width: 400px;
+  display: flex;
+  background: #fafafa;
+  transition: box-shadow 0.15s;
+}
+.link-preview-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+.link-preview-card .lp-image { width: 80px; min-width: 80px; object-fit: cover; }
+.link-preview-card .lp-body { padding: 10px 12px; flex: 1; min-width: 0; }
+.link-preview-card .lp-domain { font-size: 10px; color: #aaa; margin-bottom: 3px; }
+.link-preview-card .lp-title { font-size: 13px; font-weight: 600; color: #1a1a1a; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link-preview-card .lp-desc { font-size: 11px; color: #666; margin-top: 2px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

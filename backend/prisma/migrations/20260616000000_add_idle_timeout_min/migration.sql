@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "idle_timeout_min" INTEGER NOT NULL DEFAULT 60;

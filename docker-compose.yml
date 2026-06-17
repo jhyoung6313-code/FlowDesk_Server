@@ -1,0 +1,98 @@
+services:
+  # PostgreSQL 데이터베이스
+  db:
+    image: postgres:17-alpine
+    container_name: flowdesk-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: task_manager
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres1234}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d task_manager"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # 백엔드 API 서버
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: flowdesk-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:${DB_PASSWORD:-postgres1234}@db:5432/task_manager
+      JWT_SECRET: ${JWT_SECRET:-task-manager-secret-change-this-in-production}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      PORT: 4000
+      # HTTPS 프론트 오리진 허용 (CORS · Socket.IO)
+      CORS_ORIGIN: ${CORS_ORIGIN:-https://localhost:5443,http://localhost:5100}
+      # [개발용 임시] OTP 2단계 인증 건너뛰기. 운영 배포 전 false 로 되돌릴 것
+      DISABLE_OTP: ${DISABLE_OTP:-true}
+      # 민감정보 컬럼 암호화 키(AES-256-GCM, 64 hex). .env 에 설정 — 미설정 시 암호화 기능 사용 불가
+      DATA_ENCRYPTION_KEY: ${DATA_ENCRYPTION_KEY:-}
+    volumes:
+      - uploads_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # 프론트엔드 (nginx로 정적 파일 서빙 + API 프록시)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: flowdesk-frontend
+    restart: unless-stopped
+    ports:
+      # 기본은 로컬 전용(127.0.0.1). 사내망 개방 시 .env 에 BIND_ADDR=0.0.0.0 설정
+      - "${BIND_ADDR:-127.0.0.1}:${APP_PORT:-5100}:80"
+      - "${BIND_ADDR:-127.0.0.1}:${APP_HTTPS_PORT:-5443}:443"
+    volumes:
+      # TLS 인증서 (읽기 전용 마운트) — 이미지에 키를 굽지 않음
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:80/healthz || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Gitea - 자체 호스팅 Git 서비스
+  gitea:
+    image: gitea/gitea:latest
+    container_name: flowdesk-gitea
+    restart: unless-stopped
+    environment:
+      USER_UID: 1000
+      USER_GID: 1000
+      GITEA__database__DB_TYPE: sqlite3
+      GITEA__server__HTTP_PORT: 3000
+      GITEA__server__ROOT_URL: http://localhost:5101
+      GITEA__server__DOMAIN: localhost
+      GITEA__service__DISABLE_REGISTRATION: false
+    ports:
+      - "127.0.0.1:5101:3000"
+      - "127.0.0.1:2223:22"
+    volumes:
+      - gitea_data:/data
+
+volumes:
+  db_data:
+    driver: local
+  uploads_data:
+    driver: local
+  gitea_data:
+    driver: local

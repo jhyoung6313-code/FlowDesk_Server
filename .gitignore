@@ -1,0 +1,44 @@
+# 의존성
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# 환경변수 (민감 정보)
+.env
+backend/.env
+
+# TLS 인증서 · 개인키 (민감 정보)
+certs/
+*.key
+*.crt
+*.pem
+
+# 빌드 결과물
+dist/
+build/
+frontend/dist/
+
+# 업로드 파일 (사용자 데이터, 바이너리)
+backend/uploads/
+
+# Claude Code 개인 설정
+.claude/
+
+# 임시 디자인 비교용 preview 파일
+frontend/public/preview-*.html
+frontend/public/preview-index.html
+
+# 설치 패키지 압축 파일
+*.zip
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 로그
+*.log
+npm-debug.log*
+
+# 에디터
+.vscode/settings.json
+*.swp

@@ -1,0 +1,784 @@
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Menu, ConfigProvider, Button, Modal, Form, Input, DatePicker, Tag, Space, message, Tooltip, Avatar, Dropdown } from 'antd';
+import {
+  DashboardOutlined,
+  CheckSquareOutlined,
+  BarChartOutlined,
+  UserOutlined,
+  AppstoreOutlined,
+  ApartmentOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  FolderOutlined,
+  CalendarOutlined,
+  MessageOutlined,
+  ProjectOutlined,
+  BookOutlined,
+  PlayCircleOutlined,
+  DoubleLeftOutlined,
+  LockOutlined,
+  LogoutOutlined,
+  ReloadOutlined,
+  TagsOutlined,
+  FlagOutlined,
+  FileTextOutlined,
+  MailOutlined,
+  HistoryOutlined,
+  DatabaseOutlined,
+  GlobalOutlined,
+} from '@ant-design/icons';
+import useAuthStore from '../../store/authStore';
+import useThemeStore from '../../store/themeStore';
+import useChatStore from '../../store/chatStore';
+import useUnreadStore from '../../store/unreadStore';
+import { getAvatarColor } from '../../utils/colors';
+import { getMe } from '../../api/auth';
+import * as wbsApi from '../../api/wbs';
+import ProfileModal from '../ProfileModal';
+import ChangePasswordModal from '../ChangePasswordModal';
+import dayjs from 'dayjs';
+
+const { RangePicker } = DatePicker;
+
+const RAIL_WIDTH = 60;
+const CTX_WIDTH = 212;
+const RAIL_BG = '#101322';
+
+// 그룹(카테고리) 색상 — 테마와 무관하게 고정. 카드 틴트는 연하게.
+const GROUPS = {
+  view:   { color: '#3b82f6', tintLight: '#f4f8ff', tintDark: 'rgba(59,130,246,0.10)' },
+  collab: { color: '#10b981', tintLight: '#f2fbf7', tintDark: 'rgba(16,185,129,0.10)' },
+  admin:  { color: '#a855f7', tintLight: '#faf6ff', tintDark: 'rgba(168,85,247,0.10)' },
+};
+
+// submenu 제목 클릭 시 펼침과 함께 이동할 대표 페이지
+const SUBMENU_LANDING = {
+  'playbook-submenu': '/playbooks',
+  'project-submenu': '/wbs',
+  'wbs-submenu': '/wbs',
+};
+
+/* ── 역할 담당자 편집기 (프로젝트 생성/수정 모달용) ── */
+function MemberEditor({ members, onChange }) {
+  const [adding, setAdding] = useState(false);
+  const [role, setRole] = useState('');
+  const [name, setName] = useState('');
+
+  const handleAdd = () => {
+    if (!role.trim() || !name.trim()) return;
+    onChange([...members, { role: role.trim(), memberName: name.trim() }]);
+    setRole('');
+    setName('');
+    setAdding(false);
+  };
+
+  return (
+    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+      {members.map((m, i) => (
+        <Tag
+          key={i}
+          closable
+          onClose={() => onChange(members.filter((_, idx) => idx !== i))}
+          style={{ fontSize: 12 }}
+        >
+          <span style={{ color: '#888', marginRight: 4 }}>{m.role}</span>
+          <span style={{ fontWeight: 600 }}>{m.memberName}</span>
+        </Tag>
+      ))}
+      {adding ? (
+        <Space size={4}>
+          <Input
+            size="small"
+            placeholder="역할 (PM/PL...)"
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            style={{ width: 100 }}
+          />
+          <Input
+            size="small"
+            placeholder="이름"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onPressEnter={handleAdd}
+            style={{ width: 80 }}
+          />
+          <Button size="small" type="primary" onClick={handleAdd}>확인</Button>
+          <Button size="small" onClick={() => setAdding(false)}>취소</Button>
+        </Space>
+      ) : (
+        <Button size="small" type="dashed" icon={<PlusOutlined />} onClick={() => setAdding(true)}>
+          담당자 추가
+        </Button>
+      )}
+    </div>
+  );
+}
+
+export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
+  const setUser = useAuthStore((s) => s.setUser);
+  const totalUnread = useChatStore((s) => s.totalUnread);
+  const boardUnread = useUnreadStore((s) => s.boardUnread);
+  const playbookUnread = useUnreadStore((s) => s.playbookUnread);
+  const isAdmin = user?.role === 'admin';
+  const { isDark } = useThemeStore();
+
+  // 테마/다크모드 연동 팔레트 (레일은 항상 다크 고정)
+  const COLORS = isDark
+    ? {
+        ctxBg:        '#1a1a1f',
+        border:       'rgba(255,255,255,0.06)',
+        headText:     '#ffffff',
+        itemText:     'rgba(255,255,255,0.6)',
+        itemHoverBg:  'rgba(255,255,255,0.06)',
+        itemHoverText:'rgba(255,255,255,0.9)',
+        toggleText:   'rgba(255,255,255,0.4)',
+        toggleHoverBg:'rgba(255,255,255,0.08)',
+      }
+    : {
+        ctxBg:        '#ffffff',
+        border:       '#eceef1',
+        headText:     '#1a1d23',
+        itemText:     '#5b626e',
+        itemHoverBg:  'rgba(0,0,0,0.04)',
+        itemHoverText:'#1a1d23',
+        toggleText:   '#9499a3',
+        toggleHoverBg:'#f2f3f5',
+      };
+
+  // WBS 프로젝트 목록 상태
+  const [wbsProjects, setWbsProjects] = useState([]);
+  const [openKeys, setOpenKeys] = useState([]);
+
+  // 프로젝트 생성/수정 모달 상태
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingProject, setEditingProject] = useState(null);
+  const [form] = Form.useForm();
+  const [members, setMembers] = useState([]);
+
+  // 내 프로필 / 비밀번호 변경 팝업 상태
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
+
+  // WBS 프로젝트 목록 로드
+  const loadWbsProjects = async () => {
+    try {
+      const list = await wbsApi.getProjects();
+      setWbsProjects(list);
+    } catch {
+      // 조용히 실패
+    }
+  };
+
+  useEffect(() => {
+    loadWbsProjects();
+    const handler = () => loadWbsProjects();
+    window.addEventListener('wbs-projects-changed', handler);
+    return () => window.removeEventListener('wbs-projects-changed', handler);
+  }, []);
+
+  // 로그인 직후 user에 clientIp가 없으면 getMe로 보강
+  useEffect(() => {
+    if (user && !user.clientIp) {
+      getMe().then(setUser).catch(() => {});
+    }
+  }, [user?.id]);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
+  // 프로젝트 하위 페이지 진입 시 SubMenu 자동 펼치기
+  useEffect(() => {
+    if (pathname.startsWith('/wbs')) {
+      setOpenKeys((prev) => {
+        const next = [...prev];
+        if (!next.includes('project-submenu')) next.push('project-submenu');
+        if (!next.includes('wbs-submenu')) next.push('wbs-submenu');
+        return next;
+      });
+    } else if (pathname.startsWith('/playbooks') || pathname.startsWith('/runs')) {
+      setOpenKeys((prev) => prev.includes('playbook-submenu') ? prev : [...prev, 'playbook-submenu']);
+    }
+  }, [pathname]);
+
+  const getSelected = () => {
+    if (pathname === '/') return '/';
+    if (pathname.startsWith('/tasks')) return '/tasks';
+    if (pathname.startsWith('/kanban')) return '/tasks';
+    if (pathname.startsWith('/calendar')) return '/calendar';
+    if (pathname.startsWith('/gantt')) return '/gantt';
+    if (pathname.startsWith('/boards')) return '/boards';
+    if (pathname.startsWith('/playbooks')) return '/playbooks';
+    if (pathname.startsWith('/runs')) return '/runs';
+    if (pathname.startsWith('/notifications')) return '/notifications';
+    if (pathname.startsWith('/admin/recurring-tasks')) return '/admin/recurring-tasks';
+    if (pathname.startsWith('/admin/tags')) return '/admin/tags';
+    if (pathname.startsWith('/admin/milestones')) return '/admin/milestones';
+    if (pathname.startsWith('/admin/users')) return '/admin/users';
+    if (pathname.startsWith('/wbs/')) return pathname;
+    if (pathname === '/wbs') return '/wbs';
+    if (pathname.startsWith('/ledger')) return '/ledger';
+    if (pathname.startsWith('/chat')) return '/chat';
+    return '/';
+  };
+
+  const go = (key) => {
+    navigate(key);
+    onNavigate?.();
+  };
+
+  // ── 프로젝트 생성/수정 모달 열기
+  const openProjectModal = (e, proj = null) => {
+    e?.stopPropagation?.();
+    setEditingProject(proj);
+    if (proj) {
+      form.setFieldsValue({
+        name: proj.name,
+        period: [
+          proj.startDate ? dayjs(proj.startDate) : null,
+          proj.endDate ? dayjs(proj.endDate) : null,
+        ],
+        description: proj.description,
+      });
+      setMembers(proj.members || []);
+    } else {
+      form.resetFields();
+      setMembers([]);
+    }
+    setModalOpen(true);
+  };
+
+  const handleModalOk = async () => {
+    try {
+      const values = await form.validateFields();
+      const payload = {
+        name: values.name,
+        startDate: values.period?.[0]?.format('YYYY-MM-DD') || null,
+        endDate: values.period?.[1]?.format('YYYY-MM-DD') || null,
+        description: values.description || null,
+        members,
+      };
+      if (editingProject) {
+        await wbsApi.updateProject(editingProject.id, payload);
+        message.success('프로젝트가 수정되었습니다.');
+      } else {
+        const created = await wbsApi.createProject(payload);
+        message.success('프로젝트가 생성되었습니다.');
+        navigate(`/wbs/${created.id}`);
+      }
+      setModalOpen(false);
+      loadWbsProjects();
+      window.dispatchEvent(new Event('wbs-projects-changed'));
+    } catch (err) {
+      if (err?.errorFields) return;
+      message.error('저장 실패');
+    }
+  };
+
+  const handleDeleteProject = async (e, id) => {
+    e?.stopPropagation?.();
+    try {
+      await wbsApi.deleteProject(id);
+      message.success('삭제되었습니다.');
+      if (pathname === `/wbs/${id}`) {
+        navigate('/wbs');
+      }
+      loadWbsProjects();
+      window.dispatchEvent(new Event('wbs-projects-changed'));
+    } catch {
+      message.error('삭제 실패');
+    }
+  };
+
+  // 협업 그룹 강조색 (WBS 하위 아이콘 색)
+  const collabClr = GROUPS.collab.color;
+
+  // WBS SubMenu children (프로젝트 목록)
+  const wbsChildren = [
+    ...wbsProjects.map((proj) => ({
+      key: `/wbs/${proj.id}`,
+      icon: <FolderOutlined style={{ color: collabClr }} />,
+      label: (
+        <div
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+          title={proj.name}
+        >
+          <span
+            style={{
+              flex: 1,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              fontSize: 14,
+            }}
+          >
+            {proj.name}
+          </span>
+          {isAdmin && (
+            <span
+              style={{ display: 'flex', gap: 2, marginLeft: 4, flexShrink: 0 }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <span
+                onClick={(e) => openProjectModal(e, proj)}
+                style={{ cursor: 'pointer', color: '#43a047', fontSize: 11, padding: '0 2px' }}
+                title="수정"
+              >
+                <EditOutlined />
+              </span>
+              <span
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (window.confirm(`"${proj.name}" 프로젝트를 삭제하시겠습니까?`)) {
+                    handleDeleteProject(e, proj.id);
+                  }
+                }}
+                style={{ cursor: 'pointer', color: '#ff4d4f', fontSize: 11, padding: '0 2px' }}
+                title="삭제"
+              >
+                <DeleteOutlined />
+              </span>
+            </span>
+          )}
+        </div>
+      ),
+    })),
+    ...(isAdmin
+      ? [
+          {
+            key: 'wbs-new-project',
+            icon: <PlusOutlined style={{ color: collabClr }} />,
+            label: (
+              <span style={{ color: collabClr, fontSize: 14, fontWeight: 500 }}>
+                새 프로젝트
+              </span>
+            ),
+          },
+        ]
+      : []),
+  ];
+
+  // ── 섹션별 메뉴 항목 (아이콘에 그룹색)
+  const viewItems = [
+    { key: '/', icon: <DashboardOutlined style={{ color: GROUPS.view.color }} />, label: '대시보드' },
+    { key: '/tasks', icon: <CheckSquareOutlined style={{ color: GROUPS.view.color }} />, label: '업무 관리' },
+    { key: '/gantt', icon: <BarChartOutlined style={{ color: GROUPS.view.color }} />, label: '간트 차트' },
+    { key: '/calendar', icon: <CalendarOutlined style={{ color: GROUPS.view.color }} />, label: '캘린더' },
+  ];
+
+  const collabItems = [
+    {
+      key: '/chat',
+      icon: <MessageOutlined style={{ color: collabClr }} />,
+      label: totalUnread > 0 ? `채팅 (${totalUnread})` : '채팅',
+    },
+    {
+      key: '/boards',
+      icon: <AppstoreOutlined style={{ color: collabClr }} />,
+      label: boardUnread > 0 ? `보드 (${boardUnread})` : '보드',
+    },
+    {
+      key: 'playbook-submenu',
+      icon: <BookOutlined style={{ color: collabClr }} />,
+      label: playbookUnread > 0 ? `Playbook (${playbookUnread})` : 'Playbook',
+      children: [
+        { key: '/playbooks', icon: <BookOutlined style={{ color: collabClr }} />, label: 'Playbook 목록' },
+        { key: '/runs', icon: <PlayCircleOutlined style={{ color: collabClr }} />, label: 'Run 목록' },
+      ],
+    },
+    {
+      key: 'project-submenu',
+      icon: <ProjectOutlined style={{ color: collabClr }} />,
+      label: '프로젝트',
+      children: [
+        {
+          key: 'wbs-submenu',
+          icon: <ApartmentOutlined style={{ color: collabClr }} />,
+          label: 'WBS',
+          children: wbsChildren,
+        },
+      ],
+    },
+  ];
+
+  const adminItems = [
+    { key: '/admin/users', icon: <UserOutlined style={{ color: GROUPS.admin.color }} />, label: '사용자 관리' },
+  ];
+
+  const handleMenuClick = ({ key }) => {
+    if (key === 'wbs-new-project') {
+      openProjectModal(null);
+      return;
+    }
+    if (key === 'settings-submenu') return;
+    // submenu 제목 클릭 시: 펼침과 동시에 대표 페이지로 이동(포커싱 일치)
+    if (SUBMENU_LANDING[key]) {
+      go(SUBMENU_LANDING[key]);
+      return;
+    }
+    go(key);
+  };
+
+  // ── 섹션 카드 렌더 헬퍼
+  const Section = ({ grp, title, menuItems }) => {
+    const g = GROUPS[grp];
+    return (
+      <div
+        style={{
+          margin: '8px 10px',
+          borderRadius: 14,
+          padding: '2px 2px 6px',
+          background: isDark ? g.tintDark : g.tintLight,
+        }}
+      >
+        <div
+          style={{
+            padding: '10px 14px 4px',
+            fontSize: 11,
+            fontWeight: 800,
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            color: g.color,
+          }}
+        >
+          {title}
+        </div>
+        <ConfigProvider
+          theme={{
+            components: {
+              Menu: {
+                itemBg:           'transparent',
+                subMenuItemBg:    'transparent',
+                itemColor:        COLORS.itemText,
+                itemHoverBg:      COLORS.itemHoverBg,
+                itemHoverColor:   COLORS.itemHoverText,
+                itemSelectedBg:   isDark ? `${g.color}26` : `${g.color}1f`,
+                itemSelectedColor:g.color,
+                fontSize:         15,
+                iconSize:         17,
+                itemMarginInline: 6,
+                itemBorderRadius: 9,
+                itemHeight:       42,
+              },
+            },
+          }}
+        >
+          <Menu
+            mode="inline"
+            selectedKeys={[getSelected()]}
+            openKeys={openKeys}
+            onOpenChange={setOpenKeys}
+            items={menuItems}
+            onClick={handleMenuClick}
+            style={{ background: 'transparent', borderRight: 'none' }}
+          />
+        </ConfigProvider>
+      </div>
+    );
+  };
+
+  // ── 사용자 카드 드롭다운 메뉴 (비밀번호 변경 · 관리자 기능 · 로그아웃)
+  const userInitials = user?.displayName?.slice(0, 2) || 'U';
+  const userMenuItems = [
+    { key: 'profile', icon: <UserOutlined />, label: '내 프로필', onClick: () => setProfileOpen(true) },
+    { key: 'password', icon: <LockOutlined />, label: '비밀번호 변경', onClick: () => setPasswordOpen(true) },
+    ...(isAdmin
+      ? [
+          { type: 'divider' },
+          {
+            key: 'admin-label',
+            label: (
+              <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.4px', textTransform: 'uppercase', color: COLORS.toggleText }}>
+                관리자
+              </span>
+            ),
+            disabled: true,
+          },
+          {
+            key: 'settings-submenu',
+            icon: <AppstoreOutlined />,
+            label: '기준정보관리',
+            children: [
+              { key: '/admin/parts', icon: <AppstoreOutlined />, label: '파트 관리', onClick: () => go('/admin/parts') },
+              { key: '/admin/recurring-tasks', icon: <ReloadOutlined />, label: '반복업무 관리', onClick: () => go('/admin/recurring-tasks') },
+              { key: '/admin/tags', icon: <TagsOutlined />, label: '태그 관리', onClick: () => go('/admin/tags') },
+              { key: '/admin/milestones', icon: <FlagOutlined />, label: '마일스톤 관리', onClick: () => go('/admin/milestones') },
+              { key: '/admin/templates', icon: <FileTextOutlined />, label: '업무 템플릿 관리', onClick: () => go('/admin/templates') },
+            ],
+          },
+          { key: '/admin/email-settings', icon: <MailOutlined />, label: '이메일 알림 설정', onClick: () => go('/admin/email-settings') },
+          { key: '/admin/activity-log', icon: <HistoryOutlined />, label: '활동 로그', onClick: () => go('/admin/activity-log') },
+          { key: '/admin/backup', icon: <DatabaseOutlined />, label: '백업/복원', onClick: () => go('/admin/backup') },
+        ]
+      : []),
+    { type: 'divider' },
+    { key: 'logout', icon: <LogoutOutlined />, label: '로그아웃', onClick: handleLogout },
+  ];
+
+  // ── 1차 아이콘 레일 항목 (그룹색)
+  const railItems = [
+    { key: '/', icon: <DashboardOutlined />, title: '대시보드', color: GROUPS.view.color },
+    { key: '/tasks', icon: <CheckSquareOutlined />, title: '업무 관리', color: GROUPS.view.color },
+    { key: '/chat', icon: <MessageOutlined />, title: '채팅', color: GROUPS.collab.color, dot: totalUnread > 0 },
+    { key: '/boards', icon: <AppstoreOutlined />, title: '보드', color: GROUPS.collab.color, dot: boardUnread > 0 },
+    { key: '/wbs', icon: <ProjectOutlined />, title: '프로젝트', color: GROUPS.collab.color },
+  ];
+  const railActive = (key) => (key === '/' ? pathname === '/' : pathname.startsWith(key));
+
+  const RailIcon = ({ itemKey, icon, title, color, dot }) => {
+    const active = railActive(itemKey);
+    return (
+      <Tooltip title={title} placement="right">
+        <div
+          onClick={() => go(itemKey)}
+          style={{
+            position: 'relative',
+            width: 40,
+            height: 40,
+            borderRadius: 11,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 21,
+            cursor: 'pointer',
+            color: active ? '#fff' : 'rgba(255,255,255,0.5)',
+            background: active ? color : 'transparent',
+            transition: 'background 0.15s, color 0.15s',
+          }}
+          onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+          onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+        >
+          {icon}
+          {dot && (
+            <span
+              style={{
+                position: 'absolute',
+                top: 7,
+                right: 7,
+                width: 8,
+                height: 8,
+                borderRadius: 99,
+                background: color,
+                border: `2px solid ${RAIL_BG}`,
+              }}
+            />
+          )}
+        </div>
+      </Tooltip>
+    );
+  };
+
+  return (
+    <>
+      <div
+        className="flowdesk-sider"
+        style={{ height: '100vh', display: 'flex', flexShrink: 0 }}
+      >
+        {/* ── 1차 아이콘 레일 (다크) ── */}
+        <div
+          style={{
+            width: RAIL_WIDTH,
+            flexShrink: 0,
+            background: RAIL_BG,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            padding: '12px 0',
+            gap: 3,
+          }}
+        >
+          {railItems.map((it) => (
+            <RailIcon key={it.key} itemKey={it.key} icon={it.icon} title={it.title} color={it.color} dot={it.dot} />
+          ))}
+
+          <div style={{ flex: 1 }} />
+
+          {isAdmin && (
+            <RailIcon itemKey="/admin/users" icon={<UserOutlined />} title="사용자 관리" color={GROUPS.admin.color} />
+          )}
+        </div>
+
+        {/* ── 2차 컨텍스트 패널 (최소화 가능) ── */}
+        <div
+          style={{
+            width: collapsed ? 0 : CTX_WIDTH,
+            flexShrink: 0,
+            background: COLORS.ctxBg,
+            borderRight: collapsed ? 'none' : `1px solid ${COLORS.border}`,
+            overflow: 'hidden',
+            whiteSpace: 'nowrap',
+            opacity: collapsed ? 0 : 1,
+            transition: 'width 0.26s cubic-bezier(0.4,0,0.2,1), opacity 0.2s, padding 0.26s',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          {/* 패널 헤더 + 최소화 토글 */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '14px 14px 8px 18px',
+              flexShrink: 0,
+            }}
+          >
+            <span style={{ flex: 1, fontSize: 17, fontWeight: 800, color: COLORS.headText, letterSpacing: -0.2 }}>
+              메뉴
+            </span>
+            <Tooltip title="패널 접기" placement="bottom">
+              <div
+                onClick={() => onCollapse?.(true)}
+                style={{
+                  width: 26,
+                  height: 26,
+                  borderRadius: 7,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: COLORS.toggleText,
+                  transition: 'background 0.15s, color 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = COLORS.toggleHoverBg;
+                  e.currentTarget.style.color = COLORS.headText;
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = COLORS.toggleText;
+                }}
+              >
+                <DoubleLeftOutlined style={{ fontSize: 14 }} />
+              </div>
+            </Tooltip>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
+            <Section grp="view" title="보기" menuItems={viewItems} />
+            <Section grp="collab" title="협업" menuItems={collabItems} />
+            {isAdmin && <Section grp="admin" title="관리자" menuItems={adminItems} />}
+          </div>
+
+          {/* ── 사용자 정보 카드 (하단 고정) ── */}
+          <div style={{ flexShrink: 0, borderTop: `1px solid ${COLORS.border}`, padding: '8px 8px 10px' }}>
+            <Dropdown menu={{ items: userMenuItems }} placement="topLeft" trigger={['click']}>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  padding: '8px 10px',
+                  borderRadius: 10,
+                  cursor: 'pointer',
+                  transition: 'background 0.15s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = COLORS.itemHoverBg; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              >
+                <Avatar
+                  size={36}
+                  style={{ backgroundColor: getAvatarColor(user?.id, user?.avatarColor), flexShrink: 0 }}
+                >
+                  {userInitials}
+                </Avatar>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: 13,
+                      fontWeight: 700,
+                      color: COLORS.headText,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                    title={user?.displayName}
+                  >
+                    {user?.displayName}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: COLORS.itemText,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                    title={user?.username}
+                  >
+                    @{user?.username}
+                  </div>
+                </div>
+              </div>
+            </Dropdown>
+
+            {/* IP 정보 + 로그아웃 버튼 */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '2px 6px 0 10px',
+              }}
+            >
+              <Tooltip title="접속 IP" placement="top">
+                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: COLORS.toggleText, overflow: 'hidden' }}>
+                  <GlobalOutlined style={{ fontSize: 11 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {user?.clientIp || '—'}
+                  </span>
+                </span>
+              </Tooltip>
+              <Button
+                size="small"
+                type="text"
+                icon={<LogoutOutlined />}
+                onClick={handleLogout}
+                style={{ fontSize: 12, color: COLORS.itemText, flexShrink: 0 }}
+              >
+                로그아웃
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── 내 프로필 / 비밀번호 변경 팝업 ── */}
+      <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <ChangePasswordModal open={passwordOpen} onClose={() => setPasswordOpen(false)} />
+
+      {/* ── 프로젝트 생성/수정 모달 ── */}
+      <Modal
+        title={editingProject ? '프로젝트 수정' : '새 프로젝트'}
+        open={modalOpen}
+        onOk={handleModalOk}
+        onCancel={() => setModalOpen(false)}
+        okText="저장"
+        cancelText="취소"
+        width={520}
+      >
+        <Form form={form} layout="vertical" style={{ marginTop: 12 }}>
+          <Form.Item name="name" label="프로젝트명" rules={[{ required: true, message: '필수 항목입니다.' }]}>
+            <Input placeholder="프로젝트명을 입력하세요" />
+          </Form.Item>
+          <Form.Item name="period" label="프로젝트 기간">
+            <RangePicker style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item name="description" label="설명">
+            <Input.TextArea rows={2} placeholder="프로젝트 설명 (선택)" />
+          </Form.Item>
+          <Form.Item label="역할 담당자">
+            <MemberEditor members={members} onChange={setMembers} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
+  );
+}

@@ -1,0 +1,399 @@
+/* ══════════════════════════════════════════════
+   로그인 페이지 — Corporate Blue 테마
+══════════════════════════════════════════════ */
+
+.login-root {
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background: #eef2ff;
+  padding: 24px 16px;
+}
+
+.login-root::before { content: none; }
+.login-root::after  { content: none; }
+
+/* ── 카드 컨테이너 ── */
+.login-container {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: row;
+  width: 860px;
+  max-width: calc(100vw - 32px);
+  min-height: 520px;
+  border-radius: 20px;
+  overflow: hidden;
+  outline: none;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.06),
+    0 20px 60px rgba(30,58,138,0.15),
+    0 6px 20px rgba(0,0,0,0.08);
+  animation: card-appear 0.45s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+}
+
+@keyframes card-appear {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ══════════════════════════════
+   왼쪽 패널 — 딥 네이비 브랜딩
+══════════════════════════════ */
+.login-brand-panel {
+  width: 38%;
+  flex-shrink: 0;
+  background: #1e3a8a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* 미세 대각선 패턴 */
+.login-brand-panel::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent, transparent 20px,
+    rgba(255,255,255,0.03) 20px, rgba(255,255,255,0.03) 21px
+  );
+  pointer-events: none;
+}
+
+/* 상단 글로우 */
+.login-brand-panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 180% 35% at 50% 0%, rgba(99,102,241,0.25) 0%, transparent 60%),
+    radial-gradient(ellipse 180% 35% at 50% 100%, rgba(37,99,235,0.2) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* 브랜드 로고 */
+.login-brand-logo {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 36px;
+  text-align: center;
+}
+
+.login-brand-logo-sq {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  border: 1.5px solid rgba(255,255,255,0.2);
+  background: rgba(255,255,255,0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login-brand-name {
+  font-size: 22px;
+  font-weight: 900;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+.login-brand-tagline {
+  font-size: 11px;
+  color: rgba(255,255,255,0.45);
+  line-height: 1.7;
+  text-align: center;
+}
+
+/* 기능 목록 */
+.login-brand-features {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.login-brand-feat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.login-brand-feat-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.login-brand-feat-text {
+  font-size: 12px;
+  color: rgba(255,255,255,0.65);
+  font-weight: 600;
+}
+
+/* ══════════════════════════════
+   오른쪽 패널 — 화이트 폼
+══════════════════════════════ */
+.login-form-panel {
+  flex: 1;
+  background: #ffffff;
+  border-left: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 48px 44px;
+  overflow-y: auto;
+}
+
+/* ── Eyebrow ── */
+.login-eyebrow {
+  font-size: 10px;
+  font-weight: 700;
+  color: #1e3a8a;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+/* ── 헤딩 ── */
+.login-heading { margin-bottom: 28px; }
+
+.login-title {
+  margin: 0 0 6px !important;
+  font-size: 1.75rem !important;
+  font-weight: 900 !important;
+  color: #0f172a !important;
+  line-height: 1.15 !important;
+  letter-spacing: -0.5px !important;
+}
+
+.login-sub {
+  color: #94a3b8 !important;
+  font-size: 13px !important;
+  font-weight: 400 !important;
+}
+
+/* ── 폼 ── */
+.login-form { width: 100%; }
+
+.form-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #475569;
+  letter-spacing: 0.2px;
+}
+
+.input-icon { color: #94a3b8 !important; }
+
+/* ── 입력 필드 (라이트) ── */
+.login-input.ant-input-affix-wrapper,
+.login-input.ant-input {
+  border-radius: 10px !important;
+  border-color: #e2e8f0 !important;
+  background: #f8fafc !important;
+  height: 46px !important;
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s !important;
+}
+.login-input.ant-input-affix-wrapper:hover,
+.login-input.ant-input:hover {
+  border-color: #93c5fd !important;
+  background: #f0f9ff !important;
+}
+.login-input.ant-input-affix-wrapper-focused,
+.login-input.ant-input-affix-wrapper:focus-within {
+  border-color: #1e3a8a !important;
+  background: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(30,58,138,0.1) !important;
+}
+.login-input .ant-input {
+  background: transparent !important;
+  font-size: 14px !important;
+  color: #0f172a !important;
+}
+.login-input .ant-input:-webkit-autofill {
+  -webkit-text-fill-color: #0f172a !important;
+  -webkit-box-shadow: 0 0 0px 1000px #f8fafc inset !important;
+}
+.login-input .ant-input::placeholder { color: #cbd5e1 !important; }
+.login-input .ant-input-password-icon { color: #94a3b8 !important; }
+.login-input .anticon { color: #94a3b8 !important; }
+
+/* ── 로그인 버튼 — 네이비 ── */
+.login-btn {
+  border-radius: 10px !important;
+  height: 48px !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  background: #1e3a8a !important;
+  border: none !important;
+  color: #fff !important;
+  box-shadow: 0 4px 14px rgba(30,58,138,0.3) !important;
+  transition: all 0.2s !important;
+  letter-spacing: 0.2px;
+}
+.login-btn:hover {
+  background: #1d4ed8 !important;
+  box-shadow: 0 6px 20px rgba(30,58,138,0.4) !important;
+  transform: translateY(-1px) !important;
+}
+.login-btn:active { transform: translateY(0) !important; }
+
+/* ── 탭 (라이트 배경) ── */
+.login-tabs .ant-tabs-nav { margin-bottom: 20px !important; }
+.login-tabs .ant-tabs-nav::before { border-color: #e2e8f0 !important; }
+.login-tabs .ant-tabs-tab {
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  padding: 8px 10px !important;
+}
+.login-tabs .ant-tabs-tab .ant-tabs-tab-btn {
+  color: #94a3b8 !important;
+}
+.login-tabs .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn {
+  color: #0f172a !important;
+}
+.login-tabs .ant-tabs-tab:hover .ant-tabs-tab-btn {
+  color: #1e3a8a !important;
+}
+.login-tabs .ant-tabs-ink-bar {
+  background: #1e3a8a !important;
+  height: 2px !important;
+  border-radius: 2px !important;
+}
+
+/* ══════════════════════════════
+   OTP 인증 단계
+══════════════════════════════ */
+.otp-step,
+.qr-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0 4px;
+  text-align: center;
+}
+.otp-step-icon {
+  font-size: 36px;
+  color: #1e3a8a;
+  line-height: 1;
+}
+.otp-step-title {
+  margin: 0 !important;
+  color: #0f172a !important;
+  font-size: 1.1rem !important;
+  font-weight: 700 !important;
+}
+.otp-step-desc { color: #94a3b8; font-size: 13px; line-height: 1.6; }
+
+.otp-input {
+  width: 180px !important;
+  text-align: center !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  letter-spacing: 8px !important;
+  border-radius: 12px !important;
+  border-color: #e2e8f0 !important;
+  background: #f8fafc !important;
+  color: #0f172a !important;
+}
+.otp-input:focus,
+.otp-input:focus-within {
+  border-color: #1e3a8a !important;
+  box-shadow: 0 0 0 3px rgba(30,58,138,0.1) !important;
+}
+
+.otp-back-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #94a3b8;
+  font-size: 13px;
+  padding: 6px 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s;
+}
+.otp-back-btn:hover { color: #1e3a8a; }
+
+/* ── QR 코드 ── */
+.qr-code-wrap {
+  background: #f8fafc;
+  border-radius: 16px;
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  display: inline-block;
+}
+.qr-code-img { display: block; width: 160px; height: 160px; }
+
+/* ── Steps 오버라이드 ── */
+.ant-steps-item-title { color: #64748b !important; }
+.ant-steps-item-finish .ant-steps-item-title { color: #334155 !important; }
+.ant-steps-item-process .ant-steps-item-title { color: #0f172a !important; }
+
+.ant-steps-item-finish .ant-steps-item-icon {
+  background: #eff6ff !important;
+  border-color: #1e3a8a !important;
+}
+.ant-steps-item-finish .ant-steps-item-icon .ant-steps-icon {
+  color: #1e3a8a !important;
+}
+.ant-steps-item-process .ant-steps-item-icon {
+  background: #1e3a8a !important;
+  border-color: #1e3a8a !important;
+}
+.ant-steps-item-wait .ant-steps-item-icon {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+.ant-steps-item-wait .ant-steps-item-icon .ant-steps-icon {
+  color: #94a3b8 !important;
+}
+.ant-steps-item-finish > .ant-steps-item-container > .ant-steps-item-tail::after {
+  background-color: #1e3a8a !important;
+}
+
+/* Result */
+.login-form-panel .ant-result-title { color: #0f172a !important; }
+.login-form-panel .ant-result-subtitle { color: #64748b !important; }
+
+/* ── 반응형 ── */
+@media (max-width: 680px) {
+  .login-container {
+    flex-direction: column;
+    width: 100%;
+    min-height: auto;
+    border-radius: 16px;
+  }
+  .login-brand-panel {
+    width: 100%;
+    padding: 24px 28px;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 16px;
+  }
+  .login-brand-logo { flex-direction: row; margin-bottom: 0; text-align: left; }
+  .login-brand-tagline,
+  .login-brand-features { display: none; }
+  .login-form-panel { padding: 32px 28px; }
+}

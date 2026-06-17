@@ -1,0 +1,1180 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int               @id @default(autoincrement())
+  username         String            @unique @db.VarChar(50)
+  passwordHash     String            @map("password_hash") @db.VarChar(255)
+  displayName      String            @map("display_name") @db.VarChar(100)
+  role             Role              @default(member)
+  isActive         Boolean           @default(true) @map("is_active")
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  totpEnabled      Boolean           @default(false) @map("totp_enabled")
+  totpSecret       String?           @map("totp_secret") @db.VarChar(255)
+  avatarColor      String?           @map("avatar_color") @db.VarChar(20)
+  statusEmoji      String?           @map("status_emoji") @db.VarChar(10)
+  statusText       String?           @map("status_text") @db.VarChar(100)
+  // ── 조직 정보(내 프로필에서 본인이 편집) ───────────────
+  department       String?           @map("department") @db.VarChar(100)
+  position         String?           @map("position") @db.VarChar(100)
+  jobGrade         String?           @map("job_grade") @db.VarChar(100)
+  // ── 미사용 화면 잠금 시간(분). 0 = 사용 안 함 ──────────
+  idleTimeoutMin   Int               @default(60) @map("idle_timeout_min")
+  // ── 금융권 보안 정책 필드 ──────────────────────────────
+  failedLoginCount Int               @default(0) @map("failed_login_count")
+  lockedUntil      DateTime?         @map("locked_until")
+  passwordChangedAt DateTime         @default(now()) @map("password_changed_at")
+  mustChangePassword Boolean         @default(false) @map("must_change_password")
+  lastLoginAt      DateTime?         @map("last_login_at")
+  lastLoginIp      String?           @map("last_login_ip") @db.VarChar(45)
+  passwordHistories PasswordHistory[]
+  auditLogs        AuditLog[]
+  calendarNotes    CalendarNote[]    @relation("CalendarNoteCreator")
+  milestones       Milestone[]
+  notifications    Notification[]
+  recurringTasks   RecurringTask[]
+  assignedTasks    TaskAssignee[]
+  taskAttachments  TaskAttachment[]  @relation("AttachmentUploader")
+  taskComments     TaskComment[]
+  taskHistories    TaskHistory[]     @relation("HistoryUser")
+  taskTemplates    TaskTemplate[]
+  createdTasks     Task[]            @relation("TaskCreator")
+  timeEntries      TimeEntry[]
+  ledgerEntries    LedgerEntry[]
+  ledgerRecurrings LedgerRecurring[]
+  wbsIssues         WbsIssue[]             @relation("WbsIssueCreator")
+  wbsProjects       WbsProject[]           @relation("WbsProjectCreator")
+  chatRoomsCreated  ChatRoom[]             @relation("ChatRoomCreator")
+  chatMemberships   ChatRoomMember[]       @relation("ChatRoomMemberships")
+  chatMessages      ChatMessage[]          @relation("ChatMessageSender")
+  chatReactions     ChatMessageReaction[]  @relation("ChatReactions")
+  chatSaved              ChatSavedMessage[]     @relation("ChatSavedMessages")
+  chatPinned             ChatPinnedMessage[]    @relation("ChatPinnedMessages")
+  scheduledChatMessages  ScheduledChatMessage[] @relation("ScheduledMessages")
+  boardCategories      BoardCategory[]        @relation("BoardCategoryCreator")
+  boardsCreated        Board[]                @relation("BoardCreator")
+  boardMembers         BoardMember[]
+  boardCards           BoardCard[]            @relation("BoardCardCreator")
+  boardViewsCreated    BoardView[]            @relation("BoardViewCreator")
+  boardCardAssignees   BoardCardAssignee[]
+  boardCardComments    BoardCardComment[]
+  boardCardAttachments BoardCardAttachment[]  @relation("BoardCardAttachmentUploader")
+  playbooksCreated     Playbook[]             @relation("PlaybookCreator")
+  playbookStepsAssigned PlaybookStep[]        @relation("StepAssigneeUser")
+  runsOwned            PlaybookRun[]          @relation("RunOwner")
+  runsCreated          PlaybookRun[]          @relation("RunCreator")
+  runStepsAssigned     RunStep[]              @relation("RunStepAssignee")
+  runStepsCompleted    RunStep[]              @relation("RunStepCompleter")
+  runParticipations    RunParticipant[]       @relation("RunParticipants")
+  runUpdates           RunUpdate[]            @relation("RunUpdateCreator")
+  runTimelineEvents    RunTimeline[]          @relation("RunTimelineCreator")
+  playbookVersions     PlaybookVersion[]      @relation("PlaybookVersionCreator")
+  playbookSchedules    PlaybookSchedule[]     @relation("PlaybookScheduleCreator")
+  playbookReadState    PlaybookReadState?     @relation("PlaybookReadStateUser")
+
+  @@map("users")
+}
+
+model Part {
+  id             Int             @id @default(autoincrement())
+  name           String          @unique @db.VarChar(100)
+  description    String?
+  createdAt      DateTime        @default(now()) @map("created_at")
+  recurringTasks RecurringTask[]
+  taskTemplates  TaskTemplate[]
+  tasks          Task[]
+
+  @@map("parts")
+}
+
+model Task {
+  id              Int                 @id @default(autoincrement())
+  title           String              @db.VarChar(200)
+  description     String?
+  partId          Int?                @map("part_id")
+  priority        Priority            @default(normal)
+  status          Status              @default(pending)
+  startDate       DateTime?           @map("start_date") @db.Date
+  dueDate         DateTime?           @map("due_date") @db.Date
+  createdBy       Int                 @map("created_by")
+  createdAt       DateTime            @default(now()) @map("created_at")
+  updatedAt       DateTime            @updatedAt @map("updated_at")
+  delYn           String              @default("0") @map("del_yn") @db.Char(1)
+  recurringTaskId Int?                @map("recurring_task_id")
+  notifications   Notification[]
+  assignees       TaskAssignee[]
+  attachments     TaskAttachment[]
+  comments        TaskComment[]
+  successors      TaskDependency[]    @relation("Predecessor")
+  predecessors    TaskDependency[]    @relation("Successor")
+  extraAssignees  TaskExtraAssignee[]
+  histories       TaskHistory[]
+  tags            TaskTag[]
+  creator         User                @relation("TaskCreator", fields: [createdBy], references: [id])
+  part            Part?               @relation(fields: [partId], references: [id])
+  recurringTask   RecurringTask?      @relation(fields: [recurringTaskId], references: [id])
+  timeEntries     TimeEntry[]
+  boardCards      BoardCard[]
+
+  @@map("tasks")
+}
+
+model TaskExtraAssignee {
+  id     Int    @id @default(autoincrement())
+  taskId Int    @map("task_id")
+  name   String @db.VarChar(100)
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@map("task_extra_assignees")
+}
+
+model TaskAssignee {
+  taskId     Int      @map("task_id")
+  userId     Int      @map("user_id")
+  assignedAt DateTime @default(now()) @map("assigned_at")
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, userId])
+  @@map("task_assignees")
+}
+
+model TaskDependency {
+  id            Int            @id @default(autoincrement())
+  predecessorId Int            @map("predecessor_id")
+  successorId   Int            @map("successor_id")
+  type          DependencyType @default(finish_to_start)
+  predecessor   Task           @relation("Predecessor", fields: [predecessorId], references: [id], onDelete: Cascade)
+  successor     Task           @relation("Successor", fields: [successorId], references: [id], onDelete: Cascade)
+
+  @@unique([predecessorId, successorId])
+  @@map("task_dependencies")
+}
+
+model Notification {
+  id         Int              @id @default(autoincrement())
+  userId     Int              @map("user_id")
+  taskId     Int?             @map("task_id")
+  runId      Int?             @map("run_id")
+  runStepId  Int?             @map("run_step_id")
+  message    String?          @db.VarChar(500)
+  type       NotificationType
+  isRead     Boolean          @default(false) @map("is_read")
+  createdAt  DateTime         @default(now()) @map("created_at")
+  task       Task?            @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  run        PlaybookRun?     @relation("RunNotifications", fields: [runId], references: [id], onDelete: Cascade)
+  runStep    RunStep?         @relation("RunStepNotifications", fields: [runStepId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model TaskComment {
+  id        Int      @id @default(autoincrement())
+  taskId    Int      @map("task_id")
+  userId    Int      @map("user_id")
+  content   String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("task_comments")
+}
+
+model TaskAttachment {
+  id           Int      @id @default(autoincrement())
+  taskId       Int      @map("task_id")
+  uploadedBy   Int      @map("uploaded_by")
+  originalName String   @map("original_name") @db.VarChar(255)
+  storedName   String   @map("stored_name") @db.VarChar(255)
+  mimeType     String   @map("mime_type") @db.VarChar(100)
+  size         Int
+  createdAt    DateTime @default(now()) @map("created_at")
+  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploader     User     @relation("AttachmentUploader", fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@map("task_attachments")
+}
+
+model TaskHistory {
+  id        Int      @id @default(autoincrement())
+  taskId    Int      @map("task_id")
+  userId    Int      @map("user_id")
+  action    String   @db.VarChar(50)
+  field     String?  @db.VarChar(100)
+  oldValue  String?  @map("old_value")
+  newValue  String?  @map("new_value")
+  createdAt DateTime @default(now()) @map("created_at")
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User     @relation("HistoryUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("task_histories")
+}
+
+model CalendarNote {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @db.Date
+  content   String   @db.VarChar(200)
+  createdBy Int      @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  creator   User     @relation("CalendarNoteCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@map("calendar_notes")
+}
+
+model WbsProject {
+  id          Int                @id @default(autoincrement())
+  name        String             @db.VarChar(200)
+  startDate   DateTime?          @map("start_date") @db.Date
+  endDate     DateTime?          @map("end_date") @db.Date
+  description String?
+  createdBy   Int                @map("created_by")
+  createdAt   DateTime           @default(now()) @map("created_at")
+  updatedAt   DateTime           @updatedAt @map("updated_at")
+  issues      WbsIssue[]
+  members     WbsProjectMember[]
+  tasks       WbsTask[]
+  creator     User               @relation("WbsProjectCreator", fields: [createdBy], references: [id])
+
+  @@map("wbs_projects")
+}
+
+model WbsProjectMember {
+  id         Int        @id @default(autoincrement())
+  projectId  Int        @map("project_id")
+  role       String     @db.VarChar(50)
+  memberName String     @map("member_name") @db.VarChar(100)
+  order      Int        @default(0)
+  project    WbsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("wbs_project_members")
+}
+
+model WbsTask {
+  id              Int        @id @default(autoincrement())
+  projectId       Int        @map("project_id")
+  parentId        Int?       @map("parent_id")
+  level           Int        @default(0)
+  order           Int        @default(0)
+  name            String     @db.VarChar(200)
+  deliverable         String?    @db.VarChar(200)
+  deliverableFile     String?    @map("deliverable_file") @db.VarChar(500)
+  deliverableOrigName String?    @map("deliverable_orig_name") @db.VarChar(500)
+  startDate       DateTime?  @map("start_date") @db.Date
+  endDate         DateTime?  @map("end_date") @db.Date
+  plannedProgress Decimal    @default(0) @map("planned_progress") @db.Decimal(5, 2)
+  actualProgress  Decimal    @default(0) @map("actual_progress") @db.Decimal(5, 2)
+  memo            String?
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  parent          WbsTask?   @relation("WbsTaskChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children        WbsTask[]  @relation("WbsTaskChildren")
+  project         WbsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("wbs_tasks")
+}
+
+model WbsIssue {
+  id           Int            @id @default(autoincrement())
+  projectId    Int            @map("project_id")
+  category     String?        @db.VarChar(100)
+  content      String
+  occurDate    DateTime?      @map("occur_date") @db.Date
+  targetDate   DateTime?      @map("target_date") @db.Date
+  progress     Decimal        @default(0) @db.Decimal(5, 2)
+  expectedDate DateTime?      @map("expected_date") @db.Date
+  status       WbsIssueStatus @default(open)
+  note         String?
+  createdBy    Int            @map("created_by")
+  createdAt    DateTime       @default(now()) @map("created_at")
+  updatedAt    DateTime       @updatedAt @map("updated_at")
+  project      WbsProject     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  creator      User           @relation("WbsIssueCreator", fields: [createdBy], references: [id])
+
+  @@map("wbs_issues")
+}
+
+model RecurringTask {
+  id              Int            @id @default(autoincrement())
+  title           String         @db.VarChar(200)
+  description     String?
+  partId          Int?           @map("part_id")
+  priority        Priority       @default(normal)
+  recurrenceType  RecurrenceType @map("recurrence_type")
+  recurrenceDay   Int?           @map("recurrence_day")
+  recurrenceEnd   DateTime?      @map("recurrence_end") @db.Date
+  assigneeIdsJson String?        @map("assignee_ids_json")
+  extraNamesJson  String?        @map("extra_names_json")
+  isActive        Boolean        @default(true) @map("is_active")
+  createdBy       Int            @map("created_by")
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  creator         User           @relation(fields: [createdBy], references: [id])
+  part            Part?          @relation(fields: [partId], references: [id])
+  generatedTasks  Task[]
+
+  @@map("recurring_tasks")
+}
+
+model TaskTemplate {
+  id              Int      @id @default(autoincrement())
+  name            String   @db.VarChar(100)
+  title           String   @db.VarChar(200)
+  description     String?
+  partId          Int?     @map("part_id")
+  priority        Priority @default(normal)
+  durationDays    Int?     @map("duration_days")
+  assigneeIdsJson String?  @map("assignee_ids_json")
+  extraNamesJson  String?  @map("extra_names_json")
+  createdBy       Int      @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  creator         User     @relation(fields: [createdBy], references: [id])
+  part            Part?    @relation(fields: [partId], references: [id])
+
+  @@map("task_templates")
+}
+
+model Milestone {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(200)
+  date        DateTime @db.Date
+  color       String   @default("#722ed1") @db.VarChar(20)
+  description String?
+  createdBy   Int      @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  creator     User     @relation(fields: [createdBy], references: [id])
+
+  @@map("milestones")
+}
+
+model Tag {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique @db.VarChar(50)
+  color     String    @default("#1677ff") @db.VarChar(20)
+  createdAt DateTime  @default(now()) @map("created_at")
+  tasks     TaskTag[]
+
+  @@map("tags")
+}
+
+model TaskTag {
+  taskId Int  @map("task_id")
+  tagId  Int  @map("tag_id")
+  tag    Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, tagId])
+  @@map("task_tags")
+}
+
+model AppSetting {
+  key       String   @id @db.VarChar(100)
+  value     String
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
+
+model TimeEntry {
+  id        Int       @id @default(autoincrement())
+  taskId    Int       @map("task_id")
+  userId    Int       @map("user_id")
+  startTime DateTime  @map("start_time")
+  endTime   DateTime? @map("end_time")
+  duration  Int?
+  note      String?   @db.VarChar(500)
+  createdAt DateTime  @default(now()) @map("created_at")
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("time_entries")
+}
+
+// ── 감사로그 (접속기록·개인정보 처리이력) — 신용정보법 3년 보관 ──
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?     @map("user_id")            // 비로그인 실패 시 null
+  username   String?  @db.VarChar(50)            // 사용자 삭제돼도 추적 가능하도록 별도 보관
+  action     String   @db.VarChar(50)            // AUDIT_ACTION 상수
+  resource   String?  @db.VarChar(100)           // 대상 리소스(엔드포인트/테이블)
+  detail     String?                             // 부가 정보(JSON 문자열 등)
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  userAgent  String?  @map("user_agent")
+  success    Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ── 비밀번호 재사용 금지 이력 ──────────────────────────────
+model PasswordHistory {
+  id           Int      @id @default(autoincrement())
+  userId       Int      @map("user_id")
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  createdAt    DateTime @default(now()) @map("created_at")
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("password_histories")
+}
+
+enum Role {
+  admin
+  member
+}
+
+enum Priority {
+  high
+  normal
+  low
+}
+
+enum Status {
+  pending
+  in_progress
+  done
+  hold
+}
+
+enum DependencyType {
+  finish_to_start
+}
+
+enum NotificationType {
+  due_soon
+  overdue
+  due_today
+  sla_warning
+  sla_breach
+  step_assigned
+  step_reminder
+  security_alert
+}
+
+enum WbsIssueStatus {
+  open
+  in_progress
+  closed
+  hold
+}
+
+enum RecurrenceType {
+  daily
+  weekly
+  monthly
+}
+
+enum LedgerType {
+  income
+  expense
+}
+
+model LedgerCategory {
+  id         Int               @id @default(autoincrement())
+  name       String            @db.VarChar(50)
+  type       LedgerType
+  color      String            @default("#1677ff") @db.VarChar(20)
+  isDefault  Boolean           @default(false) @map("is_default")
+  createdAt  DateTime          @default(now()) @map("created_at")
+  entries    LedgerEntry[]
+  budgets    LedgerBudget[]
+  recurrings LedgerRecurring[]
+
+  @@map("ledger_categories")
+}
+
+model LedgerEntry {
+  id          Int              @id @default(autoincrement())
+  type        LedgerType
+  amount      Decimal          @db.Decimal(15, 0)
+  categoryId  Int              @map("category_id")
+  date        DateTime         @db.Date
+  memo        String?          @db.VarChar(300)
+  recurringId Int?             @map("recurring_id")
+  createdBy   Int              @map("created_by")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  category    LedgerCategory   @relation(fields: [categoryId], references: [id])
+  creator     User             @relation(fields: [createdBy], references: [id])
+  recurring   LedgerRecurring? @relation(fields: [recurringId], references: [id], onDelete: SetNull)
+
+  @@map("ledger_entries")
+}
+
+model LedgerBudget {
+  id         Int            @id @default(autoincrement())
+  categoryId Int            @map("category_id")
+  year       Int
+  month      Int
+  amount     Decimal        @db.Decimal(15, 0)
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+  category   LedgerCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, year, month])
+  @@map("ledger_budgets")
+}
+
+model LedgerRecurring {
+  id         Int            @id @default(autoincrement())
+  type       LedgerType
+  amount     Decimal        @db.Decimal(15, 0)
+  categoryId Int            @map("category_id")
+  dayOfMonth Int            @default(1) @map("day_of_month")
+  memo       String?        @db.VarChar(300)
+  isActive   Boolean        @default(true) @map("is_active")
+  createdBy  Int            @map("created_by")
+  createdAt  DateTime       @default(now()) @map("created_at")
+  updatedAt  DateTime       @updatedAt @map("updated_at")
+  category   LedgerCategory @relation(fields: [categoryId], references: [id])
+  creator    User           @relation(fields: [createdBy], references: [id])
+  entries    LedgerEntry[]
+
+  @@map("ledger_recurrings")
+}
+
+enum ChatRoomType {
+  direct
+  group
+  public
+  private
+}
+
+model ChatRoom {
+  id           Int              @id @default(autoincrement())
+  name         String?          @db.VarChar(100)
+  type         ChatRoomType     @default(direct)
+  description  String?          @db.VarChar(500)
+  isArchived   Boolean          @default(false) @map("is_archived")
+  announcement String?          @db.VarChar(500)
+  createdBy    Int              @map("created_by")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  creator           User                   @relation("ChatRoomCreator", fields: [createdBy], references: [id])
+  members           ChatRoomMember[]
+  messages          ChatMessage[]
+  pinnedMessages    ChatPinnedMessage[]
+  scheduledMessages ScheduledChatMessage[]
+
+  @@map("chat_rooms")
+}
+
+model ChatRoomMember {
+  id            Int       @id @default(autoincrement())
+  roomId        Int       @map("room_id")
+  userId        Int       @map("user_id")
+  joinedAt      DateTime  @default(now()) @map("joined_at")
+  lastReadAt    DateTime? @map("last_read_at")
+  isFavorite    Boolean   @default(false) @map("is_favorite")
+  isMuted       Boolean   @default(false) @map("is_muted")
+  lastUnreadAt  DateTime? @map("last_unread_at")
+  room          ChatRoom  @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user          User      @relation("ChatRoomMemberships", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@map("chat_room_members")
+}
+
+model ChatMessage {
+  id              Int      @id @default(autoincrement())
+  roomId          Int      @map("room_id")
+  senderId        Int      @map("sender_id")
+  content         String   @default("") @db.Text
+  fileUrl         String?  @map("file_url") @db.VarChar(500)
+  fileName        String?  @map("file_name") @db.VarChar(255)
+  fileType        String?  @map("file_type") @db.VarChar(100)
+  fileSize        Int?     @map("file_size")
+  parentId        Int?     @map("parent_id")
+  isDeleted       Boolean  @default(false) @map("is_deleted")
+  editedAt        DateTime? @map("edited_at")
+  forwardedFromId Int?     @map("forwarded_from_id")
+  createdAt       DateTime @default(now()) @map("created_at")
+  room            ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender          User     @relation("ChatMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  parent          ChatMessage?  @relation("ThreadMessages", fields: [parentId], references: [id], onDelete: SetNull)
+  replies         ChatMessage[] @relation("ThreadMessages")
+  forwardedFrom   ChatMessage?  @relation("ForwardedMessages", fields: [forwardedFromId], references: [id], onDelete: SetNull)
+  forwardedCopies ChatMessage[] @relation("ForwardedMessages")
+  reactions       ChatMessageReaction[]
+  savedBy         ChatSavedMessage[]
+  pinnedIn        ChatPinnedMessage[]
+
+  @@map("chat_messages")
+}
+
+model ChatMessageReaction {
+  id        Int      @id @default(autoincrement())
+  messageId Int      @map("message_id")
+  userId    Int      @map("user_id")
+  emoji     String   @db.VarChar(50)
+  createdAt DateTime @default(now()) @map("created_at")
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User        @relation("ChatReactions", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId, emoji])
+  @@map("chat_message_reactions")
+}
+
+model ChatSavedMessage {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  messageId Int      @map("message_id")
+  savedAt   DateTime @default(now()) @map("saved_at")
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User        @relation("ChatSavedMessages", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, messageId])
+  @@map("chat_saved_messages")
+}
+
+model ChatPinnedMessage {
+  id        Int      @id @default(autoincrement())
+  roomId    Int      @map("room_id")
+  messageId Int      @map("message_id")
+  pinnedBy  Int      @map("pinned_by")
+  pinnedAt  DateTime @default(now()) @map("pinned_at")
+  room      ChatRoom    @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  pinner    User        @relation("ChatPinnedMessages", fields: [pinnedBy], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, messageId])
+  @@map("chat_pinned_messages")
+}
+
+model Board {
+  id                    Int               @id @default(autoincrement())
+  title                 String            @db.VarChar(200)
+  description           String?
+  icon                  String?           @db.VarChar(10)
+  bgColor               String?           @map("bg_color") @db.VarChar(100)
+  defaultView           String            @default("kanban") @db.VarChar(20)
+  kanbanGroupByPropId   Int?              @map("kanban_group_by_prop_id")
+  swimlaneGroupByPropId Int?              @map("swimlane_group_by_prop_id")
+  wipLimitsJson         String?           @map("wip_limits_json")
+  linkedRoomId          Int?              @map("linked_room_id")
+  categoryId            Int?              @map("category_id")
+  order                 Int               @default(0)
+  createdBy             Int               @map("created_by")
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+  creator               User              @relation("BoardCreator", fields: [createdBy], references: [id])
+  category              BoardCategory?    @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  members               BoardMember[]
+  cards                 BoardCard[]
+  properties            BoardProperty[]
+  views                 BoardView[]
+  automations           BoardAutomation[]
+
+  @@map("boards")
+}
+
+model BoardCategory {
+  id        Int             @id @default(autoincrement())
+  name      String          @db.VarChar(100)
+  icon      String?         @db.VarChar(10)
+  color     String?         @db.VarChar(30)
+  scope     String          @default("shared") @db.VarChar(20)
+  ownerId   Int?            @map("owner_id")
+  parentId  Int?            @map("parent_id")
+  order     Int             @default(0)
+  createdBy Int             @map("created_by")
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+  creator   User            @relation("BoardCategoryCreator", fields: [createdBy], references: [id])
+  parent    BoardCategory?  @relation("BoardCategoryTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children  BoardCategory[] @relation("BoardCategoryTree")
+  boards    Board[]
+
+  @@map("board_categories")
+}
+
+model BoardView {
+  id        Int      @id @default(autoincrement())
+  boardId   Int      @map("board_id")
+  name      String   @db.VarChar(100)
+  type      String   @default("kanban") @db.VarChar(20)
+  config    Json?
+  order     Int      @default(0)
+  isDefault Boolean  @default(false) @map("is_default")
+  createdBy Int      @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  creator   User     @relation("BoardViewCreator", fields: [createdBy], references: [id])
+
+  @@map("board_views")
+}
+
+model BoardMember {
+  boardId    Int     @map("board_id")
+  userId     Int     @map("user_id")
+  role       String    @default("member") @db.VarChar(20)
+  isFavorite Boolean   @default(false) @map("is_favorite")
+  lastReadAt DateTime? @map("last_read_at")
+  board      Board     @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([boardId, userId])
+  @@map("board_members")
+}
+
+model BoardProperty {
+  id      Int                  @id @default(autoincrement())
+  boardId Int                  @map("board_id")
+  name    String               @db.VarChar(100)
+  type    String               @db.VarChar(30)
+  options Json?
+  order   Int                  @default(0)
+  board   Board                @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  values  BoardPropertyValue[]
+
+  @@map("board_properties")
+}
+
+model BoardCard {
+  id             Int                   @id @default(autoincrement())
+  boardId        Int                   @map("board_id")
+  cardNumber     Int?                  @map("card_number")
+  title          String                @db.VarChar(200)
+  description    String?
+  coverColor     String?               @map("cover_color") @db.VarChar(20)
+  coverImageUrl  String?               @map("cover_image_url") @db.VarChar(500)
+  order          Int                   @default(0)
+  startDate      DateTime?             @map("start_date") @db.Date
+  dueDate        DateTime?             @map("due_date") @db.Date
+  status         String                @default("todo") @db.VarChar(50)
+  priority       String                @default("normal") @db.VarChar(20)
+  progress       Int                   @default(0)
+  linkedTaskId   Int?                  @map("linked_task_id")
+  createdBy      Int                   @map("created_by")
+  createdAt      DateTime              @default(now()) @map("created_at")
+  updatedAt      DateTime              @updatedAt @map("updated_at")
+  board          Board                 @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  creator        User                  @relation("BoardCardCreator", fields: [createdBy], references: [id])
+  linkedTask     Task?                 @relation(fields: [linkedTaskId], references: [id], onDelete: SetNull)
+  properties     BoardPropertyValue[]
+  assignees      BoardCardAssignee[]
+  links          BoardCardLink[]
+  comments       BoardCardComment[]
+  attachments    BoardCardAttachment[]
+  checklists     BoardCardChecklist[]
+  dependsOn      BoardCardDependency[] @relation("DependentCard")
+  blocks         BoardCardDependency[] @relation("BlockingCard")
+
+  @@map("board_cards")
+}
+
+model BoardPropertyValue {
+  id         Int           @id @default(autoincrement())
+  cardId     Int           @map("card_id")
+  propertyId Int           @map("property_id")
+  value      String?
+  card       BoardCard     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  property   BoardProperty @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  @@unique([cardId, propertyId])
+  @@map("board_property_values")
+}
+
+model BoardCardAssignee {
+  id     Int       @id @default(autoincrement())
+  cardId Int       @map("card_id")
+  userId Int       @map("user_id")
+  type   String    @default("assignee") @db.VarChar(20)
+  card   BoardCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([cardId, userId, type])
+  @@map("board_card_assignees")
+}
+
+model BoardCardLink {
+  id        Int       @id @default(autoincrement())
+  cardId    Int       @map("card_id")
+  title     String?   @db.VarChar(200)
+  url       String    @db.VarChar(2000)
+  createdAt DateTime  @default(now()) @map("created_at")
+  card      BoardCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@map("board_card_links")
+}
+
+model BoardCardComment {
+  id          Int                   @id @default(autoincrement())
+  cardId      Int                   @map("card_id")
+  userId      Int                   @map("user_id")
+  content     String
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+  card        BoardCard             @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments BoardCardAttachment[]
+
+  @@map("board_card_comments")
+}
+
+model BoardCardAttachment {
+  id           Int               @id @default(autoincrement())
+  cardId       Int               @map("card_id")
+  commentId    Int?              @map("comment_id")
+  uploadedBy   Int               @map("uploaded_by")
+  originalName String            @map("original_name") @db.VarChar(255)
+  storedName   String            @map("stored_name") @db.VarChar(255)
+  mimeType     String            @map("mime_type") @db.VarChar(100)
+  size         Int
+  createdAt    DateTime          @default(now()) @map("created_at")
+  card         BoardCard         @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  comment      BoardCardComment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  uploader     User              @relation("BoardCardAttachmentUploader", fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@map("board_card_attachments")
+}
+
+model BoardCardChecklist {
+  id        Int       @id @default(autoincrement())
+  cardId    Int       @map("card_id")
+  content   String    @db.VarChar(500)
+  checked   Boolean   @default(false)
+  order     Int       @default(0)
+  createdAt DateTime  @default(now()) @map("created_at")
+  card      BoardCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@map("board_card_checklists")
+}
+
+model BoardCardDependency {
+  id          Int       @id @default(autoincrement())
+  dependentId Int       @map("dependent_id")
+  blockingId  Int       @map("blocking_id")
+  dependent   BoardCard @relation("DependentCard", fields: [dependentId], references: [id], onDelete: Cascade)
+  blocking    BoardCard @relation("BlockingCard", fields: [blockingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@unique([dependentId, blockingId])
+  @@map("board_card_dependencies")
+}
+
+model BoardAutomation {
+  id            Int      @id @default(autoincrement())
+  boardId       Int      @map("board_id")
+  name          String   @db.VarChar(200)
+  isActive      Boolean  @default(true) @map("is_active")
+  trigger       String   @db.VarChar(50)
+  triggerConfig String?  @map("trigger_config") @db.Text
+  action        String   @db.VarChar(50)
+  actionConfig  String?  @map("action_config") @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+  board         Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@map("board_automations")
+}
+
+// ───────────────────────── Playbook (SOP Engine) ─────────────────────────
+
+enum StepType {
+  task
+  approval
+  note
+  decision
+}
+
+enum StepAssigneeMode {
+  unassigned
+  specific
+  role
+}
+
+enum RunStatus {
+  active
+  paused
+  finished
+  archived
+}
+
+enum RunSeverity {
+  p1
+  p2
+  p3
+  none
+}
+
+enum RunStepStatus {
+  pending
+  in_progress
+  done
+  skipped
+  blocked
+  rejected
+}
+
+enum RunParticipantRole {
+  owner
+  coordinator
+  participant
+}
+
+enum RunUpdateType {
+  note
+  alert
+}
+
+model Playbook {
+  id          Int             @id @default(autoincrement())
+  name        String          @db.VarChar(200)
+  description String?         @db.Text
+  category    String          @default("general") @db.VarChar(50)
+  tags        String?         @db.VarChar(500)
+  version     Int             @default(1)
+  isPublic    Boolean         @default(true) @map("is_public")
+  variables   String?         @db.Text
+  defaultParticipants String?   @map("default_participants") @db.Text
+  createdBy   Int             @map("created_by")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  creator     User              @relation("PlaybookCreator", fields: [createdBy], references: [id])
+  phases      PlaybookPhase[]
+  steps       PlaybookStep[]
+  runs        PlaybookRun[]
+  versions    PlaybookVersion[]
+  webhooks    PlaybookWebhook[]
+  schedules   PlaybookSchedule[]
+
+  @@map("playbooks")
+}
+
+model PlaybookPhase {
+  id         Int            @id @default(autoincrement())
+  playbookId Int            @map("playbook_id")
+  name       String         @db.VarChar(100)
+  color      String         @default("#1677ff") @db.VarChar(20)
+  order      Int            @default(0)
+  playbook   Playbook       @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  steps      PlaybookStep[]
+  runSteps   RunStep[]
+
+  @@map("playbook_phases")
+}
+
+model PlaybookStep {
+  id              Int              @id @default(autoincrement())
+  playbookId      Int              @map("playbook_id")
+  phaseId         Int?             @map("phase_id")
+  title           String           @db.VarChar(300)
+  instructions    String?          @db.Text
+  type            StepType         @default(task)
+  order           Int              @default(0)
+  estimatedMins   Int?             @map("estimated_mins")
+  slaMins         Int?             @map("sla_mins")
+  dueAt           DateTime?        @map("due_at")
+  assigneeMode    StepAssigneeMode @default(unassigned) @map("assignee_mode")
+  assigneeUserId  Int?             @map("assignee_user_id")
+  assigneeRole    Role?            @map("assignee_role")
+  requireEvidence Boolean          @default(false) @map("require_evidence")
+  dependsOn       String?          @map("depends_on") @db.VarChar(500)
+  decisionOptions String?          @map("decision_options") @db.Text
+  parallelGroup   Int?             @map("parallel_group")
+  playbook        Playbook         @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  phase           PlaybookPhase?   @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  assigneeUser    User?            @relation("StepAssigneeUser", fields: [assigneeUserId], references: [id], onDelete: SetNull)
+  runSteps        RunStep[]
+
+  @@map("playbook_steps")
+}
+
+model PlaybookRun {
+  id             Int              @id @default(autoincrement())
+  playbookId     Int?             @map("playbook_id")
+  name           String           @db.VarChar(200)
+  status         RunStatus        @default(active)
+  severity       RunSeverity      @default(none)
+  variableValues String?          @map("variable_values") @db.Text
+  summary        String?          @db.Text
+  ownerId        Int              @map("owner_id")
+  createdBy      Int              @map("created_by")
+  linkedRoomId   Int?             @map("linked_room_id")
+  dueAt          DateTime?        @map("due_at")
+  startedAt      DateTime         @default(now()) @map("started_at")
+  endedAt        DateTime?        @map("ended_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  playbook       Playbook?        @relation(fields: [playbookId], references: [id], onDelete: SetNull)
+  owner          User             @relation("RunOwner", fields: [ownerId], references: [id])
+  creator        User             @relation("RunCreator", fields: [createdBy], references: [id])
+  steps          RunStep[]
+  participants   RunParticipant[]
+  updates        RunUpdate[]
+  timeline       RunTimeline[]
+  notifications  Notification[]   @relation("RunNotifications")
+
+  @@map("playbook_runs")
+}
+
+model RunStep {
+  id              Int           @id @default(autoincrement())
+  runId           Int           @map("run_id")
+  stepId          Int?          @map("step_id")
+  phaseId         Int?          @map("phase_id")
+  title           String        @db.VarChar(300)
+  instructions    String?       @db.Text
+  type            StepType      @default(task)
+  order           Int           @default(0)
+  status          RunStepStatus @default(pending)
+  assigneeId      Int?          @map("assignee_id")
+  dueAt           DateTime?     @map("due_at")
+  slaMins         Int?          @map("sla_mins")
+  requireEvidence Boolean       @default(false) @map("require_evidence")
+  evidence        String?       @db.Text
+  startedAt       DateTime?     @map("started_at")
+  completedAt     DateTime?     @map("completed_at")
+  completedBy     Int?          @map("completed_by")
+  decisionChosen  String?       @map("decision_chosen") @db.VarChar(200)
+  parallelGroup   Int?          @map("parallel_group")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  run             PlaybookRun    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  step            PlaybookStep?  @relation(fields: [stepId], references: [id], onDelete: SetNull)
+  phase           PlaybookPhase? @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  assignee        User?          @relation("RunStepAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  completer       User?          @relation("RunStepCompleter", fields: [completedBy], references: [id], onDelete: SetNull)
+  checklists      RunStepChecklist[]
+  notifications   Notification[]  @relation("RunStepNotifications")
+
+  @@map("run_steps")
+}
+
+model RunParticipant {
+  id       Int                @id @default(autoincrement())
+  runId    Int                @map("run_id")
+  userId   Int                @map("user_id")
+  role     RunParticipantRole @default(participant)
+  joinedAt DateTime           @default(now()) @map("joined_at")
+  run      PlaybookRun        @relation(fields: [runId], references: [id], onDelete: Cascade)
+  user     User               @relation("RunParticipants", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([runId, userId])
+  @@map("run_participants")
+}
+
+model RunUpdate {
+  id        Int           @id @default(autoincrement())
+  runId     Int           @map("run_id")
+  message   String        @db.Text
+  type      RunUpdateType @default(note)
+  createdBy Int           @map("created_by")
+  createdAt DateTime      @default(now()) @map("created_at")
+  run       PlaybookRun   @relation(fields: [runId], references: [id], onDelete: Cascade)
+  creator   User          @relation("RunUpdateCreator", fields: [createdBy], references: [id])
+
+  @@map("run_updates")
+}
+
+// Playbook/Run 활동(새 Run·Run 업데이트) 안읽음 추적: 사용자별 마지막 확인 시각
+model PlaybookReadState {
+  userId     Int      @id @map("user_id")
+  lastReadAt DateTime @default(now()) @map("last_read_at")
+  user       User     @relation("PlaybookReadStateUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("playbook_read_states")
+}
+
+model RunTimeline {
+  id        Int         @id @default(autoincrement())
+  runId     Int         @map("run_id")
+  eventType String      @map("event_type") @db.VarChar(50)
+  eventData String?     @map("event_data") @db.Text
+  createdBy Int?        @map("created_by")
+  createdAt DateTime    @default(now()) @map("created_at")
+  run       PlaybookRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  creator   User?       @relation("RunTimelineCreator", fields: [createdBy], references: [id])
+
+  @@map("run_timeline")
+}
+
+model ScheduledChatMessage {
+  id          Int      @id @default(autoincrement())
+  roomId      Int      @map("room_id")
+  senderId    Int      @map("sender_id")
+  content     String   @db.Text
+  scheduledAt DateTime @map("scheduled_at")
+  sent        Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+  room        ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender      User     @relation("ScheduledMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@map("scheduled_chat_messages")
+}
+
+// ───────────────────────── Playbook 확장 ─────────────────────────
+
+model RunStepChecklist {
+  id        Int      @id @default(autoincrement())
+  runStepId Int      @map("run_step_id")
+  content   String   @db.VarChar(500)
+  checked   Boolean  @default(false)
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  runStep   RunStep  @relation(fields: [runStepId], references: [id], onDelete: Cascade)
+
+  @@map("run_step_checklists")
+}
+
+model PlaybookVersion {
+  id         Int      @id @default(autoincrement())
+  playbookId Int      @map("playbook_id")
+  version    Int
+  snapshot   String   @db.Text
+  createdBy  Int      @map("created_by")
+  createdAt  DateTime @default(now()) @map("created_at")
+  playbook   Playbook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  creator    User     @relation("PlaybookVersionCreator", fields: [createdBy], references: [id])
+
+  @@map("playbook_versions")
+}
+
+model PlaybookWebhook {
+  id         Int      @id @default(autoincrement())
+  playbookId Int      @map("playbook_id")
+  name       String   @db.VarChar(200)
+  token      String   @unique @db.VarChar(64)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  playbook   Playbook @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+
+  @@map("playbook_webhooks")
+}
+
+model PlaybookSchedule {
+  id             Int            @id @default(autoincrement())
+  playbookId     Int            @map("playbook_id")
+  name           String         @db.VarChar(200)
+  recurrenceType RecurrenceType @map("recurrence_type")
+  recurrenceDay  Int?           @map("recurrence_day")
+  recurrenceTime String         @default("09:00") @map("recurrence_time") @db.VarChar(5)
+  variableValues String?        @map("variable_values") @db.Text
+  participantIds String?        @map("participant_ids") @db.VarChar(500)
+  isActive       Boolean        @default(true) @map("is_active")
+  lastRunAt      DateTime?      @map("last_run_at")
+  createdBy      Int            @map("created_by")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+  playbook       Playbook       @relation(fields: [playbookId], references: [id], onDelete: Cascade)
+  creator        User           @relation("PlaybookScheduleCreator", fields: [createdBy], references: [id])
+
+  @@map("playbook_schedules")
+}
