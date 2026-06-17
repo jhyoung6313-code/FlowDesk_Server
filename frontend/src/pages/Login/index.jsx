@@ -476,8 +476,7 @@ export default function LoginPage() {
           {/* 제작자 서명 */}
           <div className="login-brand-credit">
             <span className="login-brand-credit-line" />
-            <span className="login-brand-credit-label">Crafted by</span>
-            <span className="login-brand-credit-name">Hong&rsquo;s</span>
+            <span className="login-brand-credit-text">Crafted by Hong&rsquo;s</span>
           </div>
         </div>
 

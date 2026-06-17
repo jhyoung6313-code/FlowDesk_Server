@@ -164,30 +164,15 @@
 .login-brand-credit-line {
   width: 40px;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(251,191,36,0.6), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
 }
 
-.login-brand-credit-label {
-  font-size: 9px;
+.login-brand-credit-text {
+  font-size: 10px;
   font-weight: 700;
-  letter-spacing: 3px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
   color: rgba(255,255,255,0.4);
-}
-
-.login-brand-credit-name {
-  font-family: 'Georgia', 'Times New Roman', serif;
-  font-style: italic;
-  font-weight: 700;
-  font-size: 22px;
-  line-height: 1;
-  letter-spacing: 0.5px;
-  background: linear-gradient(135deg, #fde68a 0%, #fbbf24 45%, #f59e0b 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-  filter: drop-shadow(0 2px 8px rgba(245,158,11,0.35));
 }
 
 /* ══════════════════════════════
