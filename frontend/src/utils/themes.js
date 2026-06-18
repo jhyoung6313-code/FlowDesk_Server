@@ -536,11 +536,6 @@ export const THEMES = {
     desc:     '블루 · 인디고',
     swatches: ['#1d4ed8', '#3b82f6', '#93c5fd'],
     tokens: {
-      sections: {
-        viewTint: '#e8f2fe', viewColor: '#2563eb',
-        collabTint: '#e4fdf3', collabColor: '#10b981',
-        adminTint: '#f2efff', adminColor: '#7c3aed',
-      },
       accent: {
         base:  '#2563eb',
         light: '#93c5fd',

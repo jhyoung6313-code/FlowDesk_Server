@@ -57,7 +57,6 @@ const PrivateRoute = ({ children, adminOnly = false }) => {
 export default function App() {
   const { init, loading, user, logout } = useAuthStore();
   const { locked, lock, unlock } = useLockStore();
-  const isDark = useThemeStore((s) => s.isDark);
   const currentTheme = useThemeStore((s) => s.theme);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
@@ -103,7 +102,7 @@ export default function App() {
   return (
     <ConfigProvider
       theme={{
-        algorithm: isDark ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
+        algorithm: antTheme.defaultAlgorithm,
         token: {
           colorPrimary:       c.accentMid,
           colorLink:          c.accentMid,
@@ -112,8 +111,8 @@ export default function App() {
           borderRadiusSM:     6,
           fontFamily:         "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif",
           fontSize:           13,
-          colorBgBase:        isDark ? '#0f0e1a' : '#ffffff',
-          colorTextBase:      isDark ? 'rgba(255,255,255,0.88)' : '#0f172a',
+          colorBgBase:        '#ffffff',
+          colorTextBase:      '#0f172a',
           controlHeight:      32,
           motion:             false,
         },

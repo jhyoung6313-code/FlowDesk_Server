@@ -1,14 +1,5 @@
-/* ── CSS 변수 기본값 - themeStore가 런타임에 덮어씀 ── */
+/* ── CSS 변수 기본값 (Corporate Blue 테마) - themeStore가 런타임에 덮어씀 ── */
 :root {
-  /* 헤더 / 팝오버 구조 변수 (다크모드 전환용) */
-  --fd-header-bg:       #ffffff;
-  --fd-header-border:   #f1f5f9;
-  --fd-popover-bg:      #ffffff;
-  --fd-popover-border:  #e2e8f0;
-  /* 아이콘 버튼 */
-  --fd-icon-btn-bg:     #f8fafc;
-  --fd-icon-btn-border: #e2e8f0;
-  --fd-icon-btn-color:  #6b7280;
   --fd-accent:           #1e3a8a;
   --fd-accent-light:     #93c5fd;
   --fd-accent-mid:       #1d4ed8;
@@ -49,51 +40,14 @@
   --fd-font-lg:        20px;
 }
 
-/* ── 다크모드 CSS 변수 전체 오버라이드 ── */
+/* ── 다크모드 텍스트/차트 변수 ── */
 [data-dark="true"] {
-  /* 텍스트 / 차트 */
   --fd-text-primary:   rgba(255,255,255,0.88);
   --fd-text-secondary: rgba(255,255,255,0.65);
   --fd-text-muted:     rgba(255,255,255,0.45);
   --fd-text-hint:      rgba(255,255,255,0.30);
   --fd-chart-label:    rgba(255,255,255,0.60);
   --fd-chart-grid:     rgba(255,255,255,0.08);
-
-  /* 사이드바 컨텍스트 패널 */
-  --fd-sidebar-bg:        #1c1c28;
-  --fd-sidebar-text:      rgba(255,255,255,0.65);
-  --fd-sidebar-hover-bg:  rgba(255,255,255,0.06);
-  --fd-sidebar-hover-txt: rgba(255,255,255,0.92);
-  --fd-sidebar-sel-bg:    rgba(255,255,255,0.10);
-  --fd-sidebar-sel-txt:   #ffffff;
-  --fd-sidebar-group:     rgba(255,255,255,0.40);
-  --fd-sidebar-divider:   rgba(255,255,255,0.06);
-  --fd-sidebar-trigger:   rgba(255,255,255,0.10);
-  --fd-sidebar-trig-txt:  rgba(255,255,255,0.45);
-
-  /* 레이아웃 */
-  --fd-content-bg-light: #0f0e1a;
-  --fd-header-bg:        #13111f;
-  --fd-header-border:    rgba(255,255,255,0.05);
-
-  /* 팝오버 / 드롭다운 */
-  --fd-popover-bg:      #1e1d2e;
-  --fd-popover-border:  rgba(255,255,255,0.08);
-
-  /* 아이콘 버튼 */
-  --fd-icon-btn-bg:     rgba(255,255,255,0.06);
-  --fd-icon-btn-border: rgba(255,255,255,0.08);
-  --fd-icon-btn-color:  #9ca3af;
-
-  /* 섹션 카드 틴트 — 모든 테마 동일하게 subtle 오버레이 */
-  --fd-tint-view:   rgba(59,130,246,0.13);
-  --fd-tint-collab: rgba(16,185,129,0.13);
-  --fd-tint-admin:  rgba(124,58,237,0.13);
-
-  /* 섹션 헤더 / 아이콘 색상 — 다크 배경에서 밝게 */
-  --fd-group-view:   #60a5fa;
-  --fd-group-collab: #34d399;
-  --fd-group-admin:  #c084fc;
 }
 
 * {

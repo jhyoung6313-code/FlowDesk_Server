@@ -46,9 +46,39 @@ const RAIL_WIDTH = 60;
 const CTX_WIDTH = 212;
 const RAIL_BG = '#101322';
 
-// 섹션별 CSS 변수명 매핑 (themes.js의 sections 토큰과 연동)
-const SECTION_TINT  = { view: 'var(--fd-tint-view)',   collab: 'var(--fd-tint-collab)',   admin: 'var(--fd-tint-admin)'   };
-const SECTION_COLOR = { view: 'var(--fd-group-view)', collab: 'var(--fd-group-collab)', admin: 'var(--fd-group-admin)' };
+// 테마별 섹션 카드 색상 (view/collab/admin 각각 테마와 어울리는 색)
+const THEME_GROUPS = {
+  slate: {
+    view:   { color: '#2563eb', tint: '#e8f2fe' },
+    collab: { color: '#10b981', tint: '#e4fdf3' },
+    admin:  { color: '#7c3aed', tint: '#f2efff' },
+  },
+  ocean: {
+    view:   { color: '#0891b2', tint: '#e2fbff' },
+    collab: { color: '#059669', tint: '#e4fdf3' },
+    admin:  { color: '#7c3aed', tint: '#f2efff' },
+  },
+  aurora: {
+    view:   { color: '#4f46e5', tint: '#ecedff' },
+    collab: { color: '#059669', tint: '#e4fdf3' },
+    admin:  { color: '#9333ea', tint: '#f5eeff' },
+  },
+  forest: {
+    view:   { color: '#2563eb', tint: '#e8f2fe' },
+    collab: { color: '#16a34a', tint: '#d8fce8' },
+    admin:  { color: '#7c3aed', tint: '#f2efff' },
+  },
+  sunset: {
+    view:   { color: '#2563eb', tint: '#e8f2fe' },
+    collab: { color: '#059669', tint: '#e4fdf3' },
+    admin:  { color: '#c026d3', tint: '#fceeff' },
+  },
+  rose: {
+    view:   { color: '#2563eb', tint: '#e8f2fe' },
+    collab: { color: '#059669', tint: '#e4fdf3' },
+    admin:  { color: '#9333ea', tint: '#f5eeff' },
+  },
+};
 
 // submenu 제목 클릭 시 펼침과 함께 이동할 대표 페이지
 const SUBMENU_LANDING = {
@@ -124,15 +154,21 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   const playbookUnread = useUnreadStore((s) => s.playbookUnread);
   const isAdmin = user?.role === 'admin';
   const { theme } = useThemeStore();
+  const c = theme.colors;
 
-  // 컨텍스트 패널 팔레트 — 모두 CSS 변수 참조 (다크모드는 index.css가 자동 오버라이드)
+  // 현재 테마에 맞는 섹션 그룹 색상 (없으면 slate 기본값)
+  const GROUPS = THEME_GROUPS[theme.key] ?? THEME_GROUPS.slate;
+
+  // 테마 sidebar 토큰으로 컨텍스트 패널 팔레트 구성 (레일은 항상 다크 고정)
   const COLORS = {
-    ctxBg:        'var(--fd-sidebar-bg)',
-    border:       'var(--fd-sidebar-divider)',
-    itemText:     'var(--fd-sidebar-text)',
-    itemHoverBg:  'var(--fd-sidebar-hover-bg)',
-    itemHoverText:'var(--fd-sidebar-hover-txt)',
-    toggleText:   'var(--fd-sidebar-group)',
+    ctxBg:        c.sidebarBg,
+    border:       c.sidebarDivider,
+    headText:     c.sidebarText,
+    itemText:     c.sidebarText,
+    itemHoverBg:  c.sidebarHoverBg,
+    itemHoverText:c.sidebarHoverText,
+    toggleText:   c.sidebarGroup,
+    toggleHoverBg:c.sidebarHoverBg,
   };
 
   // WBS 프로젝트 목록 상태
@@ -282,7 +318,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   };
 
   // 협업 그룹 강조색 (WBS 하위 아이콘 색)
-  const collabClr = SECTION_COLOR.collab;
+  const collabClr = GROUPS.collab.color;
 
   // WBS SubMenu children (프로젝트 목록)
   const wbsChildren = [
@@ -351,10 +387,10 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
 
   // ── 섹션별 메뉴 항목 (아이콘에 그룹색)
   const viewItems = [
-    { key: '/', icon: <DashboardOutlined style={{ color: SECTION_COLOR.view }} />, label: '대시보드' },
-    { key: '/tasks', icon: <CheckSquareOutlined style={{ color: SECTION_COLOR.view }} />, label: '업무 관리' },
-    { key: '/gantt', icon: <BarChartOutlined style={{ color: SECTION_COLOR.view }} />, label: '간트 차트' },
-    { key: '/calendar', icon: <CalendarOutlined style={{ color: SECTION_COLOR.view }} />, label: '캘린더' },
+    { key: '/', icon: <DashboardOutlined style={{ color: GROUPS.view.color }} />, label: '대시보드' },
+    { key: '/tasks', icon: <CheckSquareOutlined style={{ color: GROUPS.view.color }} />, label: '업무 관리' },
+    { key: '/gantt', icon: <BarChartOutlined style={{ color: GROUPS.view.color }} />, label: '간트 차트' },
+    { key: '/calendar', icon: <CalendarOutlined style={{ color: GROUPS.view.color }} />, label: '캘린더' },
   ];
 
   const collabItems = [
@@ -393,7 +429,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   ];
 
   const adminItems = [
-    { key: '/admin/users', icon: <UserOutlined style={{ color: SECTION_COLOR.admin }} />, label: '사용자 관리' },
+    { key: '/admin/users', icon: <UserOutlined style={{ color: GROUPS.admin.color }} />, label: '사용자 관리' },
   ];
 
   const handleMenuClick = ({ key }) => {
@@ -412,13 +448,14 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
 
   // ── 섹션 카드 렌더 헬퍼
   const Section = ({ grp, title, menuItems }) => {
+    const g = GROUPS[grp];
     return (
       <div
         style={{
           margin: '8px 10px',
           borderRadius: 14,
           padding: '2px 2px 6px',
-          background: SECTION_TINT[grp],
+          background: g.tint,
         }}
       >
         <div
@@ -428,7 +465,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
             fontWeight: 800,
             textTransform: 'uppercase',
             letterSpacing: '1px',
-            color: SECTION_COLOR[grp],
+            color: g.color,
           }}
         >
           {title}
@@ -437,18 +474,18 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
           theme={{
             components: {
               Menu: {
-                itemBg:            'transparent',
-                subMenuItemBg:     'transparent',
-                itemColor:         COLORS.itemText,
-                itemHoverBg:       COLORS.itemHoverBg,
-                itemHoverColor:    COLORS.itemHoverText,
-                itemSelectedBg:    SECTION_TINT[grp],
-                itemSelectedColor: SECTION_COLOR[grp],
-                fontSize:          15,
-                iconSize:          17,
-                itemMarginInline:  6,
-                itemBorderRadius:  9,
-                itemHeight:        42,
+                itemBg:           'transparent',
+                subMenuItemBg:    'transparent',
+                itemColor:        COLORS.itemText,
+                itemHoverBg:      COLORS.itemHoverBg,
+                itemHoverColor:   COLORS.itemHoverText,
+                itemSelectedBg:   `${g.color}1f`,
+                itemSelectedColor: g.color,
+                fontSize:         15,
+                iconSize:         17,
+                itemMarginInline: 6,
+                itemBorderRadius: 9,
+                itemHeight:       42,
               },
             },
           }}
@@ -507,11 +544,11 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
 
   // ── 1차 아이콘 레일 항목 (그룹색)
   const railItems = [
-    { key: '/', icon: <DashboardOutlined />, title: '대시보드', color: SECTION_COLOR.view },
-    { key: '/tasks', icon: <CheckSquareOutlined />, title: '업무 관리', color: SECTION_COLOR.view },
-    { key: '/chat', icon: <MessageOutlined />, title: '채팅', color: SECTION_COLOR.collab, dot: totalUnread > 0 },
-    { key: '/boards', icon: <AppstoreOutlined />, title: '보드', color: SECTION_COLOR.collab, dot: boardUnread > 0 },
-    { key: '/wbs', icon: <ProjectOutlined />, title: '프로젝트', color: SECTION_COLOR.collab },
+    { key: '/', icon: <DashboardOutlined />, title: '대시보드', color: GROUPS.view.color },
+    { key: '/tasks', icon: <CheckSquareOutlined />, title: '업무 관리', color: GROUPS.view.color },
+    { key: '/chat', icon: <MessageOutlined />, title: '채팅', color: GROUPS.collab.color, dot: totalUnread > 0 },
+    { key: '/boards', icon: <AppstoreOutlined />, title: '보드', color: GROUPS.collab.color, dot: boardUnread > 0 },
+    { key: '/wbs', icon: <ProjectOutlined />, title: '프로젝트', color: GROUPS.collab.color },
   ];
   const railActive = (key) => (key === '/' ? pathname === '/' : pathname.startsWith(key));
 
@@ -584,7 +621,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
           <div style={{ flex: 1 }} />
 
           {isAdmin && (
-            <RailIcon itemKey="/admin/users" icon={<UserOutlined />} title="사용자 관리" color={SECTION_COLOR.admin} />
+            <RailIcon itemKey="/admin/users" icon={<UserOutlined />} title="사용자 관리" color={GROUPS.admin.color} />
           )}
         </div>
 

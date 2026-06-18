@@ -1,13 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Space, Typography, Badge, Tooltip, Popover, Switch, List, Button, Empty, Tag } from 'antd';
+import { Layout, Space, Typography, Badge, Tooltip, Popover, List, Button, Empty, Tag } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   BellOutlined,
   BgColorsOutlined,
   CheckOutlined,
-  MoonOutlined,
-  SunOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import useNotificationStore from '../../store/notificationStore';
@@ -46,34 +44,9 @@ function ChatBubbleIcon({ size = 17, color = '#22c55e' }) {
 }
 
 /* ── 테마 피커 팝오버 내용 ── */
-function ThemePicker({ themeKey, setTheme, isDark, toggleDark, onClose }) {
+function ThemePicker({ themeKey, setTheme, onClose }) {
   return (
     <div style={{ width: 280, padding: '4px 0' }}>
-      {/* 다크모드 토글 */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 16,
-        padding: '8px 10px',
-        borderRadius: 10,
-        background: 'var(--fd-icon-btn-bg)',
-        border: '1px solid var(--fd-icon-btn-border)',
-      }}>
-        <Space size={6}>
-          {isDark ? <MoonOutlined style={{ color: '#818cf8' }} /> : <SunOutlined style={{ color: '#f59e0b' }} />}
-          <Typography.Text style={{ fontSize: 13 }}>
-            {isDark ? '다크 모드' : '라이트 모드'}
-          </Typography.Text>
-        </Space>
-        <Switch
-          size="small"
-          checked={isDark}
-          onChange={toggleDark}
-          checkedChildren={<MoonOutlined />}
-          unCheckedChildren={<SunOutlined />}
-        />
-      </div>
       <div style={{
         fontSize: 12,
         fontWeight: 700,
@@ -279,7 +252,7 @@ function NotificationPopup({ onClose }) {
 export default function AppHeader({ collapsed, onCollapse }) {
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const totalUnread = useChatStore((s) => s.totalUnread);
-  const { themeKey, theme, setTheme, isDark, toggleDark } = useThemeStore();
+  const { themeKey, theme, setTheme } = useThemeStore();
   const [themeOpen, setThemeOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
 
@@ -295,22 +268,22 @@ export default function AppHeader({ collapsed, onCollapse }) {
     height: 36,
     borderRadius: 10,
     cursor: 'pointer',
-    background: 'var(--fd-icon-btn-bg)',
-    border: '1px solid var(--fd-icon-btn-border)',
+    background: '#f8fafc',
+    border: '1px solid #e2e8f0',
     transition: 'background 0.2s',
-    color: 'var(--fd-icon-btn-color)',
+    color: '#6b7280',
     fontSize: 16,
   };
 
   return (
     <Header
       style={{
-        background: 'var(--fd-header-bg)',
+        background: '#ffffff',
         padding: '0 24px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        borderBottom: '1px solid var(--fd-header-border)',
+        borderBottom: '1px solid #f1f5f9',
         height: 48,
         position: 'sticky',
         top: 0,
@@ -359,8 +332,8 @@ export default function AppHeader({ collapsed, onCollapse }) {
           arrow={false}
           overlayStyle={{ zIndex: 1050 }}
           styles={{ body: {
-            background: 'var(--fd-popover-bg)',
-            border: '1px solid var(--fd-popover-border)',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
             borderRadius: 16,
             boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
             padding: '16px',
@@ -369,8 +342,6 @@ export default function AppHeader({ collapsed, onCollapse }) {
             <ThemePicker
               themeKey={themeKey}
               setTheme={setTheme}
-              isDark={isDark}
-              toggleDark={toggleDark}
               onClose={() => setThemeOpen(false)}
             />
           }
@@ -391,8 +362,8 @@ export default function AppHeader({ collapsed, onCollapse }) {
           arrow={false}
           overlayStyle={{ zIndex: 1050 }}
           styles={{ body: {
-            background: 'var(--fd-popover-bg)',
-            border: '1px solid var(--fd-popover-border)',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
             borderRadius: 16,
             boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
             padding: '16px',
