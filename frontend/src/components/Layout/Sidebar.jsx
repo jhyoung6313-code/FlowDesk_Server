@@ -46,11 +46,38 @@ const RAIL_WIDTH = 60;
 const CTX_WIDTH = 212;
 const RAIL_BG = '#101322';
 
-// 그룹(카테고리) 색상 — 테마와 무관하게 고정. 카드 틴트는 연하게.
-const GROUPS = {
-  view:   { color: '#3b82f6', tintLight: '#f4f8ff', tintDark: 'rgba(59,130,246,0.10)' },
-  collab: { color: '#10b981', tintLight: '#f2fbf7', tintDark: 'rgba(16,185,129,0.10)' },
-  admin:  { color: '#a855f7', tintLight: '#faf6ff', tintDark: 'rgba(168,85,247,0.10)' },
+// 테마별 섹션 카드 색상 (view/collab/admin 각각 테마와 어울리는 색)
+const THEME_GROUPS = {
+  slate: {
+    view:   { color: '#2563eb', tint: '#e8f2fe' },
+    collab: { color: '#10b981', tint: '#e4fdf3' },
+    admin:  { color: '#7c3aed', tint: '#f2efff' },
+  },
+  ocean: {
+    view:   { color: '#0891b2', tint: '#e2fbff' },
+    collab: { color: '#059669', tint: '#e4fdf3' },
+    admin:  { color: '#7c3aed', tint: '#f2efff' },
+  },
+  aurora: {
+    view:   { color: '#4f46e5', tint: '#ecedff' },
+    collab: { color: '#059669', tint: '#e4fdf3' },
+    admin:  { color: '#9333ea', tint: '#f5eeff' },
+  },
+  forest: {
+    view:   { color: '#2563eb', tint: '#e8f2fe' },
+    collab: { color: '#16a34a', tint: '#d8fce8' },
+    admin:  { color: '#7c3aed', tint: '#f2efff' },
+  },
+  sunset: {
+    view:   { color: '#2563eb', tint: '#e8f2fe' },
+    collab: { color: '#059669', tint: '#e4fdf3' },
+    admin:  { color: '#c026d3', tint: '#fceeff' },
+  },
+  rose: {
+    view:   { color: '#2563eb', tint: '#e8f2fe' },
+    collab: { color: '#059669', tint: '#e4fdf3' },
+    admin:  { color: '#9333ea', tint: '#f5eeff' },
+  },
 };
 
 // submenu 제목 클릭 시 펼침과 함께 이동할 대표 페이지
@@ -126,30 +153,23 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   const boardUnread = useUnreadStore((s) => s.boardUnread);
   const playbookUnread = useUnreadStore((s) => s.playbookUnread);
   const isAdmin = user?.role === 'admin';
-  const { isDark } = useThemeStore();
+  const { theme } = useThemeStore();
+  const c = theme.colors;
 
-  // 테마/다크모드 연동 팔레트 (레일은 항상 다크 고정)
-  const COLORS = isDark
-    ? {
-        ctxBg:        '#1a1a1f',
-        border:       'rgba(255,255,255,0.06)',
-        headText:     '#ffffff',
-        itemText:     'rgba(255,255,255,0.6)',
-        itemHoverBg:  'rgba(255,255,255,0.06)',
-        itemHoverText:'rgba(255,255,255,0.9)',
-        toggleText:   'rgba(255,255,255,0.4)',
-        toggleHoverBg:'rgba(255,255,255,0.08)',
-      }
-    : {
-        ctxBg:        '#ffffff',
-        border:       '#eceef1',
-        headText:     '#1a1d23',
-        itemText:     '#5b626e',
-        itemHoverBg:  'rgba(0,0,0,0.04)',
-        itemHoverText:'#1a1d23',
-        toggleText:   '#9499a3',
-        toggleHoverBg:'#f2f3f5',
-      };
+  // 현재 테마에 맞는 섹션 그룹 색상 (없으면 slate 기본값)
+  const GROUPS = THEME_GROUPS[theme.key] ?? THEME_GROUPS.slate;
+
+  // 테마 sidebar 토큰으로 컨텍스트 패널 팔레트 구성 (레일은 항상 다크 고정)
+  const COLORS = {
+    ctxBg:        c.sidebarBg,
+    border:       c.sidebarDivider,
+    headText:     c.sidebarText,
+    itemText:     c.sidebarText,
+    itemHoverBg:  c.sidebarHoverBg,
+    itemHoverText:c.sidebarHoverText,
+    toggleText:   c.sidebarGroup,
+    toggleHoverBg:c.sidebarHoverBg,
+  };
 
   // WBS 프로젝트 목록 상태
   const [wbsProjects, setWbsProjects] = useState([]);
@@ -435,7 +455,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
           margin: '8px 10px',
           borderRadius: 14,
           padding: '2px 2px 6px',
-          background: isDark ? g.tintDark : g.tintLight,
+          background: g.tint,
         }}
       >
         <div
@@ -459,8 +479,8 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
                 itemColor:        COLORS.itemText,
                 itemHoverBg:      COLORS.itemHoverBg,
                 itemHoverColor:   COLORS.itemHoverText,
-                itemSelectedBg:   isDark ? `${g.color}26` : `${g.color}1f`,
-                itemSelectedColor:g.color,
+                itemSelectedBg:   `${g.color}1f`,
+                itemSelectedColor: g.color,
                 fontSize:         15,
                 iconSize:         17,
                 itemMarginInline: 6,

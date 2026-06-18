@@ -1,20 +1,20 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Layout, Space, Typography, Badge, Tooltip, Popover, Switch } from 'antd';
+import React, { useState, useEffect } from 'react';
+import { Layout, Space, Typography, Badge, Tooltip, Popover, List, Button, Empty, Tag } from 'antd';
 import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   BellOutlined,
   BgColorsOutlined,
   CheckOutlined,
-  MoonOutlined,
-  SunOutlined,
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import useNotificationStore from '../../store/notificationStore';
 import useThemeStore from '../../store/themeStore';
 import useChatStore from '../../store/chatStore';
 import { THEME_LIST } from '../../utils/themes';
 import { openChatPopup as openChatPopupWindow } from '../../utils/chatPopup';
+import { NOTIFICATION_LABELS } from '../../utils/colors';
+import { calcDday, getDdayColor } from '../../utils/dday';
 
 const { Header } = Layout;
 
@@ -44,38 +44,13 @@ function ChatBubbleIcon({ size = 17, color = '#22c55e' }) {
 }
 
 /* ── 테마 피커 팝오버 내용 ── */
-function ThemePicker({ themeKey, setTheme, isDark, toggleDark, onClose }) {
+function ThemePicker({ themeKey, setTheme, onClose }) {
   return (
     <div style={{ width: 280, padding: '4px 0' }}>
-      {/* 다크모드 토글 */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: 16,
-        padding: '8px 10px',
-        borderRadius: 10,
-        background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc',
-        border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e2e8f0',
-      }}>
-        <Space size={6}>
-          {isDark ? <MoonOutlined style={{ color: '#818cf8' }} /> : <SunOutlined style={{ color: '#f59e0b' }} />}
-          <Typography.Text style={{ fontSize: 13, color: isDark ? 'rgba(255,255,255,0.8)' : '#374151' }}>
-            {isDark ? '다크 모드' : '라이트 모드'}
-          </Typography.Text>
-        </Space>
-        <Switch
-          size="small"
-          checked={isDark}
-          onChange={toggleDark}
-          checkedChildren={<MoonOutlined />}
-          unCheckedChildren={<SunOutlined />}
-        />
-      </div>
       <div style={{
         fontSize: 12,
         fontWeight: 700,
-        color: isDark ? 'rgba(255,255,255,0.4)' : '#94a3b8',
+        color: '#94a3b8',
         letterSpacing: '0.6px',
         textTransform: 'uppercase',
         marginBottom: 12,
@@ -100,10 +75,10 @@ function ThemePicker({ themeKey, setTheme, isDark, toggleDark, onClose }) {
                 cursor: 'pointer',
                 border: active
                   ? `2px solid ${t.colors.accentMid}`
-                  : `2px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e2e8f0'}`,
+                  : '2px solid #e2e8f0',
                 background: active
-                  ? (isDark ? `rgba(${t.colors.accentRgb},0.12)` : `rgba(${t.colors.accentRgb},0.06)`)
-                  : (isDark ? 'rgba(255,255,255,0.03)' : '#fafafa'),
+                  ? `rgba(${t.colors.accentRgb},0.06)`
+                  : '#fafafa',
                 transition: 'all 0.18s',
                 position: 'relative',
                 display: 'flex',
@@ -113,13 +88,13 @@ function ThemePicker({ themeKey, setTheme, isDark, toggleDark, onClose }) {
               onMouseEnter={(e) => {
                 if (!active) {
                   e.currentTarget.style.border = `2px solid ${t.colors.accentMid}44`;
-                  e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9';
+                  e.currentTarget.style.background = '#f1f5f9';
                 }
               }}
               onMouseLeave={(e) => {
                 if (!active) {
-                  e.currentTarget.style.border = `2px solid ${isDark ? 'rgba(255,255,255,0.06)' : '#e2e8f0'}`;
-                  e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.03)' : '#fafafa';
+                  e.currentTarget.style.border = '2px solid #e2e8f0';
+                  e.currentTarget.style.background = '#fafafa';
                 }
               }}
             >
@@ -131,7 +106,7 @@ function ThemePicker({ themeKey, setTheme, isDark, toggleDark, onClose }) {
                     height: i === 0 ? 18 : 14,
                     borderRadius: '50%',
                     background: c,
-                    boxShadow: `0 0 0 1.5px rgba(0,0,0,0.1)`,
+                    boxShadow: '0 0 0 1.5px rgba(0,0,0,0.1)',
                   }} />
                 ))}
                 {active && (
@@ -148,14 +123,14 @@ function ThemePicker({ themeKey, setTheme, isDark, toggleDark, onClose }) {
                 <div style={{
                   fontSize: 13,
                   fontWeight: 600,
-                  color: isDark ? 'rgba(255,255,255,0.85)' : '#1e293b',
+                  color: '#1e293b',
                   lineHeight: 1.3,
                 }}>
                   {t.name}
                 </div>
                 <div style={{
                   fontSize: 11,
-                  color: isDark ? 'rgba(255,255,255,0.35)' : '#94a3b8',
+                  color: '#94a3b8',
                   marginTop: 1,
                 }}>
                   {t.desc}
@@ -169,21 +144,121 @@ function ThemePicker({ themeKey, setTheme, isDark, toggleDark, onClose }) {
   );
 }
 
+const NOTIFICATION_COLORS = {
+  due_soon: 'warning',
+  due_today: 'error',
+  overdue: 'error',
+  sla_warning: 'warning',
+  sla_breach: 'error',
+  step_assigned: 'processing',
+  step_reminder: 'purple',
+  security_alert: 'error',
+};
+
+function NotificationPopup({ onClose }) {
+  const { notifications, unreadCount, fetch, markRead, markAllRead } = useNotificationStore();
+
+  useEffect(() => { fetch(); }, []);
+
+  return (
+    <div style={{ width: 360 }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        marginBottom: 12,
+        paddingBottom: 10,
+        borderBottom: '1px solid #f0f0f0',
+      }}>
+        <Space align="center">
+          <Typography.Text strong style={{ fontSize: 14 }}>알림</Typography.Text>
+          {unreadCount > 0 && (
+            <Badge count={unreadCount} style={{ backgroundColor: '#ff4d4f' }} />
+          )}
+        </Space>
+        {unreadCount > 0 && (
+          <Button
+            icon={<CheckOutlined />}
+            size="small"
+            type="text"
+            onClick={() => { markAllRead(); onClose(); }}
+          >
+            전체 읽음
+          </Button>
+        )}
+      </div>
+
+      {notifications.length === 0 ? (
+        <Empty
+          image={<BellOutlined style={{ fontSize: 36, color: '#ccc' }} />}
+          description="새 알림이 없습니다."
+          style={{ padding: '24px 0' }}
+        />
+      ) : (
+        <div style={{ maxHeight: 420, overflowY: 'auto', marginRight: -4, paddingRight: 4 }}>
+          <List
+            dataSource={notifications}
+            renderItem={(item) => (
+              <List.Item
+                style={{
+                  background: '#e6f4ff',
+                  borderRadius: 8,
+                  marginBottom: 6,
+                  padding: '10px 12px',
+                  cursor: 'pointer',
+                  border: '1px solid #91caff',
+                }}
+                onClick={() => markRead(item.id)}
+              >
+                <List.Item.Meta
+                  avatar={
+                    <BellOutlined style={{
+                      fontSize: 18,
+                      color: item.type === 'overdue' || item.type === 'due_today' ? '#ff4d4f' : '#1677ff',
+                      marginTop: 2,
+                    }} />
+                  }
+                  title={
+                    <Space size={4} wrap>
+                      <Typography.Text strong style={{ fontSize: 12 }}>
+                        {item.task?.title || item.message || NOTIFICATION_LABELS[item.type] || item.type}
+                      </Typography.Text>
+                      <Tag color={NOTIFICATION_COLORS[item.type]} style={{ fontSize: 10, padding: '0 4px', lineHeight: '16px' }}>
+                        {NOTIFICATION_LABELS[item.type]}
+                      </Tag>
+                      {item.task?.dueDate && (
+                        <span style={{ fontSize: 11, fontWeight: 700, color: getDdayColor(item.task.dueDate) }}>
+                          {calcDday(item.task.dueDate)}
+                        </span>
+                      )}
+                    </Space>
+                  }
+                  description={
+                    <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                      {item.task?.dueDate ? `마감: ${dayjs(item.task.dueDate).format('MM/DD')} · ` : ''}
+                      {dayjs(item.createdAt).format('MM/DD HH:mm')}
+                    </Typography.Text>
+                  }
+                />
+              </List.Item>
+            )}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AppHeader({ collapsed, onCollapse }) {
-  const navigate = useNavigate();
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const totalUnread = useChatStore((s) => s.totalUnread);
-  const { isDark, themeKey, theme, setTheme, toggleDark } = useThemeStore();
+  const { themeKey, theme, setTheme } = useThemeStore();
   const [themeOpen, setThemeOpen] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
 
   const openChatPopup = () => openChatPopupWindow();
 
   const c = theme.colors;
-
-  const headerBg = isDark ? c.headerBgDark : c.headerBgLight;
-  const headerBorder = isDark
-    ? '1px solid rgba(255,255,255,0.05)'
-    : '1px solid rgba(0,0,0,0.06)';
 
   const iconBtnStyle = {
     display: 'flex',
@@ -193,27 +268,26 @@ export default function AppHeader({ collapsed, onCollapse }) {
     height: 36,
     borderRadius: 10,
     cursor: 'pointer',
-    background: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc',
-    border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid #e2e8f0',
+    background: '#f8fafc',
+    border: '1px solid #e2e8f0',
     transition: 'background 0.2s',
-    color: isDark ? '#9ca3af' : '#6b7280',
+    color: '#6b7280',
     fontSize: 16,
   };
 
   return (
     <Header
       style={{
-        background: isDark ? headerBg : '#ffffff',
+        background: '#ffffff',
         padding: '0 24px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        borderBottom: isDark ? headerBorder : '1px solid #f1f5f9',
+        borderBottom: '1px solid #f1f5f9',
         height: 48,
         position: 'sticky',
         top: 0,
         zIndex: 100,
-        boxShadow: isDark ? '0 1px 12px rgba(0,0,0,0.3)' : 'none',
       }}
     >
       <Space size={12} align="center">
@@ -222,7 +296,7 @@ export default function AppHeader({ collapsed, onCollapse }) {
           style={{
             cursor: 'pointer',
             fontSize: 16,
-            color: isDark ? '#6b7280' : '#9ca3af',
+            color: '#9ca3af',
             display: 'flex',
             alignItems: 'center',
             padding: '4px',
@@ -230,11 +304,11 @@ export default function AppHeader({ collapsed, onCollapse }) {
             transition: 'color 0.2s, background 0.2s',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.color = isDark ? c.accentLight : c.accentDark;
-            e.currentTarget.style.background = isDark ? 'rgba(255,255,255,0.06)' : c.inputHoverBg;
+            e.currentTarget.style.color = c.accentDark;
+            e.currentTarget.style.background = c.inputHoverBg;
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.color = isDark ? '#6b7280' : '#9ca3af';
+            e.currentTarget.style.color = '#9ca3af';
             e.currentTarget.style.background = 'transparent';
           }}
         >
@@ -257,19 +331,17 @@ export default function AppHeader({ collapsed, onCollapse }) {
           placement="bottomRight"
           arrow={false}
           overlayStyle={{ zIndex: 1050 }}
-          overlayInnerStyle={{
-            background: isDark ? '#1e1e2e' : '#ffffff',
-            border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e2e8f0',
+          styles={{ body: {
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
             borderRadius: 16,
             boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
             padding: '16px',
-          }}
+          }}}
           content={
             <ThemePicker
               themeKey={themeKey}
               setTheme={setTheme}
-              isDark={isDark}
-              toggleDark={toggleDark}
               onClose={() => setThemeOpen(false)}
             />
           }
@@ -281,19 +353,35 @@ export default function AppHeader({ collapsed, onCollapse }) {
           </Tooltip>
         </Popover>
 
-        {/* 알림 */}
-        <Tooltip title="알림">
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <Badge count={unreadCount} size="small" offset={[-2, 2]}>
-              <div
-                onClick={() => navigate('/notifications')}
-                style={iconBtnStyle}
-              >
-                <BellOutlined />
-              </div>
-            </Badge>
-          </div>
-        </Tooltip>
+        {/* 알림 팝업 */}
+        <Popover
+          open={notifOpen}
+          onOpenChange={setNotifOpen}
+          trigger="click"
+          placement="bottomRight"
+          arrow={false}
+          overlayStyle={{ zIndex: 1050 }}
+          styles={{ body: {
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            borderRadius: 16,
+            boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
+            padding: '16px',
+          }}}
+          content={
+            <NotificationPopup onClose={() => setNotifOpen(false)} />
+          }
+        >
+          <Tooltip title="알림" placement="bottom">
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <Badge count={unreadCount} size="small" offset={[-2, 2]}>
+                <div style={iconBtnStyle}>
+                  <BellOutlined />
+                </div>
+              </Badge>
+            </div>
+          </Tooltip>
+        </Popover>
 
         {/* 채팅 */}
         <Tooltip title="채팅" placement="bottom">
@@ -303,15 +391,15 @@ export default function AppHeader({ collapsed, onCollapse }) {
                 onClick={openChatPopup}
                 style={{
                   ...iconBtnStyle,
-                  background: isDark ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.1)',
-                  border: isDark ? '1px solid rgba(34,197,94,0.3)' : '1px solid rgba(34,197,94,0.25)',
+                  background: 'rgba(34,197,94,0.1)',
+                  border: '1px solid rgba(34,197,94,0.25)',
                   color: '#22c55e',
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = isDark ? 'rgba(34,197,94,0.25)' : 'rgba(34,197,94,0.18)';
+                  e.currentTarget.style.background = 'rgba(34,197,94,0.18)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = isDark ? 'rgba(34,197,94,0.15)' : 'rgba(34,197,94,0.1)';
+                  e.currentTarget.style.background = 'rgba(34,197,94,0.1)';
                 }}
               >
                 <ChatBubbleIcon size={17} color="#22c55e" />

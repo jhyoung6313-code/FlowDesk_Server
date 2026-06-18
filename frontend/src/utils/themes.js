@@ -75,6 +75,14 @@ export const CSS_VAR_MAP = {
     scrollThumb: '--fd-scroll-thumb',
     scrollHover: '--fd-scroll-hover',
   },
+  sections: {
+    viewTint:    '--fd-tint-view',
+    viewColor:   '--fd-group-view',
+    collabTint:  '--fd-tint-collab',
+    collabColor: '--fd-group-collab',
+    adminTint:   '--fd-tint-admin',
+    adminColor:  '--fd-group-admin',
+  },
 };
 
 /* tokens → 컴포넌트에서 사용하는 flat colors 객체 */
@@ -143,6 +151,11 @@ export const THEMES = {
     desc:     '인디고 · 바이올렛',
     swatches: ['#4f46e5', '#7c3aed', '#a78bfa'],
     tokens: {
+      sections: {
+        viewTint: '#ecedff', viewColor: '#4f46e5',
+        collabTint: '#e4fdf3', collabColor: '#059669',
+        adminTint: '#f5eeff', adminColor: '#9333ea',
+      },
       accent: {
         base:  '#6d28d9',
         light: '#a78bfa',
@@ -215,6 +228,11 @@ export const THEMES = {
     desc:     '티얼 · 사이언',
     swatches: ['#0891b2', '#06b6d4', '#67e8f9'],
     tokens: {
+      sections: {
+        viewTint: '#e2fbff', viewColor: '#0891b2',
+        collabTint: '#e4fdf3', collabColor: '#059669',
+        adminTint: '#f2efff', adminColor: '#7c3aed',
+      },
       accent: {
         base:  '#0891b2',
         light: '#67e8f9',
@@ -287,6 +305,11 @@ export const THEMES = {
     desc:     '에메랄드 · 그린',
     swatches: ['#166534', '#16a34a', '#4ade80'],
     tokens: {
+      sections: {
+        viewTint: '#e8f2fe', viewColor: '#2563eb',
+        collabTint: '#d8fce8', collabColor: '#16a34a',
+        adminTint: '#f2efff', adminColor: '#7c3aed',
+      },
       accent: {
         base:  '#16a34a',
         light: '#4ade80',
@@ -359,6 +382,11 @@ export const THEMES = {
     desc:     '오렌지 · 앰버',
     swatches: ['#ea580c', '#f97316', '#fdba74'],
     tokens: {
+      sections: {
+        viewTint: '#e8f2fe', viewColor: '#2563eb',
+        collabTint: '#e4fdf3', collabColor: '#059669',
+        adminTint: '#fceeff', adminColor: '#c026d3',
+      },
       accent: {
         base:  '#ea580c',
         light: '#fdba74',
@@ -431,6 +459,11 @@ export const THEMES = {
     desc:     '로즈 · 핑크',
     swatches: ['#e11d48', '#f43f5e', '#fda4af'],
     tokens: {
+      sections: {
+        viewTint: '#e8f2fe', viewColor: '#2563eb',
+        collabTint: '#e4fdf3', collabColor: '#059669',
+        adminTint: '#f5eeff', adminColor: '#9333ea',
+      },
       accent: {
         base:  '#e11d48',
         light: '#fda4af',
@@ -492,78 +525,6 @@ export const THEMES = {
         logoIcon:    '#f43f5e',
         scrollThumb: 'rgba(225,29,72,0.25)',
         scrollHover: 'rgba(225,29,72,0.4)',
-      },
-    },
-  },
-
-  /* ── Corporate Blue ──────────────────────────────────────── */
-  corporateblue: {
-    key:      'corporateblue',
-    name:     'Corporate Blue',
-    desc:     '딥 네이비 · 화이트',
-    swatches: ['#1e3a8a', '#1d4ed8', '#93c5fd'],
-    tokens: {
-      accent: {
-        base:  '#1e3a8a',
-        light: '#93c5fd',
-        mid:   '#1d4ed8',
-        dark:  '#1e3a8a',
-        rgb:   '29,78,216',
-      },
-      sidebar: {
-        bg:       '#1e3a8a',
-        text:     'rgba(255,255,255,0.6)',
-        hoverBg:  'rgba(255,255,255,0.1)',
-        hoverText:'#ffffff',
-        selBg:    'rgba(255,255,255,0.12)',
-        selText:  '#ffffff',
-        group:    'rgba(255,255,255,0.32)',
-        divider:  'rgba(255,255,255,0.1)',
-        trigger:  '#1d4ed8',
-        trigText: 'rgba(255,255,255,0.6)',
-      },
-      layout: {
-        bodyBgDark:     '#0a0f1e',
-        contentBgLight: '#eef2ff',
-        contentBgDark:  '#0f172a',
-        headerBgLight:  'rgba(255,255,255,0.95)',
-        headerBgDark:   'rgba(10,15,30,0.95)',
-      },
-      login: {
-        pageBg:   '#eef2ff',
-        orb1:     'rgba(29,78,216,0.1)',
-        orb2:     'rgba(29,78,216,0.06)',
-        orb3:     'rgba(147,197,253,0.04)',
-        heroA:    '#1e3a8a',
-        heroB:    '#1d4ed8',
-        heroC:    '#1e40af',
-        badgeClr: '#93c5fd',
-        badgeBg:  'rgba(29,78,216,0.1)',
-        badgeBdr: 'rgba(29,78,216,0.2)',
-        badgeDot: '#1d4ed8',
-      },
-      button: {
-        from:      '#1e3a8a',
-        to:        '#1e3a8a',
-        hoverFrom: '#1d4ed8',
-        hoverTo:   '#1d4ed8',
-        shadow:    'rgba(30,58,138,0.3)',
-      },
-      input: {
-        hoverBorder: '#93c5fd',
-        hoverBg:     '#eff6ff',
-        focusBorder: '#1e3a8a',
-        focusBg:     '#ffffff',
-        focusShadow: 'rgba(30,58,138,0.1)',
-      },
-      misc: {
-        tabActive:   '#1e3a8a',
-        tabBar:      '#1d4ed8',
-        logoA:       '#1e3a8a',
-        logoB:       '#1d4ed8',
-        logoIcon:    '#1d4ed8',
-        scrollThumb: 'rgba(29,78,216,0.25)',
-        scrollHover: 'rgba(29,78,216,0.4)',
       },
     },
   },
@@ -642,4 +603,4 @@ export const THEMES = {
 };
 
 export const THEME_LIST = Object.values(THEMES).map(t => ({ ...t, colors: flattenColors(t.tokens) }));
-export const DEFAULT_THEME = 'corporateblue';
+export const DEFAULT_THEME = 'slate';

@@ -36,7 +36,6 @@ export default function MainLayout() {
   const isMobile = useIsMobile();
   const fetchNotifications = useNotificationStore((s) => s.fetch);
   const addSSENotification = useNotificationStore((s) => s.addSSENotification);
-  const isDark = useThemeStore((s) => s.isDark);
   const esRef = useRef(null);
   const reconnectTimer = useRef(null);
 
@@ -102,9 +101,7 @@ export default function MainLayout() {
             minHeight: 0,
             margin: isMobile ? '0' : '0',
             padding: isMobile ? '16px' : '24px 28px',
-            background: isDark
-              ? 'var(--fd-content-bg-dark, #111018)'
-              : 'var(--fd-content-bg-light, #f8fafc)',
+            background: 'var(--fd-content-bg-light, #f8fafc)',
             borderRadius: 0,
             overflow: 'auto',
           }}
