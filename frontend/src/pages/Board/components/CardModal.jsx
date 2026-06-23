@@ -294,7 +294,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
       onSave(saved);
       onClose();
     } catch (err) {
-      message.error(err?.response?.data?.message || '저장에 실패했습니다.');
+      message.error(err?.response?.data?.error || '저장에 실패했습니다.');
     } finally {
       setSaving(false);
     }
@@ -453,7 +453,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
       setDepSearch('');
       message.success('의존성이 추가되었습니다.');
     } catch (err) {
-      message.error(err?.response?.data?.message || '추가에 실패했습니다.');
+      message.error(err?.response?.data?.error || '추가에 실패했습니다.');
     }
   };
 

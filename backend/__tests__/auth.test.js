@@ -16,6 +16,11 @@ jest.mock('@prisma/client', () => {
       findMany: jest.fn(),
       update: jest.fn(),
     },
+    passwordHistory: {
+      findMany: jest.fn().mockResolvedValue([]),
+      create: jest.fn().mockResolvedValue({}),
+      deleteMany: jest.fn().mockResolvedValue({}),
+    },
   };
   return { PrismaClient: jest.fn(() => mockPrismaClient) };
 });
@@ -25,6 +30,17 @@ jest.mock('bcrypt');
 
 // node-cron mock (app.js에서 import됨)
 jest.mock('node-cron', () => ({ schedule: jest.fn() }));
+
+// 감사로그 서비스 mock (DB 접근 차단)
+jest.mock('../src/services/auditService', () => ({
+  record: jest.fn().mockResolvedValue(undefined),
+  getClientIp: jest.fn(() => '127.0.0.1'),
+}));
+
+// 소켓 mock (중복 로그인 차단용 kickUserSockets)
+jest.mock('../src/socket', () => ({
+  kickUserSockets: jest.fn(),
+}));
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
@@ -48,6 +64,8 @@ function createApp() {
 }
 
 process.env.JWT_SECRET = 'test-secret';
+// 단위 테스트에서는 OTP 2단계를 건너뛰어 1단계 로그인 응답을 검증한다(런타임 평가).
+process.env.DISABLE_OTP = 'true';
 
 describe('POST /api/auth/login', () => {
   let app;
@@ -103,6 +121,8 @@ describe('POST /api/auth/login', () => {
       role: 'admin',
     };
     prisma.user.findUnique.mockResolvedValue(mockUser);
+    // finalizeLogin은 갱신된 user 객체를 반환하므로 update도 mockUser를 돌려줘야 함
+    prisma.user.update.mockResolvedValue(mockUser);
     bcrypt.compare.mockResolvedValue(true);
 
     const res = await request(app)
@@ -138,12 +158,14 @@ describe('PUT /api/auth/password (비밀번호 변경)', () => {
     expect(res.body.error).toMatch(/입력해주세요/);
   });
 
-  test('새 비밀번호 6자 미만 → 400 반환', async () => {
+  test('새 비밀번호 정책 위반(8자 미만) → 400 반환', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 1, username: 'admin', passwordHash: 'hash' });
+    bcrypt.compare.mockResolvedValue(true); // 현재 비밀번호 일치
     const res = await request(app)
       .put('/api/auth/password')
       .send({ currentPassword: 'old1234', newPassword: '123' });
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/6자 이상/);
+    expect(res.body.error).toMatch(/8자 이상/);
   });
 
   test('현재 비밀번호 불일치 → 401 반환', async () => {
@@ -157,14 +179,17 @@ describe('PUT /api/auth/password (비밀번호 변경)', () => {
   });
 
   test('정상 변경 → 200 반환', async () => {
-    prisma.user.findUnique.mockResolvedValue({ id: 1, passwordHash: 'oldhash' });
-    bcrypt.compare.mockResolvedValue(true);
+    prisma.user.findUnique.mockResolvedValue({ id: 1, username: 'admin', passwordHash: 'oldhash' });
+    // 1번째 compare: 현재 비밀번호 일치(true) / 2번째 compare: 새 비밀번호가 기존과 다름(false)
+    bcrypt.compare
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false);
     bcrypt.hash = jest.fn().mockResolvedValue('newhash');
     prisma.user.update.mockResolvedValue({});
 
     const res = await request(app)
       .put('/api/auth/password')
-      .send({ currentPassword: 'old1234', newPassword: 'new1234' });
+      .send({ currentPassword: 'old1234', newPassword: 'NewPass123!' });
 
     expect(res.status).toBe(200);
     expect(res.body.message).toMatch(/변경되었습니다/);

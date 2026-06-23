@@ -195,7 +195,7 @@ const list = async (req, res, next) => {
 const create = async (req, res, next) => {
   try {
     const { title, description, icon, bgColor, categoryId, memberIds = [] } = req.body;
-    if (!title) return res.status(400).json({ message: '보드 제목은 필수입니다.' });
+    if (!title) return res.status(400).json({ error: '보드 제목은 필수입니다.' });
 
     const board = await prisma.$transaction(async (tx) => {
       const maxOrder = await tx.board.aggregate({
@@ -260,7 +260,7 @@ const get = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     if (!await isMember(id, req.user.id) && req.user.role !== 'admin') {
-      return res.status(403).json({ message: '접근 권한이 없습니다.' });
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
     }
     const board = await prisma.board.findUnique({
       where: { id },
@@ -271,7 +271,7 @@ const get = async (req, res, next) => {
         _count: { select: { cards: true } },
       },
     });
-    if (!board) return res.status(404).json({ message: '보드를 찾을 수 없습니다.' });
+    if (!board) return res.status(404).json({ error: '보드를 찾을 수 없습니다.' });
     res.json(board);
   } catch (err) { next(err); }
 };
@@ -280,7 +280,7 @@ const update = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     if (!await isOwnerOrAdmin(id, req.user.id, req.user.role)) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
     const {
       title, description, icon, bgColor, defaultView,
@@ -329,7 +329,7 @@ const remove = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     if (!await isOwnerOrAdmin(id, req.user.id, req.user.role)) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
     await prisma.board.delete({ where: { id } });
     res.json({ message: '보드가 삭제되었습니다.' });
@@ -342,7 +342,7 @@ const listCards = async (req, res, next) => {
   try {
     const boardId = Number(req.params.id);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'viewer')) {
-      return res.status(403).json({ message: '접근 권한이 없습니다.' });
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
     }
     const cards = await prisma.boardCard.findMany({
       where: { boardId },
@@ -357,7 +357,7 @@ const createCard = async (req, res, next) => {
   try {
     const boardId = Number(req.params.id);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '카드 생성 권한이 없습니다.' });
+      return res.status(403).json({ error: '카드 생성 권한이 없습니다.' });
     }
     const {
       title, description, coverColor, coverImageUrl, propertyValues = {},
@@ -365,7 +365,7 @@ const createCard = async (req, res, next) => {
       assigneeIds = [], relatedAssigneeIds = [],
       links = [], checklists = [],
     } = req.body;
-    if (!title) return res.status(400).json({ message: '카드 제목은 필수입니다.' });
+    if (!title) return res.status(400).json({ error: '카드 제목은 필수입니다.' });
 
     const [maxOrder, maxNumber] = await Promise.all([
       prisma.boardCard.aggregate({ where: { boardId }, _max: { order: true } }),
@@ -459,7 +459,7 @@ const updateCard = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const cardId = Number(req.params.cardId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '카드 수정 권한이 없습니다.' });
+      return res.status(403).json({ error: '카드 수정 권한이 없습니다.' });
     }
     const {
       title, description, coverColor, coverImageUrl,
@@ -565,7 +565,7 @@ const deleteCard = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const cardId = Number(req.params.cardId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '카드 삭제 권한이 없습니다.' });
+      return res.status(403).json({ error: '카드 삭제 권한이 없습니다.' });
     }
     const card = await prisma.boardCard.findUnique({ where: { id: cardId }, select: { title: true } });
 
@@ -588,7 +588,7 @@ const updateCardProperties = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const cardId = Number(req.params.cardId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
     const { propertyValues = {} } = req.body;
 
@@ -615,7 +615,7 @@ const reorderCards = async (req, res, next) => {
   try {
     const boardId = Number(req.params.id);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '접근 권한이 없습니다.' });
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
     }
     const { orders } = req.body;
     await prisma.$transaction(
@@ -634,9 +634,9 @@ const uploadCoverImage = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const cardId = Number(req.params.cardId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
-    if (!req.file) return res.status(400).json({ message: '파일을 선택해주세요.' });
+    if (!req.file) return res.status(400).json({ error: '파일을 선택해주세요.' });
 
     const url = `/uploads/board-cards/${req.file.filename}`;
     const updated = await prisma.boardCard.update({
@@ -652,7 +652,7 @@ const deleteCoverImage = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const cardId = Number(req.params.cardId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
     const card = await prisma.boardCard.findUnique({ where: { id: cardId }, select: { coverImageUrl: true } });
     if (card?.coverImageUrl) {
@@ -672,10 +672,10 @@ const createComment = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const cardId = Number(req.params.cardId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'commenter')) {
-      return res.status(403).json({ message: '댓글 작성 권한이 없습니다.' });
+      return res.status(403).json({ error: '댓글 작성 권한이 없습니다.' });
     }
     const { content, mentions = [] } = req.body;
-    if (!content?.trim()) return res.status(400).json({ message: '댓글 내용을 입력하세요.' });
+    if (!content?.trim()) return res.status(400).json({ error: '댓글 내용을 입력하세요.' });
 
     const comment = await prisma.boardCardComment.create({
       data: { cardId, userId: req.user.id, content },
@@ -770,9 +770,9 @@ const updateComment = async (req, res, next) => {
     const commentId = Number(req.params.commentId);
     const { content } = req.body;
     const existing = await prisma.boardCardComment.findUnique({ where: { id: commentId } });
-    if (!existing) return res.status(404).json({ message: '댓글을 찾을 수 없습니다.' });
+    if (!existing) return res.status(404).json({ error: '댓글을 찾을 수 없습니다.' });
     if (existing.userId !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: '수정 권한이 없습니다.' });
+      return res.status(403).json({ error: '수정 권한이 없습니다.' });
     }
     const comment = await prisma.boardCardComment.update({
       where: { id: commentId },
@@ -790,9 +790,9 @@ const deleteComment = async (req, res, next) => {
   try {
     const commentId = Number(req.params.commentId);
     const existing = await prisma.boardCardComment.findUnique({ where: { id: commentId } });
-    if (!existing) return res.status(404).json({ message: '댓글을 찾을 수 없습니다.' });
+    if (!existing) return res.status(404).json({ error: '댓글을 찾을 수 없습니다.' });
     if (existing.userId !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: '삭제 권한이 없습니다.' });
+      return res.status(403).json({ error: '삭제 권한이 없습니다.' });
     }
     await prisma.boardCardComment.delete({ where: { id: commentId } });
     res.json({ message: '댓글이 삭제되었습니다.' });
@@ -806,9 +806,9 @@ const uploadAttachment = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const cardId = Number(req.params.cardId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '접근 권한이 없습니다.' });
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
     }
-    if (!req.file) return res.status(400).json({ message: '파일을 선택해주세요.' });
+    if (!req.file) return res.status(400).json({ error: '파일을 선택해주세요.' });
     const originalName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
     const att = await prisma.boardCardAttachment.create({
       data: {
@@ -846,9 +846,9 @@ const downloadAttachment = async (req, res, next) => {
     const att = await prisma.boardCardAttachment.findUnique({
       where: { id: Number(req.params.attachmentId) },
     });
-    if (!att) return res.status(404).json({ message: '파일을 찾을 수 없습니다.' });
+    if (!att) return res.status(404).json({ error: '파일을 찾을 수 없습니다.' });
     const filePath = path.join(UPLOAD_DIR, att.storedName);
-    if (!fs.existsSync(filePath)) return res.status(404).json({ message: '파일이 존재하지 않습니다.' });
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: '파일이 존재하지 않습니다.' });
     res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${encodeURIComponent(att.originalName)}`);
     res.setHeader('Content-Type', att.mimeType);
     res.sendFile(filePath);
@@ -859,9 +859,9 @@ const deleteAttachment = async (req, res, next) => {
   try {
     const attachmentId = Number(req.params.attachmentId);
     const att = await prisma.boardCardAttachment.findUnique({ where: { id: attachmentId } });
-    if (!att) return res.status(404).json({ message: '파일을 찾을 수 없습니다.' });
+    if (!att) return res.status(404).json({ error: '파일을 찾을 수 없습니다.' });
     if (att.uploadedBy !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: '삭제 권한이 없습니다.' });
+      return res.status(403).json({ error: '삭제 권한이 없습니다.' });
     }
     const filePath = path.join(UPLOAD_DIR, att.storedName);
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
@@ -878,11 +878,11 @@ const uploadCommentAttachment = async (req, res, next) => {
     const cardId = Number(req.params.cardId);
     const commentId = Number(req.params.commentId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'commenter')) {
-      return res.status(403).json({ message: '접근 권한이 없습니다.' });
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
     }
-    if (!req.file) return res.status(400).json({ message: '파일을 선택해주세요.' });
+    if (!req.file) return res.status(400).json({ error: '파일을 선택해주세요.' });
     const comment = await prisma.boardCardComment.findFirst({ where: { id: commentId, cardId } });
-    if (!comment) return res.status(404).json({ message: '댓글을 찾을 수 없습니다.' });
+    if (!comment) return res.status(404).json({ error: '댓글을 찾을 수 없습니다.' });
     const originalName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
     const att = await prisma.boardCardAttachment.create({
       data: {
@@ -906,10 +906,10 @@ const createChecklistItem = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const cardId = Number(req.params.cardId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '접근 권한이 없습니다.' });
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
     }
     const { content } = req.body;
-    if (!content?.trim()) return res.status(400).json({ message: '항목 내용을 입력하세요.' });
+    if (!content?.trim()) return res.status(400).json({ error: '항목 내용을 입력하세요.' });
     const maxOrder = await prisma.boardCardChecklist.aggregate({
       where: { cardId },
       _max: { order: true },
@@ -950,7 +950,7 @@ const listProperties = async (req, res, next) => {
   try {
     const boardId = Number(req.params.id);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'viewer')) {
-      return res.status(403).json({ message: '접근 권한이 없습니다.' });
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
     }
     const props = await prisma.boardProperty.findMany({
       where: { boardId },
@@ -964,10 +964,10 @@ const createProperty = async (req, res, next) => {
   try {
     const boardId = Number(req.params.id);
     if (!await isOwnerOrAdmin(boardId, req.user.id, req.user.role)) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
     const { name, type, options } = req.body;
-    if (!name || !type) return res.status(400).json({ message: '이름과 타입은 필수입니다.' });
+    if (!name || !type) return res.status(400).json({ error: '이름과 타입은 필수입니다.' });
     const maxOrder = await prisma.boardProperty.aggregate({
       where: { boardId },
       _max: { order: true },
@@ -984,7 +984,7 @@ const updateProperty = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const propId = Number(req.params.propId);
     if (!await isOwnerOrAdmin(boardId, req.user.id, req.user.role)) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
     const { name, options, order } = req.body;
     const prop = await prisma.boardProperty.update({
@@ -1000,7 +1000,7 @@ const deleteProperty = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const propId = Number(req.params.propId);
     if (!await isOwnerOrAdmin(boardId, req.user.id, req.user.role)) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
     await prisma.board.updateMany({
       where: { id: boardId, kanbanGroupByPropId: propId },
@@ -1017,7 +1017,7 @@ const listMembers = async (req, res, next) => {
   try {
     const boardId = Number(req.params.id);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'viewer')) {
-      return res.status(403).json({ message: '접근 권한이 없습니다.' });
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
     }
     const members = await prisma.boardMember.findMany({
       where: { boardId },
@@ -1031,7 +1031,7 @@ const addMember = async (req, res, next) => {
   try {
     const boardId = Number(req.params.id);
     if (!await isOwnerOrAdmin(boardId, req.user.id, req.user.role)) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
     const { userId, role = 'member' } = req.body;
     const validRoles = ['owner', 'member', 'commenter', 'viewer'];
@@ -1059,7 +1059,7 @@ const removeMember = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const userId = Number(req.params.userId);
     if (!await isOwnerOrAdmin(boardId, req.user.id, req.user.role)) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
     await prisma.boardMember.delete({
       where: { boardId_userId: { boardId, userId } },
@@ -1074,7 +1074,7 @@ const exportBoard = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     if (!await hasMinRole(id, req.user.id, req.user.role, 'viewer')) {
-      return res.status(403).json({ message: '접근 권한이 없습니다.' });
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
     }
     const board = await prisma.board.findUnique({
       where: { id },
@@ -1092,7 +1092,7 @@ const exportBoard = async (req, res, next) => {
         },
       },
     });
-    if (!board) return res.status(404).json({ message: '보드를 찾을 수 없습니다.' });
+    if (!board) return res.status(404).json({ error: '보드를 찾을 수 없습니다.' });
 
     const exportData = {
       version: '1.0',
@@ -1129,7 +1129,7 @@ const exportBoard = async (req, res, next) => {
 const importBoard = async (req, res, next) => {
   try {
     const { board: boardData } = req.body;
-    if (!boardData?.title) return res.status(400).json({ message: '유효하지 않은 내보내기 파일입니다.' });
+    if (!boardData?.title) return res.status(400).json({ error: '유효하지 않은 내보내기 파일입니다.' });
 
     const result = await prisma.$transaction(async (tx) => {
       const newBoard = await tx.board.create({
@@ -1235,7 +1235,7 @@ const toggleFavorite = async (req, res, next) => {
     const m = await prisma.boardMember.findUnique({
       where: { boardId_userId: { boardId, userId: req.user.id } },
     });
-    if (!m) return res.status(403).json({ message: '보드 멤버가 아닙니다.' });
+    if (!m) return res.status(403).json({ error: '보드 멤버가 아닙니다.' });
     const updated = await prisma.boardMember.update({
       where: { boardId_userId: { boardId, userId: req.user.id } },
       data: { isFavorite: !m.isFavorite },
@@ -1251,10 +1251,10 @@ const duplicateCard = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const cardId = Number(req.params.cardId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '카드 생성 권한이 없습니다.' });
+      return res.status(403).json({ error: '카드 생성 권한이 없습니다.' });
     }
     const src = await prisma.boardCard.findUnique({ where: { id: cardId }, include: cardInclude });
-    if (!src) return res.status(404).json({ message: '카드를 찾을 수 없습니다.' });
+    if (!src) return res.status(404).json({ error: '카드를 찾을 수 없습니다.' });
 
     const [maxOrder, maxNumber] = await Promise.all([
       prisma.boardCard.aggregate({ where: { boardId }, _max: { order: true } }),
@@ -1313,7 +1313,7 @@ const listDependencies = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const cardId = Number(req.params.cardId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'viewer')) {
-      return res.status(403).json({ message: '접근 권한이 없습니다.' });
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
     }
     const [dependsOn, blocks] = await Promise.all([
       prisma.boardCardDependency.findMany({
@@ -1334,11 +1334,11 @@ const addDependency = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const dependentId = Number(req.params.cardId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
     const { blockingId } = req.body;
     if (!blockingId || blockingId === dependentId) {
-      return res.status(400).json({ message: '유효하지 않은 의존성입니다.' });
+      return res.status(400).json({ error: '유효하지 않은 의존성입니다.' });
     }
     const dep = await prisma.boardCardDependency.create({
       data: { dependentId, blockingId: Number(blockingId) },
@@ -1346,7 +1346,7 @@ const addDependency = async (req, res, next) => {
     });
     res.status(201).json(dep);
   } catch (err) {
-    if (err.code === 'P2002') return res.status(409).json({ message: '이미 등록된 의존성입니다.' });
+    if (err.code === 'P2002') return res.status(409).json({ error: '이미 등록된 의존성입니다.' });
     next(err);
   }
 };
@@ -1452,7 +1452,7 @@ const linkTask = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const cardId = Number(req.params.cardId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
     const { taskId } = req.body;
     const updated = await prisma.boardCard.update({
@@ -1470,7 +1470,7 @@ const listAutomations = async (req, res, next) => {
   try {
     const boardId = Number(req.params.id);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'viewer')) {
-      return res.status(403).json({ message: '접근 권한이 없습니다.' });
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
     }
     const automations = await prisma.boardAutomation.findMany({
       where: { boardId },
@@ -1484,11 +1484,11 @@ const createAutomation = async (req, res, next) => {
   try {
     const boardId = Number(req.params.id);
     if (!await isOwnerOrAdmin(boardId, req.user.id, req.user.role)) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
     const { name, trigger, triggerConfig, action, actionConfig } = req.body;
     if (!name || !trigger || !action) {
-      return res.status(400).json({ message: 'name, trigger, action은 필수입니다.' });
+      return res.status(400).json({ error: 'name, trigger, action은 필수입니다.' });
     }
     const automation = await prisma.boardAutomation.create({
       data: {
@@ -1509,7 +1509,7 @@ const updateAutomation = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const autoId = Number(req.params.autoId);
     if (!await isOwnerOrAdmin(boardId, req.user.id, req.user.role)) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
     const { name, isActive, trigger, triggerConfig, action, actionConfig } = req.body;
     const automation = await prisma.boardAutomation.update({
@@ -1532,7 +1532,7 @@ const deleteAutomation = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const autoId = Number(req.params.autoId);
     if (!await isOwnerOrAdmin(boardId, req.user.id, req.user.role)) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
     await prisma.boardAutomation.delete({ where: { id: autoId } });
     res.json({ message: '자동화가 삭제되었습니다.' });
@@ -1591,7 +1591,7 @@ const cardPreview = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const cardId = Number(req.params.cardId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'viewer')) {
-      return res.status(403).json({ message: '접근 권한이 없습니다.' });
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
     }
     const card = await prisma.boardCard.findUnique({
       where: { id: cardId },
@@ -1612,7 +1612,7 @@ const cardPreview = async (req, res, next) => {
         board: { select: { id: true, title: true, icon: true } },
       },
     });
-    if (!card) return res.status(404).json({ message: '카드를 찾을 수 없습니다.' });
+    if (!card) return res.status(404).json({ error: '카드를 찾을 수 없습니다.' });
     res.json(card);
   } catch (err) { next(err); }
 };
@@ -1668,7 +1668,7 @@ const listViews = async (req, res, next) => {
   try {
     const boardId = Number(req.params.id);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'viewer')) {
-      return res.status(403).json({ message: '접근 권한이 없습니다.' });
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
     }
     const views = await prisma.boardView.findMany({
       where: { boardId },
@@ -1682,10 +1682,10 @@ const createView = async (req, res, next) => {
   try {
     const boardId = Number(req.params.id);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '뷰 생성 권한이 없습니다.' });
+      return res.status(403).json({ error: '뷰 생성 권한이 없습니다.' });
     }
     const { name, type = 'kanban', config = null, isDefault = false } = req.body;
-    if (!name) return res.status(400).json({ message: '뷰 이름은 필수입니다.' });
+    if (!name) return res.status(400).json({ error: '뷰 이름은 필수입니다.' });
 
     const view = await prisma.$transaction(async (tx) => {
       const maxOrder = await tx.boardView.aggregate({ where: { boardId }, _max: { order: true } });
@@ -1713,7 +1713,7 @@ const updateView = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const viewId = Number(req.params.viewId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '뷰 수정 권한이 없습니다.' });
+      return res.status(403).json({ error: '뷰 수정 권한이 없습니다.' });
     }
     const { name, type, config, order, isDefault } = req.body;
     const view = await prisma.$transaction(async (tx) => {
@@ -1740,7 +1740,7 @@ const deleteView = async (req, res, next) => {
     const boardId = Number(req.params.id);
     const viewId = Number(req.params.viewId);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '뷰 삭제 권한이 없습니다.' });
+      return res.status(403).json({ error: '뷰 삭제 권한이 없습니다.' });
     }
     await prisma.boardView.delete({ where: { id: viewId } });
     res.json({ message: '뷰가 삭제되었습니다.' });
@@ -1751,7 +1751,7 @@ const reorderViews = async (req, res, next) => {
   try {
     const boardId = Number(req.params.id);
     if (!await hasMinRole(boardId, req.user.id, req.user.role, 'member')) {
-      return res.status(403).json({ message: '권한이 없습니다.' });
+      return res.status(403).json({ error: '권한이 없습니다.' });
     }
     const { items = [] } = req.body;
     await prisma.$transaction(
@@ -1768,7 +1768,7 @@ const reorderViews = async (req, res, next) => {
 const reorderBoards = async (req, res, next) => {
   try {
     const { items = [] } = req.body;
-    if (!Array.isArray(items)) return res.status(400).json({ message: 'items 배열이 필요합니다.' });
+    if (!Array.isArray(items)) return res.status(400).json({ error: 'items 배열이 필요합니다.' });
     const updatable = [];
     for (const it of items) {
       const boardId = Number(it.id);

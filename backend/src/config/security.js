@@ -28,7 +28,7 @@ const LOCKOUT = {
 
 // ── 비밀번호 정책 ────────────────────────────────────────────
 const PASSWORD = {
-  MIN_LENGTH: num('PASSWORD_MIN_LENGTH', 9),
+  MIN_LENGTH: num('PASSWORD_MIN_LENGTH', 8),
   // 4종(영대문자·영소문자·숫자·특수문자) 중 최소 충족 종류 수
   MIN_CHAR_CLASSES: num('PASSWORD_MIN_CLASSES', 3),
   // 변경 주기(일). 경과 시 변경 요구

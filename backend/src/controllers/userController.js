@@ -1,6 +1,8 @@
 const bcrypt = require('bcrypt');
 
 const prisma = require('../lib/prisma');
+const pwPolicy = require('../utils/passwordPolicy');
+const { AUTH } = require('../config/security');
 
 const USER_SELECT = { id: true, username: true, displayName: true, role: true, isActive: true, createdAt: true, avatarColor: true, department: true, position: true };
 
@@ -16,16 +18,15 @@ const list = async (req, res, next) => {
   }
 };
 
-const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]).{8,}$/;
-
 const create = async (req, res, next) => {
   try {
     const { username, password, displayName, role } = req.body;
     if (!username || !password || !displayName) {
       return res.status(400).json({ error: '아이디, 비밀번호, 이름은 필수입니다.' });
     }
-    if (!PASSWORD_REGEX.test(password)) {
-      return res.status(400).json({ error: '비밀번호는 8자 이상이며 대문자, 소문자, 숫자, 특수문자를 모두 포함해야 합니다.' });
+    const formatError = pwPolicy.validateFormat(password, username);
+    if (formatError) {
+      return res.status(400).json({ error: formatError });
     }
 
     const exists = await prisma.user.findUnique({ where: { username } });
@@ -33,7 +34,7 @@ const create = async (req, res, next) => {
       return res.status(409).json({ error: '이미 사용 중인 아이디입니다.' });
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await bcrypt.hash(password, AUTH.BCRYPT_ROUNDS);
     const user = await prisma.user.create({
       data: { username, passwordHash, displayName, role: role || 'member' },
       select: { id: true, username: true, displayName: true, role: true, isActive: true, createdAt: true },
@@ -53,10 +54,11 @@ const update = async (req, res, next) => {
     if (displayName) data.displayName = displayName;
     if (role) data.role = role;
     if (password) {
-      if (!PASSWORD_REGEX.test(password)) {
-        return res.status(400).json({ error: '비밀번호는 8자 이상이며 대문자, 소문자, 숫자, 특수문자를 모두 포함해야 합니다.' });
+      const formatError = pwPolicy.validateFormat(password);
+      if (formatError) {
+        return res.status(400).json({ error: formatError });
       }
-      data.passwordHash = await bcrypt.hash(password, 10);
+      data.passwordHash = await bcrypt.hash(password, AUTH.BCRYPT_ROUNDS);
     }
 
     const user = await prisma.user.update({

@@ -64,7 +64,18 @@ const apiLimiter = rateLimit({
   skip: () => isDev,
 });
 
+// Rate Limiting: 미인증 웹훅 트리거 전용 — 외부 노출 엔드포인트라 더 엄격(1분에 30회)
+const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '웹훅 호출이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+  skip: () => isDev,
+});
+
 app.use('/api/auth/login', loginLimiter);
+app.use('/api/webhooks/trigger', webhookLimiter);
 app.use('/api', apiLimiter);
 
 // 업로드 파일 정적 서빙
