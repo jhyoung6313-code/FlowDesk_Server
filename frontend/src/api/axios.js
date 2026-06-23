@@ -19,6 +19,9 @@ api.interceptors.response.use(
     const isLoginRequest = error.config?.url?.includes('/auth/login');
     if (error.response?.status === 401 && !isLoginRequest) {
       localStorage.removeItem('token');
+      if (error.response?.data?.code === 'SESSION_REPLACED') {
+        sessionStorage.setItem('loginNotice', '다른 기기에서 로그인되어 현재 세션이 종료되었습니다.');
+      }
       window.location.href = '/login';
     }
     return Promise.reject(error);

@@ -1,9 +1,11 @@
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { authenticator } = require('otplib');
 const QRCode = require('qrcode');
 
 const prisma = require('../lib/prisma');
+const { kickUserSockets } = require('../socket');
 const audit = require('../services/auditService');
 const pwPolicy = require('../utils/passwordPolicy');
 const { AUTH, LOCKOUT, AUDIT_ACTION } = require('../config/security');
@@ -19,6 +21,7 @@ function issueToken(user) {
       userId: user.id,
       role: user.role,
       pwAt: user.passwordChangedAt ? new Date(user.passwordChangedAt).getTime() : 0,
+      sn: user.sessionNonce,
     },
     process.env.JWT_SECRET,
     { expiresIn: AUTH.JWT_EXPIRES_IN }
@@ -99,25 +102,31 @@ const login = async (req, res, next) => {
       return res.json({ requireTotp: true, preAuthToken });
     }
 
-    await finalizeLogin(user, req);
-    res.json(buildLoginResponse(user));
+    const finalUser = await finalizeLogin(user, req);
+    res.json(buildLoginResponse(finalUser));
   } catch (err) {
     next(err);
   }
 };
 
-// 로그인 성공 후처리: 실패카운트 초기화 + 최종 로그인 기록 + 감사로그
+// 로그인 성공 후처리: 실패카운트 초기화 + 세션 nonce 갱신 + 최종 로그인 기록 + 감사로그
+// 반환값: sessionNonce가 반영된 최신 user 객체 (issueToken에 전달해야 함)
 async function finalizeLogin(user, req) {
-  await prisma.user.update({
+  // 기존 소켓 연결 강제 종료 (중복 로그인 차단)
+  kickUserSockets(user.id);
+  const sessionNonce = crypto.randomUUID();
+  const updated = await prisma.user.update({
     where: { id: user.id },
     data: {
       failedLoginCount: 0,
       lockedUntil: null,
       lastLoginAt: new Date(),
       lastLoginIp: audit.getClientIp(req),
+      sessionNonce,
     },
   });
   await audit.record({ action: AUDIT_ACTION.LOGIN_SUCCESS, req, userId: user.id, username: user.username, resource: 'auth/login' });
+  return updated;
 }
 
 // 로그인 응답 본문 (비밀번호 변경 필요 여부 포함)
@@ -153,8 +162,8 @@ const verifyLoginTotp = async (req, res, next) => {
       return res.status(401).json({ error: 'OTP 코드가 올바르지 않습니다.' });
     }
 
-    await finalizeLogin(user, req);
-    res.json(buildLoginResponse(user));
+    const finalUser = await finalizeLogin(user, req);
+    res.json(buildLoginResponse(finalUser));
   } catch (err) {
     next(err);
   }
@@ -205,8 +214,8 @@ const verifyLoginTotpSetup = async (req, res, next) => {
     }
     await prisma.user.update({ where: { id: user.id }, data: { totpEnabled: true } });
     const enabled = { ...user, totpEnabled: true };
-    await finalizeLogin(enabled, req);
-    res.json(buildLoginResponse(enabled));
+    const finalUser = await finalizeLogin(enabled, req);
+    res.json(buildLoginResponse(finalUser));
   } catch (err) {
     next(err);
   }
@@ -276,7 +285,7 @@ const verifyRegisterTotp = async (req, res, next) => {
     // 계정 활성화
     const activated = await prisma.user.update({
       where: { id: user.id },
-      data: { isActive: true, totpEnabled: true },
+      data: { isActive: true, totpEnabled: true, sessionNonce: crypto.randomUUID() },
     });
 
     const token = issueToken(activated);
@@ -296,8 +305,16 @@ const verifyRegisterTotp = async (req, res, next) => {
 };
 
 // ── 로그아웃 ──────────────────────────────────────────────
-const logout = (_req, res) => {
-  res.json({ message: '로그아웃 되었습니다.' });
+const logout = async (req, res, next) => {
+  try {
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { sessionNonce: null },
+    });
+    res.json({ message: '로그아웃 되었습니다.' });
+  } catch (err) {
+    next(err);
+  }
 };
 
 // ── 내 정보 조회 ──────────────────────────────────────────

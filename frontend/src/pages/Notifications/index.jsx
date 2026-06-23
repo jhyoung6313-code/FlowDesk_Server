@@ -12,6 +12,11 @@ const NOTIFICATION_COLORS = {
   due_soon: 'warning',
   due_today: 'error',
   overdue: 'error',
+  sla_warning: 'warning',
+  sla_breach: 'error',
+  step_assigned: 'processing',
+  step_reminder: 'purple',
+  security_alert: 'error',
 };
 
 export default function NotificationsPage() {
@@ -84,7 +89,7 @@ export default function NotificationsPage() {
                 title={
                   <Space>
                     <span style={{ fontWeight: item.isRead ? 400 : 600 }}>
-                      {item.task?.title}
+                      {item.task?.title || item.message || NOTIFICATION_LABELS[item.type] || item.type}
                     </span>
                     <Tag color={NOTIFICATION_COLORS[item.type]}>
                       {NOTIFICATION_LABELS[item.type]}
@@ -104,10 +109,9 @@ export default function NotificationsPage() {
                 }
                 description={
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    마감일: {item.task?.dueDate
-                      ? dayjs(item.task.dueDate).format('YYYY년 MM월 DD일')
-                      : '-'}
-                    {' · '}
+                    {item.task?.dueDate
+                      ? `마감일: ${dayjs(item.task.dueDate).format('YYYY년 MM월 DD일')} · `
+                      : ''}
                     {dayjs(item.createdAt).format('MM/DD HH:mm')}
                   </Typography.Text>
                 }

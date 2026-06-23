@@ -7,12 +7,17 @@ import { calcDday, getDdayColor } from '../../utils/dday';
 import { focusChatPopup } from '../../utils/chatPopup';
 
 const TYPE_CONFIG = {
-  overdue:   { label: '마감 초과', color: '#ff4d4f', bg: '#fff1f0', border: '#ffa39e' },
-  due_today: { label: '오늘 마감', color: '#fa8c16', bg: '#fff7e6', border: '#ffd591' },
-  due_soon:  { label: '마감 임박', color: '#1677ff', bg: '#e6f4ff', border: '#91caff' },
-  chat:      { label: '채팅',     color: '#722ed1', bg: '#f9f0ff', border: '#d3adf7' },
-  mention:   { label: '멘션',     color: '#eb2f96', bg: '#fff0f6', border: '#ffadd2' },
-  board:     { label: '보드',     color: '#13c2c2', bg: '#e6fffb', border: '#87e8de' },
+  overdue:        { label: '마감 초과',  color: '#ff4d4f', bg: '#fff1f0', border: '#ffa39e' },
+  due_today:      { label: '오늘 마감',  color: '#fa8c16', bg: '#fff7e6', border: '#ffd591' },
+  due_soon:       { label: '마감 임박',  color: '#1677ff', bg: '#e6f4ff', border: '#91caff' },
+  sla_warning:    { label: 'SLA 임박',   color: '#d46b08', bg: '#fff7e6', border: '#ffd591' },
+  sla_breach:     { label: 'SLA 초과',   color: '#ff4d4f', bg: '#fff1f0', border: '#ffa39e' },
+  step_assigned:  { label: '스텝 배정',  color: '#13c2c2', bg: '#e6fffb', border: '#87e8de' },
+  step_reminder:  { label: '스텝 미처리', color: '#722ed1', bg: '#f9f0ff', border: '#d3adf7' },
+  security_alert: { label: '보안 알림',  color: '#ff4d4f', bg: '#fff1f0', border: '#ffa39e' },
+  chat:           { label: '채팅',       color: '#722ed1', bg: '#f9f0ff', border: '#d3adf7' },
+  mention:        { label: '멘션',       color: '#eb2f96', bg: '#fff0f6', border: '#ffadd2' },
+  board:          { label: '보드',       color: '#13c2c2', bg: '#e6fffb', border: '#87e8de' },
 };
 
 const AUTO_DISMISS_MS = 6000;
@@ -23,7 +28,9 @@ function ToastItem({ toast, onDismiss, onNavigate }) {
 
   // transient toast (chat/board)는 toast.title / toast.message / toast.path 사용
   const isTransient = !!toast.path || toast.type === 'chat' || toast.type === 'board' || toast.type === 'mention';
-  const displayTitle = isTransient ? (toast.title || cfg.label) : (toast.task?.title || toast.message);
+  const displayTitle = isTransient
+    ? (toast.title || cfg.label)
+    : (toast.task?.title || toast.message || cfg.label);
   const displayBody  = isTransient ? toast.message : null;
 
   const dday      = !isTransient && toast.task?.dueDate ? calcDday(toast.task.dueDate) : null;
