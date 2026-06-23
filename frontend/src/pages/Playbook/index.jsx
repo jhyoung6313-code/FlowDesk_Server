@@ -26,7 +26,7 @@ const CATEGORY_MAP = {
   emergency:   { label: '긴급대응',   color: 'volcano' },
 };
 
-export default function PlaybookListPage() {
+export default function PlaybookListPage({ onNew } = {}) {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === 'admin';
@@ -82,7 +82,7 @@ export default function PlaybookListPage() {
           <BookOutlined style={{ marginRight: 8, color: '#1677ff' }} />
           Playbook
         </Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/playbooks/new')}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => (onNew ? onNew() : navigate('/playbooks/new'))}>
           새 Playbook
         </Button>
       </div>

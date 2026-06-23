@@ -336,7 +336,7 @@ function KanbanCard({ task, isDark, dragging, canEdit, canDelete, onEdit, onDele
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-        <Avatar.Group maxCount={3} size={20}>
+        <Avatar.Group max={{ count: 3 }} size={20}>
           {task.assignees?.map((a) => {
             const uid = a.userId ?? a.user?.id;
             return (

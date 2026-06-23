@@ -11,7 +11,7 @@ export default function ChangePasswordModal({ open, onClose }) {
       onCancel={onClose}
       footer={null}
       width={460}
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{ marginTop: 12 }}>
         <ChangePasswordForm onSuccess={onClose} />

@@ -365,10 +365,14 @@ function VariableEditor({ variables, onChange }) {
 
 // ─── Main Editor ─────────────────────────────────────────────
 
-export default function PlaybookEditor() {
-  const { id } = useParams();
+export default function PlaybookEditor({ embedded = false, embeddedId = null, onClose, onSaved } = {}) {
+  const { id: routeId } = useParams();
   const navigate = useNavigate();
+  const id = embedded ? embeddedId : routeId;
   const isNew = !id || id === 'new';
+
+  // 목록(닫기) 이동: 임베드 시 드로어 닫기, 아니면 라우트 이동
+  const goList = () => (embedded ? onClose?.() : navigate('/playbooks'));
 
   const [form] = Form.useForm();
   const [schedForm] = Form.useForm();
@@ -467,11 +471,13 @@ export default function PlaybookEditor() {
       if (isNew) {
         const pb = await pbApi.createPlaybook(payload);
         message.success('Playbook이 생성되었습니다.');
-        navigate(`/playbooks/${pb.id}`);
+        if (embedded) { onSaved?.(pb); onClose?.(); }
+        else navigate(`/playbooks/${pb.id}`);
       } else {
         await pbApi.updatePlaybook(id, payload);
         message.success('저장되었습니다.');
-        navigate(`/playbooks/${id}`);
+        if (embedded) { onSaved?.(); onClose?.(); }
+        else navigate(`/playbooks/${id}`);
       }
     } catch (err) {
       if (!err?.errorFields) message.error('저장 실패');
@@ -583,10 +589,10 @@ export default function PlaybookEditor() {
   const freeSteps = steps.filter((s) => !s.phaseTempId);
 
   return (
-    <div style={{ padding: 24, maxWidth: 1000, margin: '0 auto' }}>
+    <div style={{ padding: embedded ? 0 : 24, maxWidth: embedded ? '100%' : 1000, margin: '0 auto' }}>
       {/* 헤더 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/playbooks')}>목록</Button>
+        <Button icon={<ArrowLeftOutlined />} onClick={goList}>{embedded ? '닫기' : '목록'}</Button>
         <Title level={4} style={{ margin: 0 }}>{isNew ? '새 Playbook' : 'Playbook 편집'}</Title>
         <Space>
           {!isNew && (

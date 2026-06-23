@@ -362,7 +362,7 @@ export default function ListView() {
       key: 'assignees',
       width: 120,
       render: (_, record) => (
-        <Avatar.Group maxCount={4} size="small">
+        <Avatar.Group max={{ count: 4 }} size="small">
           {record.assignees?.map((a) => {
             const uid = a.userId ?? a.user?.id;
             return (

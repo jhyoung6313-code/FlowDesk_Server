@@ -86,7 +86,7 @@ export default function PropertyValue({ property, value, card }) {
   if (type === 'user') {
     const users = Array.isArray(parsed) ? parsed : [parsed];
     return (
-      <Avatar.Group maxCount={3} size="small">
+      <Avatar.Group max={{ count: 3 }} size="small">
         {users.map(u => (
           <Tooltip key={u.id ?? u} title={u.displayName ?? u}>
             <Avatar size={16} style={{ backgroundColor: u.avatarColor || '#1677ff', fontSize: 9 }}>

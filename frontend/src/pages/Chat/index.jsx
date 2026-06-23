@@ -1812,7 +1812,7 @@ export default function ChatPage() {
       )}
 
       {/* ══ 새 채팅방 생성 모달 ══ */}
-      <Modal title="새 채팅 만들기" open={newRoomModal} onOk={handleCreateRoom} onCancel={() => setNewRoomModal(false)} okText="만들기" cancelText="취소" confirmLoading={creating} width={440} destroyOnClose>
+      <Modal title="새 채팅 만들기" open={newRoomModal} onOk={handleCreateRoom} onCancel={() => setNewRoomModal(false)} okText="만들기" cancelText="취소" confirmLoading={creating} width={440} destroyOnHidden>
         <Form form={newRoomForm} layout="vertical" style={{ marginTop: 12 }} initialValues={{ type: 'direct' }}>
           <Form.Item name="type" label="채팅 유형">
             <Radio.Group onChange={() => newRoomForm.setFieldsValue({ memberIds: undefined })}>
@@ -1949,7 +1949,7 @@ export default function ChatPage() {
       </Modal>
 
       {/* ══ 채널 정보 수정 모달 ══ */}
-      <Modal title={<><EditOutlined /> 채널 정보 수정</>} open={editRoomModal} onOk={handleEditRoomSave} onCancel={() => setEditRoomModal(false)} okText="저장" cancelText="취소" destroyOnClose>
+      <Modal title={<><EditOutlined /> 채널 정보 수정</>} open={editRoomModal} onOk={handleEditRoomSave} onCancel={() => setEditRoomModal(false)} okText="저장" cancelText="취소" destroyOnHidden>
         <Form form={editRoomForm} layout="vertical" style={{ marginTop: 12 }}>
           <Form.Item name="name" label="채널 이름" rules={[{ required: true, message: '이름을 입력해주세요.' }]}>
             <Input />

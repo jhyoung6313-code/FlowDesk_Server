@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Input, Button, Typography, message, Tabs, Steps, Result } from 'antd';
+import { Form, Input, Button, Typography, message, Tabs, Steps, Result, Alert } from 'antd';
 import { UserOutlined, LockOutlined, SafetyOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import useAuthStore from '../../store/authStore';
 import * as authApi from '../../api/auth';
@@ -26,6 +26,47 @@ function LoginTab({ onSuccess }) {
   const { setAuth } = useAuthStore();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
+  const [pwWarning, setPwWarning] = useState('');
+  const pwRef = useRef(null);
+  const capsLockRef = useRef(false);
+
+  useEffect(() => {
+    const inputEl = pwRef.current?.input;
+    if (!inputEl) return;
+
+    // Chrome은 type="password"에서 Korean IME를 OS 수준에서 우회
+    // → e.key, value, getLayoutMap() 모두 한글을 반환하지 않아 감지 불가
+    // → type="text"(눈동자 열림) 전환 시에는 IME 정상 작동 → value 기반 감지 가능
+    const updateWarning = () => {
+      const val = inputEl.value;
+      if (/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(val)) {
+        setPwWarning('한글 입력 감지 — 입력기를 영문으로 전환하세요');
+      } else if (capsLockRef.current) {
+        setPwWarning('Caps Lock이 켜져 있습니다 — 비밀번호를 확인하세요');
+      } else {
+        setPwWarning('');
+      }
+    };
+
+    const onInput = () => updateWarning();
+    const onKey = (e) => {
+      if (typeof e.getModifierState === 'function') {
+        capsLockRef.current = e.getModifierState('CapsLock');
+      }
+      updateWarning();
+    };
+
+    inputEl.addEventListener('input', onInput);
+    inputEl.addEventListener('compositionend', onInput);
+    inputEl.addEventListener('keydown', onKey);
+    inputEl.addEventListener('keyup', onKey);
+    return () => {
+      inputEl.removeEventListener('input', onInput);
+      inputEl.removeEventListener('compositionend', onInput);
+      inputEl.removeEventListener('keydown', onKey);
+      inputEl.removeEventListener('keyup', onKey);
+    };
+  }, []);
 
   // step: 'login' | 'otp'(기존 OTP 검증) | 'otp-setup'(미등록 사용자 최초 등록)
   const [step, setStep] = useState('login');
@@ -177,7 +218,13 @@ function LoginTab({ onSuccess }) {
         <Typography.Title level={2} className="login-title">반갑습니다</Typography.Title>
         <Typography.Text className="login-sub">아이디와 비밀번호를 입력해 주세요</Typography.Text>
       </div>
-      <Form form={form} onFinish={handleLogin} layout="vertical" size="large" className="login-form">
+      <Form
+        form={form}
+        onFinish={handleLogin}
+        layout="vertical"
+        size="large"
+        className="login-form"
+      >
         <Form.Item
           name="username"
           label={<span className="form-label">아이디</span>}
@@ -196,12 +243,31 @@ function LoginTab({ onSuccess }) {
           rules={[{ required: true, message: '비밀번호를 입력하세요.' }]}
         >
           <Input.Password
+            ref={pwRef}
             prefix={<LockOutlined className="input-icon" />}
             placeholder="비밀번호를 입력하세요"
             className="login-input"
             autoComplete="current-password"
           />
         </Form.Item>
+        {pwWarning && (
+          <div className="pw-warning">
+            <span className="pw-warning-icon">⚠</span>
+            <span className="pw-warning-text">{pwWarning}</span>
+            <button
+              type="button"
+              className="pw-warning-clear"
+              onClick={() => {
+                pwRef.current?.blur();
+                form.setFieldValue('password', '');
+                setPwWarning('');
+                setTimeout(() => pwRef.current?.focus(), 0);
+              }}
+            >
+              지우기
+            </button>
+          </div>
+        )}
         <Form.Item style={{ marginTop: 8 }}>
           <Button htmlType="submit" block loading={loading} className="login-btn">
             로그인
@@ -420,8 +486,17 @@ function ResetPasswordTab() {
 export default function LoginPage() {
   const navigate = useNavigate();
   const { user, setAuth } = useAuthStore();
+  const [loginNotice, setLoginNotice] = useState('');
 
   useEffect(() => { if (user) navigate('/'); }, [user]);
+
+  useEffect(() => {
+    const notice = sessionStorage.getItem('loginNotice');
+    if (notice) {
+      setLoginNotice(notice);
+      sessionStorage.removeItem('loginNotice');
+    }
+  }, []);
 
   const handleSuccess = (path = '/') => navigate(path);
 
@@ -482,6 +557,16 @@ export default function LoginPage() {
 
         {/* 오른쪽 폼 패널 */}
         <div className="login-form-panel">
+          {loginNotice && (
+            <Alert
+              type="warning"
+              message={loginNotice}
+              showIcon
+              closable
+              onClose={() => setLoginNotice('')}
+              style={{ marginBottom: 16 }}
+            />
+          )}
           <Tabs
             defaultActiveKey="login"
             items={tabItems}

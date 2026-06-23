@@ -23,7 +23,7 @@ export default function ProfileModal({ open, onClose }) {
       onCancel={onClose}
       footer={null}
       width={560}
-      destroyOnClose
+      destroyOnHidden
     >
       <div style={{ marginTop: 12 }}>
         <AccountInfoSection user={user} />

@@ -1,20 +1,27 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Layout, Space, Typography, Badge, Tooltip, Popover, List, Button, Empty, Tag } from 'antd';
 import {
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
   BellOutlined,
   BgColorsOutlined,
   CheckOutlined,
+  UnorderedListOutlined,
+  MessageOutlined,
+  AppstoreOutlined,
+  BookOutlined,
+  ApartmentOutlined,
+  SnippetsOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import useNotificationStore from '../../store/notificationStore';
 import useThemeStore from '../../store/themeStore';
 import useChatStore from '../../store/chatStore';
+import useUnreadStore from '../../store/unreadStore';
 import { THEME_LIST } from '../../utils/themes';
 import { openChatPopup as openChatPopupWindow } from '../../utils/chatPopup';
 import { NOTIFICATION_LABELS } from '../../utils/colors';
 import { calcDday, getDdayColor } from '../../utils/dday';
+import MemoWidget from '../Memo/MemoWidget';
 
 const { Header } = Layout;
 
@@ -252,13 +259,83 @@ function NotificationPopup({ onClose }) {
 export default function AppHeader({ collapsed, onCollapse }) {
   const unreadCount = useNotificationStore((s) => s.unreadCount);
   const totalUnread = useChatStore((s) => s.totalUnread);
+  const boardUnread = useUnreadStore((s) => s.boardUnread);
+  const playbookUnread = useUnreadStore((s) => s.playbookUnread);
   const { themeKey, theme, setTheme } = useThemeStore();
   const [themeOpen, setThemeOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
 
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+
   const openChatPopup = () => openChatPopupWindow();
 
   const c = theme.colors;
+
+  // ── 상단 2줄 그룹 메뉴 (워크스페이스 / 협업기능) ──
+  // 업무관리: 칸반·캘린더·간트는 업무관리 페이지 내부 탭이므로 상단은 '업무관리' 하나
+  const workspaceActive =
+    pathname.startsWith('/tasks') || pathname.startsWith('/calendar') || pathname.startsWith('/gantt');
+
+  // 협업기능 링크 (미읽음 배지)
+  const collabLinks = [
+    { key: 'chat',      icon: <MessageOutlined />,   label: '채팅',     path: '/chat',      active: pathname.startsWith('/chat'),     badge: totalUnread },
+    { key: 'boards',    icon: <AppstoreOutlined />,  label: '보드',     path: '/boards',    active: pathname.startsWith('/boards'),   badge: boardUnread },
+    { key: 'playbooks', icon: <BookOutlined />,      label: '플레이북', path: '/playbooks', active: pathname.startsWith('/playbooks') || pathname.startsWith('/runs'), badge: playbookUnread },
+    { key: 'wbs',       icon: <ApartmentOutlined />, label: '프로젝트', path: '/wbs',       active: pathname.startsWith('/wbs'),      badge: 0 },
+  ];
+
+  // 세그먼트 항목 스타일 (활성 = 흰 카드 + 그림자)
+  const linkStyle = (active) => ({
+    padding: '5px 12px',
+    fontSize: 13,
+    fontWeight: active ? 700 : 500,
+    color: active ? c.accentMid : '#64748b',
+    background: active ? '#ffffff' : 'transparent',
+    borderRadius: 8,
+    boxShadow: active ? '0 1px 4px rgba(15,23,42,0.10)' : 'none',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+    transition: 'all 0.14s',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 5,
+  });
+  const linkEnter = (active) => (e) => {
+    if (!active) { e.currentTarget.style.color = '#334155'; e.currentTarget.style.background = 'rgba(255,255,255,0.65)'; }
+  };
+  const linkLeave = (active) => (e) => {
+    if (!active) { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = 'transparent'; }
+  };
+
+  const renderLink = ({ key, icon, label, path, active, badge = 0 }) => (
+    <div
+      key={key || path}
+      onClick={() => navigate(path)}
+      style={linkStyle(active)}
+      onMouseEnter={linkEnter(active)}
+      onMouseLeave={linkLeave(active)}
+    >
+      {icon}
+      {label}
+      {badge > 0 && (
+        <Badge count={badge} size="small" style={{ backgroundColor: '#ef4444', boxShadow: 'none' }} />
+      )}
+    </div>
+  );
+
+  // 대분류 세그먼트 트랙 (라벨 캡션 없이 트랙만)
+  const GroupColumn = ({ children }) => (
+    <div style={{
+      display: 'flex',
+      gap: 2,
+      background: '#f1f5f9',
+      borderRadius: 11,
+      padding: 3,
+    }}>
+      {children}
+    </div>
+  );
 
   const iconBtnStyle = {
     display: 'flex',
@@ -284,45 +361,45 @@ export default function AppHeader({ collapsed, onCollapse }) {
         alignItems: 'center',
         justifyContent: 'space-between',
         borderBottom: '1px solid #f1f5f9',
-        height: 48,
+        height: 52,
+        lineHeight: 'normal',
         position: 'sticky',
         top: 0,
         zIndex: 100,
       }}
     >
       <Space size={12} align="center">
-        <div
-          onClick={() => onCollapse(!collapsed)}
-          style={{
-            cursor: 'pointer',
-            fontSize: 16,
-            color: '#9ca3af',
-            display: 'flex',
-            alignItems: 'center',
-            padding: '4px',
-            borderRadius: 8,
-            transition: 'color 0.2s, background 0.2s',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = c.accentDark;
-            e.currentTarget.style.background = c.inputHoverBg;
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = '#9ca3af';
-            e.currentTarget.style.background = 'transparent';
-          }}
+        <Space
+          size={6}
+          align="center"
+          style={{ cursor: 'pointer', marginRight: 8 }}
+          onClick={() => navigate('/')}
         >
-          {collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-        </div>
-        <Space size={6} align="center" style={{ cursor: 'default' }}>
           <FlowdeskIcon size={18} color={c.accentMid} />
           <Typography.Text strong style={{ fontSize: 14, color: c.accentMid, letterSpacing: 0.3 }}>
             Flowdesk
           </Typography.Text>
         </Space>
+
+        {/* ── 상단 그룹 메뉴 (세그먼트 트랙) ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* 워크스페이스 */}
+          <GroupColumn>
+            {renderLink({ key: 'tasks', icon: <UnorderedListOutlined />, label: '업무관리', path: '/tasks', active: workspaceActive })}
+            {renderLink({ key: 'memos', icon: <SnippetsOutlined />, label: '메모지', path: '/memos', active: pathname.startsWith('/memos') })}
+          </GroupColumn>
+
+          {/* 협업기능 */}
+          <GroupColumn>
+            {collabLinks.map(renderLink)}
+          </GroupColumn>
+        </div>
       </Space>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* 메모지 플로팅 위젯 (어느 화면에서든 빠른 메모) */}
+        <MemoWidget />
+
         {/* 테마 피커 */}
         <Popover
           open={themeOpen}

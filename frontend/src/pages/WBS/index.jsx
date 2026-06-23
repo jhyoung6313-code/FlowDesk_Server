@@ -363,10 +363,10 @@ export default function WbsPage() {
           <ApartmentOutlined style={{ fontSize: 64, color: '#c8e6c9' }} />
           <div style={{ textAlign: 'center' }}>
             <Title level={4} style={{ color: '#9e9e9e', marginBottom: 8 }}>WBS 프로젝트를 선택하세요</Title>
-            <Text type="secondary">왼쪽 사이드 메뉴의 <b>WBS</b> 항목을 펼쳐서 프로젝트를 선택하세요.</Text>
+            <Text type="secondary">왼쪽 목록에서 프로젝트를 선택하세요.</Text>
             {isAdmin && (
               <div style={{ marginTop: 12 }}>
-                <Text type="secondary">새 프로젝트는 사이드 메뉴의 <b>새 프로젝트</b> 버튼으로 추가할 수 있습니다.</Text>
+                <Text type="secondary">새 프로젝트는 왼쪽 상단의 <b>＋</b> 버튼으로 추가할 수 있습니다.</Text>
               </div>
             )}
           </div>

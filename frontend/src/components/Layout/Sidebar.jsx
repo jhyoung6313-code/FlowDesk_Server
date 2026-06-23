@@ -28,6 +28,7 @@ import {
   HistoryOutlined,
   DatabaseOutlined,
   GlobalOutlined,
+  SnippetsOutlined,
 } from '@ant-design/icons';
 import useAuthStore from '../../store/authStore';
 import useThemeStore from '../../store/themeStore';
@@ -233,6 +234,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     if (pathname.startsWith('/tasks')) return '/tasks';
     if (pathname.startsWith('/kanban')) return '/tasks';
     if (pathname.startsWith('/calendar')) return '/calendar';
+    if (pathname.startsWith('/memos')) return '/memos';
     if (pathname.startsWith('/gantt')) return '/gantt';
     if (pathname.startsWith('/boards')) return '/boards';
     if (pathname.startsWith('/playbooks')) return '/playbooks';
@@ -391,6 +393,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     { key: '/tasks', icon: <CheckSquareOutlined style={{ color: GROUPS.view.color }} />, label: '업무 관리' },
     { key: '/gantt', icon: <BarChartOutlined style={{ color: GROUPS.view.color }} />, label: '간트 차트' },
     { key: '/calendar', icon: <CalendarOutlined style={{ color: GROUPS.view.color }} />, label: '캘린더' },
+    { key: '/memos', icon: <SnippetsOutlined style={{ color: GROUPS.view.color }} />, label: '메모지' },
   ];
 
   const collabItems = [
@@ -546,8 +549,10 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   const railItems = [
     { key: '/', icon: <DashboardOutlined />, title: '대시보드', color: GROUPS.view.color },
     { key: '/tasks', icon: <CheckSquareOutlined />, title: '업무 관리', color: GROUPS.view.color },
+    { key: '/memos', icon: <SnippetsOutlined />, title: '메모지', color: GROUPS.view.color },
     { key: '/chat', icon: <MessageOutlined />, title: '채팅', color: GROUPS.collab.color, dot: totalUnread > 0 },
     { key: '/boards', icon: <AppstoreOutlined />, title: '보드', color: GROUPS.collab.color, dot: boardUnread > 0 },
+    { key: '/playbooks', icon: <BookOutlined />, title: 'Playbook', color: GROUPS.collab.color, dot: playbookUnread > 0 },
     { key: '/wbs', icon: <ProjectOutlined />, title: '프로젝트', color: GROUPS.collab.color },
   ];
   const railActive = (key) => (key === '/' ? pathname === '/' : pathname.startsWith(key));
@@ -623,150 +628,20 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
           {isAdmin && (
             <RailIcon itemKey="/admin/users" icon={<UserOutlined />} title="사용자 관리" color={GROUPS.admin.color} />
           )}
-        </div>
 
-        {/* ── 2차 컨텍스트 패널 (최소화 가능) ── */}
-        <div
-          style={{
-            width: collapsed ? 0 : CTX_WIDTH,
-            flexShrink: 0,
-            background: COLORS.ctxBg,
-            borderRight: collapsed ? 'none' : `1px solid ${COLORS.border}`,
-            overflow: 'hidden',
-            whiteSpace: 'nowrap',
-            opacity: collapsed ? 0 : 1,
-            transition: 'width 0.26s cubic-bezier(0.4,0,0.2,1), opacity 0.2s, padding 0.26s',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          {/* 패널 헤더 + 최소화 토글 */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '14px 14px 8px 18px',
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ flex: 1, fontSize: 17, fontWeight: 800, color: COLORS.headText, letterSpacing: -0.2 }}>
-              메뉴
-            </span>
-            <Tooltip title="패널 접기" placement="bottom">
-              <div
-                onClick={() => onCollapse?.(true)}
-                style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: 7,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: COLORS.toggleText,
-                  transition: 'background 0.15s, color 0.15s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = COLORS.toggleHoverBg;
-                  e.currentTarget.style.color = COLORS.headText;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = COLORS.toggleText;
-                }}
-              >
-                <DoubleLeftOutlined style={{ fontSize: 14 }} />
-              </div>
-            </Tooltip>
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-            <Section grp="view" title="보기" menuItems={viewItems} />
-            <Section grp="collab" title="협업" menuItems={collabItems} />
-            {isAdmin && <Section grp="admin" title="관리자" menuItems={adminItems} />}
-          </div>
-
-          {/* ── 사용자 정보 카드 (하단 고정) ── */}
-          <div style={{ flexShrink: 0, borderTop: `1px solid ${COLORS.border}`, padding: '8px 8px 10px' }}>
-            <Dropdown menu={{ items: userMenuItems }} placement="topLeft" trigger={['click']}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '8px 10px',
-                  borderRadius: 10,
-                  cursor: 'pointer',
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = COLORS.itemHoverBg; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-              >
+          {/* ── 사용자 메뉴 (프로필·비밀번호·관리자·로그아웃) ── */}
+          <Dropdown menu={{ items: userMenuItems }} placement="topRight" trigger={['click']}>
+            <Tooltip title={user?.displayName ? `${user.displayName} (@${user.username})` : '내 계정'} placement="right">
+              <div style={{ marginTop: 8, cursor: 'pointer', display: 'flex', justifyContent: 'center' }}>
                 <Avatar
-                  size={36}
-                  style={{ backgroundColor: getAvatarColor(user?.id, user?.avatarColor), flexShrink: 0 }}
+                  size={38}
+                  style={{ backgroundColor: getAvatarColor(user?.id, user?.avatarColor), border: '2px solid rgba(255,255,255,0.15)' }}
                 >
                   {userInitials}
                 </Avatar>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: COLORS.headText,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                    title={user?.displayName}
-                  >
-                    {user?.displayName}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: COLORS.itemText,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                    title={user?.username}
-                  >
-                    @{user?.username}
-                  </div>
-                </div>
               </div>
-            </Dropdown>
-
-            {/* IP 정보 + 로그아웃 버튼 */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '2px 6px 0 10px',
-              }}
-            >
-              <Tooltip title="접속 IP" placement="top">
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: COLORS.toggleText, overflow: 'hidden' }}>
-                  <GlobalOutlined style={{ fontSize: 11 }} />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {user?.clientIp || '—'}
-                  </span>
-                </span>
-              </Tooltip>
-              <Button
-                size="small"
-                type="text"
-                icon={<LogoutOutlined />}
-                onClick={handleLogout}
-                style={{ fontSize: 12, color: COLORS.itemText, flexShrink: 0 }}
-              >
-                로그아웃
-              </Button>
-            </div>
-          </div>
+            </Tooltip>
+          </Dropdown>
         </div>
       </div>
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Button, Col, Form, Input, Modal, Row, Select, Spin, Typography,
-  Avatar, Tooltip, Popconfirm, message, Steps, Radio, Empty, Dropdown,
+  Avatar, Tooltip, Popconfirm, message, Steps, Radio, Empty, Dropdown, Drawer,
 } from 'antd';
 import {
   PlusOutlined, AppstoreOutlined, DeleteOutlined, EditOutlined,
@@ -701,13 +701,18 @@ export default function BoardWorkspace() {
       </div>
 
       {/* ─── 카테고리 생성/수정 모달 ─── */}
-      <Modal
+      <Drawer
         title={catMode === 'create' ? '카테고리 생성' : '카테고리 수정'}
         open={catModalOpen}
-        onOk={handleCatOk}
-        onCancel={() => setCatModalOpen(false)}
-        okText="저장" cancelText="취소"
+        onClose={() => setCatModalOpen(false)}
+        placement="right"
         width={440}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setCatModalOpen(false)}>취소</Button>
+            <Button type="primary" onClick={handleCatOk}>저장</Button>
+          </div>
+        }
       >
         <Form form={catForm} layout="vertical">
           <div style={{ display: 'flex', gap: 12 }}>
@@ -745,13 +750,14 @@ export default function BoardWorkspace() {
             </Form.Item>
           )}
         </Form>
-      </Modal>
+      </Drawer>
 
       {/* ─── 새 보드 생성 모달 ─── */}
-      <Modal
+      <Drawer
         title={step === 0 ? '템플릿 선택' : '보드 정보 입력'}
         open={boardModalOpen}
-        onCancel={() => setBoardModalOpen(false)}
+        onClose={() => setBoardModalOpen(false)}
+        placement="right"
         footer={
           step === 0 ? (
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -839,15 +845,21 @@ export default function BoardWorkspace() {
             </Form.Item>
           </Form>
         )}
-      </Modal>
+      </Drawer>
 
       {/* ─── 보드 수정 모달 ─── */}
-      <Modal
+      <Drawer
         title="보드 수정"
         open={editModalOpen}
-        onOk={handleEditBoard}
-        onCancel={() => setEditModalOpen(false)}
-        okText="수정" cancelText="취소"
+        onClose={() => setEditModalOpen(false)}
+        placement="right"
+        width={480}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setEditModalOpen(false)}>취소</Button>
+            <Button type="primary" onClick={handleEditBoard}>수정</Button>
+          </div>
+        }
       >
         <Form form={editForm} layout="vertical">
           <div style={{ display: 'flex', gap: 12 }}>
@@ -882,7 +894,8 @@ export default function BoardWorkspace() {
             <Input.TextArea rows={2} placeholder="보드 설명 (선택)" />
           </Form.Item>
         </Form>
-      </Modal>
+      </Drawer>
     </div>
   );
 }
+

@@ -598,6 +598,11 @@ export const THEMES = {
         scrollThumb: 'rgba(59,130,246,0.25)',
         scrollHover: 'rgba(59,130,246,0.4)',
       },
+      sections: {
+        viewTint:   '#e8f2fe', viewColor:   '#2563eb',
+        collabTint: '#e4fdf3', collabColor: '#10b981',
+        adminTint:  '#f2efff', adminColor:  '#7c3aed',
+      },
     },
   },
 };

@@ -98,7 +98,7 @@ function toGanttMilestone(m) {
   };
 }
 
-export default function GanttPage() {
+export default function GanttPage({ embedded = false }) {
   const [tasks, setTasks]           = useState([]);
   const [milestones, setMilestones] = useState([]);
   const [parts, setParts]           = useState([]);
@@ -262,9 +262,9 @@ export default function GanttPage() {
       {/* 상단 제목 + 뷰 전환 + 마일스톤 버튼 */}
       <Space style={{ marginBottom: 12, justifyContent: 'space-between', width: '100%' }} wrap>
         <Typography.Title level={4} style={{ margin: 0 }}>
-          간트 차트
+          {!embedded && '간트 차트'}
           {hasFilter && (
-            <Tag color="blue" style={{ marginLeft: 8, fontSize: 12, fontWeight: 400 }}>
+            <Tag color="blue" style={{ marginLeft: embedded ? 0 : 8, fontSize: 12, fontWeight: 400 }}>
               {filteredTasks.length}/{tasks.length}건 표시
             </Tag>
           )}

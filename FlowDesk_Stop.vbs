@@ -5,7 +5,7 @@ Set oShell = CreateObject("WScript.Shell")
 Set oFSO   = CreateObject("Scripting.FileSystemObject")
 
 Dim stopScript
-stopScript = "C:\Users\jhyou\task-manager\stop.bat"
+stopScript = "C:\Users\DCHINAE\Desktop\FlowDesk_Repo\stop.bat"
 
 If Not oFSO.FileExists(stopScript) Then
     MsgBox "stop.bat 파일을 찾을 수 없습니다." & vbCrLf & _

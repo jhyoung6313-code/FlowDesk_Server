@@ -219,6 +219,13 @@ export default function useChatSocket(token) {
       console.warn('[Chat] 소켓 연결 끊김:', reason);
     });
 
+    // 중복 로그인 감지: 다른 기기에서 로그인 시 서버가 이 이벤트를 emit
+    socket.on('session-replaced', () => {
+      localStorage.removeItem('token');
+      sessionStorage.setItem('loginNotice', '다른 기기에서 로그인되어 현재 세션이 종료되었습니다.');
+      window.location.href = '/login';
+    });
+
     // Socket.IO v4: reconnect 이벤트는 socket.io(Manager)에만 발생하므로
     // connect 이벤트를 사용해야 초기 연결 + 재연결 모두 처리됨
     // 채팅 페이지 방문 전에도 사이드바 안읽음 배지가 뜨도록, 연결 시 방 목록을

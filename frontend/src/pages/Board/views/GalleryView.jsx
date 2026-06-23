@@ -215,7 +215,7 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
                 </span>
               )}
             </div>
-            <Avatar.Group maxCount={3} size={20}>
+            <Avatar.Group max={{ count: 3 }} size={20}>
               {assignees.map(a => (
                 <Tooltip key={a.id} title={a.user?.displayName}>
                   <Avatar size={20} style={{ backgroundColor: getAvatarColor(a.userId ?? a.user?.id), fontSize: 10 }}>

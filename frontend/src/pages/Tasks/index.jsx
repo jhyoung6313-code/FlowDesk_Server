@@ -1,9 +1,10 @@
 import { useSearchParams } from 'react-router-dom';
 import { Tabs, Typography } from 'antd';
-import { UnorderedListOutlined, ProjectOutlined, CalendarOutlined } from '@ant-design/icons';
+import { UnorderedListOutlined, ProjectOutlined, CalendarOutlined, BarChartOutlined } from '@ant-design/icons';
 import ListView from './ListView';
 import KanbanView from './KanbanView';
 import CalendarView from './CalendarView';
+import GanttPage from '../Gantt';
 
 export default function TasksPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -57,6 +58,16 @@ export default function TasksPage() {
               </span>
             ),
             children: <CalendarView isActive={view === 'calendar'} />,
+          },
+          {
+            key: 'gantt',
+            label: (
+              <span>
+                <BarChartOutlined style={{ marginRight: 6 }} />
+                간트 차트
+              </span>
+            ),
+            children: <GanttPage embedded />,
           },
         ]}
       />
