@@ -5,7 +5,6 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { getTasks } from '../../api/tasks';
-import { getNotifications } from '../../api/notifications';
 import useTaskStore from '../../store/taskStore';
 import useAuthStore from '../../store/authStore';
 import useThemeStore from '../../store/themeStore';
@@ -47,7 +46,6 @@ export default function DashboardPage() {
   const { addTask, editTask, fetchTasks } = useTaskStore();
 
   const [tasks,   setTasks]   = useState([]);
-  const [notifs,  setNotifs]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [formStatus, setFormStatus] = useState('pending');
@@ -63,8 +61,8 @@ export default function DashboardPage() {
 
   const loadTasks = useCallback(() => {
     setLoading(true);
-    Promise.all([getTasks(), getNotifications()])
-      .then(([t, n]) => { setTasks(t); setNotifs(Array.isArray(n) ? n : []); })
+    getTasks()
+      .then((t) => { setTasks(t); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -434,49 +432,6 @@ export default function DashboardPage() {
         onClose={() => { setFormOpen(false); setSelectedTask(null); }}
         onSubmit={async (data) => { await handleFormSubmit(data); setFormOpen(false); setSelectedTask(null); }}
       />
-
-      {/* ── 하단 활동 스트립 ── */}
-      <div style={{
-        height: 42,
-        background: D.stripBg,
-        borderTop: `1px solid ${D.border}`,
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 24px',
-        overflow: 'hidden',
-        flexShrink: 0,
-        gap: 0,
-      }}>
-        <span style={{
-          fontSize: 9.5, fontWeight: 700, color: D.text2,
-          letterSpacing: '1px', textTransform: 'uppercase',
-          marginRight: 16, whiteSpace: 'nowrap', flexShrink: 0,
-        }}>최근 활동</span>
-        <div style={{ display: 'flex', gap: 18, alignItems: 'center', overflow: 'hidden' }}>
-          {notifs.length === 0 ? (
-            <span style={{ fontSize: 11, color: D.text2 }}>활동 내역이 없습니다.</span>
-          ) : notifs.slice(0, 6).map((n, i) => (
-            <div key={n.id || i} style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              fontSize: 11, color: isDark ? '#64748b' : '#64748B',
-              whiteSpace: 'nowrap', flexShrink: 0,
-            }}>
-              <span style={{
-                width: 18, height: 18, borderRadius: '50%',
-                background: nameColor(n.title || '시스템'),
-                color: '#fff', display: 'inline-flex', alignItems: 'center',
-                justifyContent: 'center', fontSize: 7.5, fontWeight: 700, flexShrink: 0,
-              }}>{(n.title || '시')[0]}</span>
-              <span style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {n.body || n.title}
-              </span>
-              <span style={{ color: isDark ? '#374151' : '#CBD5E1', fontSize: 10 }}>
-                {n.createdAt ? dayjs(n.createdAt).fromNow() : ''}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
