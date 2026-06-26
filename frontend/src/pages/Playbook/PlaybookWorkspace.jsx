@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Input, Tooltip, Spin, message, Tag, Drawer } from 'antd';
+import { Button, Input, Tooltip, Spin, message, Tag } from 'antd';
+import ResizableDrawer from '../../components/common/ResizableDrawer';
 import {
   PlusOutlined, BookOutlined, SearchOutlined, RightOutlined, DownOutlined,
   PlayCircleOutlined, EyeOutlined, EditOutlined, UnorderedListOutlined,
@@ -83,9 +84,9 @@ export default function PlaybookWorkspace() {
   const filtered = playbooks.filter((pb) => !search || pb.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div style={{ display: 'flex', height: '100%', background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e8e8e8' }}>
+    <div style={{ display: 'flex', height: '100%', background: 'var(--fd-surface)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--fd-border)' }}>
       {/* ── 좌측 트리: 플레이북 → Run ── */}
-      <div style={{ width: 290, flexShrink: 0, borderRight: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div style={{ width: 290, flexShrink: 0, borderRight: '1px solid var(--fd-border)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={{ padding: '14px 14px 10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 15, fontWeight: 700 }}>
@@ -139,7 +140,7 @@ export default function PlaybookWorkspace() {
                   >
                     {isOpen ? <DownOutlined style={{ fontSize: 12, color: '#8c8c8c' }} /> : <RightOutlined style={{ fontSize: 12, color: '#8c8c8c' }} />}
                     <BookOutlined style={{ color: '#1677ff', flexShrink: 0 }} />
-                    <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: '#595959', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={pb.name}>
+                    <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: 'var(--fd-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={pb.name}>
                       {pb.name}
                     </span>
                     <span style={{ fontSize: 12, color: '#bfbfbf' }}>{runCount}</span>
@@ -180,7 +181,7 @@ export default function PlaybookWorkspace() {
                                 }}
                               >
                                 <span style={{ width: 7, height: 7, borderRadius: '50%', background: st.color, flexShrink: 0 }} />
-                                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: '#434343' }} title={run.name}>
+                                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--fd-text-primary)' }} title={run.name}>
                                   {run.name}
                                 </span>
                                 <Tag color={st.color === '#bfbfbf' ? 'default' : undefined} style={{ fontSize: 10, margin: 0, padding: '0 6px', lineHeight: '16px', color: st.color, borderColor: st.color, background: 'transparent' }}>
@@ -225,7 +226,7 @@ export default function PlaybookWorkspace() {
       />
 
       {/* ── 새 Playbook 드로어 (오른쪽 슬라이드) ── */}
-      <Drawer
+      <ResizableDrawer
         title={null}
         open={editorDrawer}
         onClose={() => setEditorDrawer(false)}
@@ -240,7 +241,7 @@ export default function PlaybookWorkspace() {
           onClose={() => setEditorDrawer(false)}
           onSaved={() => { load(); setListRefresh((v) => v + 1); }}
         />
-      </Drawer>
+      </ResizableDrawer>
 
       <style>{`
         .fd-pb-row .fd-pb-actions { opacity: 0; transition: opacity .12s; }

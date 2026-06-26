@@ -58,7 +58,7 @@ export default function NotificationsPage() {
                 marginBottom: 6,
                 padding: '12px 16px',
                 cursor: 'pointer',
-                border: item.isRead ? '1px solid #f0f0f0' : '1px solid #91caff',
+                border: item.isRead ? '1px solid var(--fd-border)' : '1px solid #91caff',
               }}
               onClick={() => !item.isRead && markRead(item.id)}
               actions={[

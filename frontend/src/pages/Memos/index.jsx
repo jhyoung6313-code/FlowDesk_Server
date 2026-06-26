@@ -128,7 +128,7 @@ export default function MemosPage() {
           style={{
             position: 'relative', flex: 1, minHeight: 480,
             background: 'repeating-linear-gradient(45deg, #f8fafc, #f8fafc 12px, #f1f5f9 12px, #f1f5f9 24px)',
-            border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'auto',
+            border: '1px solid var(--fd-border)', borderRadius: 12, overflow: 'auto',
           }}
         >
           {memos.map((m) => (

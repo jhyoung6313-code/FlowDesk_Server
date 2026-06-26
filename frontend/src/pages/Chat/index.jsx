@@ -6,9 +6,10 @@ import emojiData from '@emoji-mart/data';
 import { createPortal } from 'react-dom';
 import {
   Badge, Button, Tooltip, Avatar, Spin, Modal,
-  Select, Radio, Form, Input, message as antMsg, Dropdown, Empty, Drawer,
+  Select, Radio, Form, Input, message as antMsg, Dropdown, Empty,
   DatePicker,
 } from 'antd';
+import ResizableDrawer from '../../components/common/ResizableDrawer';
 import {
   PlusOutlined, SendOutlined, TeamOutlined, UserOutlined,
   LogoutOutlined, PaperClipOutlined, BoldOutlined, ItalicOutlined,
@@ -156,15 +157,15 @@ function DateDivider({ date }) {
   else label = d.format('YYYY년 M월 D일 (ddd)');
   return (
     <div style={{ display: 'flex', alignItems: 'center', margin: '24px 20px 12px', gap: 12 }}>
-      <div style={{ flex: 1, height: 1, background: '#ebebeb' }} />
+      <div style={{ flex: 1, height: 1, background: 'var(--fd-border)' }} />
       <span style={{
         fontSize: 11, color: '#aaa', fontWeight: 600, whiteSpace: 'nowrap',
-        padding: '3px 10px', background: '#fff', borderRadius: 20,
-        border: '1px solid #ebebeb', letterSpacing: 0.3,
+        padding: '3px 10px', background: 'var(--fd-surface)', borderRadius: 20,
+        border: '1px solid var(--fd-border)', letterSpacing: 0.3,
       }}>
         {label}
       </span>
-      <div style={{ flex: 1, height: 1, background: '#ebebeb' }} />
+      <div style={{ flex: 1, height: 1, background: 'var(--fd-border)' }} />
     </div>
   );
 }
@@ -306,7 +307,7 @@ function FileAttachment({ msg }) {
       <div style={{ marginTop: 6 }}>
         <a href={fullUrl} target="_blank" rel="noreferrer">
           <img src={fullUrl} alt={fileName}
-            style={{ width: CHAT_IMAGE_THUMB_W, height: CHAT_IMAGE_THUMB_H, borderRadius: 8, display: 'block', objectFit: 'cover', border: '1px solid #eee', cursor: 'zoom-in' }}
+            style={{ width: CHAT_IMAGE_THUMB_W, height: CHAT_IMAGE_THUMB_H, borderRadius: 8, display: 'block', objectFit: 'cover', border: '1px solid var(--fd-border)', cursor: 'zoom-in' }}
           />
         </a>
         {fileName && <div style={{ fontSize: 11, color: '#aaa', marginTop: 3 }}>{fileName}</div>}
@@ -317,7 +318,7 @@ function FileAttachment({ msg }) {
   return (
     <a
       href={fullUrl} download={fileName} target="_blank" rel="noreferrer"
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginTop: 8, padding: '10px 14px', borderRadius: 10, background: '#f5f5f5', textDecoration: 'none', color: '#333', maxWidth: 320, border: '1px solid #e8e8e8', transition: 'background 0.12s' }}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 10, marginTop: 8, padding: '10px 14px', borderRadius: 10, background: 'var(--fd-surface-sunken)', textDecoration: 'none', color: 'var(--fd-text-primary)', maxWidth: 320, border: '1px solid var(--fd-border)', transition: 'background 0.12s' }}
       onMouseEnter={(e) => { e.currentTarget.style.background = '#eeeeee'; }}
       onMouseLeave={(e) => { e.currentTarget.style.background = '#f5f5f5'; }}
     >
@@ -417,7 +418,7 @@ function MessageBubble({ msg, prevMsg, myId, onReact, onEdit, onDelete, onPin, o
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: isMine ? 'flex-end' : 'flex-start' }}>
         {!isGrouped && !isMine && (
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 3 }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: '#1a1a1a' }}>
+            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--fd-text-primary)' }}>
               {msg.sender?.displayName}
             </span>
             <span style={{ fontSize: 11, color: '#c0c0c0' }}>{fmtTime(msg.createdAt)}</span>
@@ -483,7 +484,7 @@ function MessageBubble({ msg, prevMsg, myId, onReact, onEdit, onDelete, onPin, o
                   type="button"
                   onClick={() => onReact(msg.id, r.emoji)}
                   style={{
-                    background: '#f5f5f5', border: '1.5px solid #e8e8e8',
+                    background: 'var(--fd-surface-sunken)', border: '1.5px solid var(--fd-border)',
                     borderRadius: 12, padding: '2px 9px', cursor: 'pointer',
                     fontSize: 13, display: 'flex', alignItems: 'center', gap: 4,
                     fontFamily: 'inherit', transition: 'all 0.1s',
@@ -491,7 +492,7 @@ function MessageBubble({ msg, prevMsg, myId, onReact, onEdit, onDelete, onPin, o
                   onMouseEnter={(e) => { e.currentTarget.style.background = '#e6f4ff'; e.currentTarget.style.borderColor = '#91caff'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = '#f5f5f5'; e.currentTarget.style.borderColor = '#e8e8e8'; }}
                 >
-                  {r.emoji} <span style={{ fontSize: 11, color: '#555', fontWeight: 600 }}>{r.users.length}</span>
+                  {r.emoji} <span style={{ fontSize: 11, color: 'var(--fd-text-secondary)', fontWeight: 600 }}>{r.users.length}</span>
                 </button>
               </Tooltip>
             ))}
@@ -514,7 +515,7 @@ function MessageBubble({ msg, prevMsg, myId, onReact, onEdit, onDelete, onPin, o
       {hover && (
         <div style={{
           position: 'absolute', top: -16, right: 20,
-          background: '#fff', border: '1px solid #e0e0e0',
+          background: 'var(--fd-surface)', border: '1px solid var(--fd-border)',
           borderRadius: 20, boxShadow: '0 2px 12px rgba(0,0,0,0.1)',
           display: 'flex', alignItems: 'center', padding: '2px 6px', zIndex: 10,
         }}>
@@ -601,11 +602,11 @@ function FormatToolbar({ editorRef, fontSize, setFontSize, fontFamily, setFontFa
     }
   };
 
-  const btn = { width: 26, height: 26, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid transparent', borderRadius: 4, background: 'transparent', cursor: 'pointer', fontSize: 12, color: '#555', flexShrink: 0 };
+  const btn = { width: 26, height: 26, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid transparent', borderRadius: 4, background: 'transparent', cursor: 'pointer', fontSize: 12, color: 'var(--fd-text-secondary)', flexShrink: 0 };
   const sep = { width: 1, height: 14, background: '#e0e0e0', margin: '0 3px', flexShrink: 0 };
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '3px 8px', borderBottom: '1px solid #f0f0f0', background: '#fafafa', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '3px 8px', borderBottom: '1px solid var(--fd-border)', background: 'var(--fd-surface-sunken)', flexWrap: 'wrap' }}>
       <Tooltip title="굵게"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('bold'); }}><BoldOutlined /></button></Tooltip>
       <Tooltip title="기울임"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('italic'); }}><ItalicOutlined /></button></Tooltip>
       <Tooltip title="밑줄"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('underline'); }}><UnderlineOutlined /></button></Tooltip>
@@ -626,10 +627,10 @@ function FormatToolbar({ editorRef, fontSize, setFontSize, fontFamily, setFontFa
         }}><CodeOutlined /></button>
       </Tooltip>
       <div style={sep} />
-      <select value={fontSize} onChange={(e) => { editorRef.current?.focus(); applySpan('fontSize', e.target.value, setFontSize); }} style={{ height: 24, fontSize: 11, border: '1px solid #ddd', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: '#fff', width: 54 }}>
+      <select value={fontSize} onChange={(e) => { editorRef.current?.focus(); applySpan('fontSize', e.target.value, setFontSize); }} style={{ height: 24, fontSize: 11, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: 'var(--fd-surface)', width: 54 }}>
         {FONT_SIZES.map((s) => <option key={s} value={s}>{s}px</option>)}
       </select>
-      <select value={fontFamily} onChange={(e) => { editorRef.current?.focus(); applySpan('fontFamily', e.target.value, setFontFamily); }} style={{ height: 24, fontSize: 11, border: '1px solid #ddd', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: '#fff', width: 78 }}>
+      <select value={fontFamily} onChange={(e) => { editorRef.current?.focus(); applySpan('fontFamily', e.target.value, setFontFamily); }} style={{ height: 24, fontSize: 11, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: 'var(--fd-surface)', width: 78 }}>
         {FONT_FAMILIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
       </select>
       <div style={sep} />
@@ -646,7 +647,7 @@ function FormatToolbar({ editorRef, fontSize, setFontSize, fontFamily, setFontFa
             setColorOpen((v) => !v);
           }}
         >
-          <FontColorsOutlined style={{ fontSize: 13, color: '#555' }} />
+          <FontColorsOutlined style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }} />
           <div style={{ position: 'absolute', bottom: -1, left: 2, right: 2, height: 3, background: fontColor, borderRadius: 1 }} />
         </div>
       </Tooltip>
@@ -661,7 +662,7 @@ function FormatToolbar({ editorRef, fontSize, setFontSize, fontFamily, setFontFa
           <div
             style={{
               position: 'fixed', top: colorPos.top, left: colorPos.left, zIndex: 99999,
-              background: '#fff', border: '1px solid #e8e8e8', borderRadius: 6,
+              background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 6,
               boxShadow: '0 4px 12px rgba(0,0,0,0.18)', padding: 6,
               display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4,
             }}
@@ -677,7 +678,7 @@ function FormatToolbar({ editorRef, fontSize, setFontSize, fontFamily, setFontFa
                 }}
                 style={{
                   width: 22, height: 22, background: color, borderRadius: 3, cursor: 'pointer',
-                  border: color === fontColor ? '2px solid #1677ff' : '1px solid #d9d9d9',
+                  border: color === fontColor ? '2px solid #1677ff' : '1px solid var(--fd-border)',
                   boxSizing: 'border-box',
                 }}
               />
@@ -1279,17 +1280,17 @@ export default function ChatPage() {
   );
 
   return (
-    <div style={{ display: 'flex', height: '100%', background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e8e8e8' }}>
+    <div style={{ display: 'flex', height: '100%', background: 'var(--fd-surface)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--fd-border)' }}>
 
       {/* ══ 왼쪽 사이드바 ══ */}
-      <div style={{ width: 252, minWidth: 252, borderRight: '1px solid #ebebeb', display: 'flex', flexDirection: 'column', background: '#f8f9fa' }}>
+      <div style={{ width: 252, minWidth: 252, borderRight: '1px solid var(--fd-border)', display: 'flex', flexDirection: 'column', background: 'var(--fd-surface-sunken)' }}>
 
         {/* 사이드바 헤더 */}
-        <div style={{ padding: '12px 12px 8px', borderBottom: '1px solid #ebebeb' }}>
+        <div style={{ padding: '12px 12px 8px', borderBottom: '1px solid var(--fd-border)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
               <MessageOutlined style={{ fontSize: 15, color: '#1677ff' }} />
-              <span style={{ fontWeight: 700, fontSize: 15, color: '#111' }}>채팅</span>
+              <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--fd-text-primary)' }}>채팅</span>
               {totalUnread > 0 && <Badge count={totalUnread} size="small" />}
             </div>
             <div style={{ display: 'flex', gap: 2 }}>
@@ -1391,13 +1392,13 @@ export default function ChatPage() {
         ) : (
           <>
             {/* 채팅방 헤더 */}
-            <div style={{ height: 52, padding: '0 16px', borderBottom: '1px solid #ebebeb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', flexShrink: 0 }}>
+            <div style={{ height: 52, padding: '0 16px', borderBottom: '1px solid var(--fd-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--fd-surface)', flexShrink: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
                 {activeRoom && roomAvatar(activeRoom, user.id, 30)}
                 <div style={{ minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                     {activeRoom && <RoomTypeIcon type={activeRoom.type} size={12} />}
-                    <span style={{ fontWeight: 700, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#111' }}>
+                    <span style={{ fontWeight: 700, fontSize: 15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: 'var(--fd-text-primary)' }}>
                       {activeRoom ? roomDisplayName(activeRoom, user.id) : ''}
                     </span>
                   </div>
@@ -1498,8 +1499,8 @@ export default function ChatPage() {
             )}
 
             {/* 입력 영역 */}
-            <div style={{ padding: '6px 72px 8px 14px', background: '#fff', flexShrink: 0 }}>
-              <div style={{ border: '1px solid #e0e0e0', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', transition: 'border-color 0.15s, box-shadow 0.15s' }}
+            <div style={{ padding: '6px 72px 8px 14px', background: 'var(--fd-surface)', flexShrink: 0 }}>
+              <div style={{ border: '1px solid var(--fd-border)', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.05)', transition: 'border-color 0.15s, box-shadow 0.15s' }}
                 onFocus={() => {}} // handled per element
               >
                 {/* 서식 툴바 */}
@@ -1512,7 +1513,7 @@ export default function ChatPage() {
 
                 {/* 파일 미리보기 */}
                 {pendingFile && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 12px', borderBottom: '1px solid #f0f0f0', background: '#fafafa' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '7px 12px', borderBottom: '1px solid var(--fd-border)', background: 'var(--fd-surface-sunken)' }}>
                     {pendingFile.previewUrl
                       ? <img src={pendingFile.previewUrl} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 4 }} />
                       : <FileTypeIcon type={pendingFile.type} size={22} />
@@ -1590,10 +1591,10 @@ export default function ChatPage() {
 
       {/* ══ 오른쪽: 정보 패널 (멤버·파일) ══ */}
       {activeRoomId && (
-        <div style={{ width: 230, minWidth: 230, borderLeft: '1px solid #ebebeb', display: 'flex', flexDirection: 'column', background: '#fafbfc', overflowY: 'auto' }}>
+        <div style={{ width: 230, minWidth: 230, borderLeft: '1px solid var(--fd-border)', display: 'flex', flexDirection: 'column', background: 'var(--fd-surface-sunken)', overflowY: 'auto' }}>
           {/* 패널 헤더 */}
-          <div style={{ padding: '0 14px', height: 52, borderBottom: '1px solid #ebebeb', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>정보</span>
+          <div style={{ padding: '0 14px', height: 52, borderBottom: '1px solid var(--fd-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--fd-text-primary)' }}>정보</span>
             <Tooltip title="내 상태 설정">
               <Button type="text" size="small" icon={<SmileOutlined />} style={{ color: '#bbb' }}
                 onClick={() => {
@@ -1620,7 +1621,7 @@ export default function ChatPage() {
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: isOnline ? '#52c41a' : '#d9d9d9', border: '1.5px solid #fafbfc', position: 'absolute', bottom: 0, right: 0, display: 'block' }} />
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.user?.displayName}</div>
+                    <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--fd-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.user?.displayName}</div>
                     {hasStatus ? (
                       <div style={{ fontSize: 10, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {m.user.statusEmoji} {m.user.statusText}
@@ -1634,7 +1635,7 @@ export default function ChatPage() {
             })}
           </div>
 
-          <div style={{ borderTop: '1px solid #ebebeb', margin: '4px 0' }} />
+          <div style={{ borderTop: '1px solid var(--fd-border)', margin: '4px 0' }} />
 
           {/* 고정 메시지 섹션 */}
           <div style={{ padding: '10px 14px' }}>
@@ -1642,7 +1643,7 @@ export default function ChatPage() {
             <button
               type="button"
               onClick={handleOpenPinned}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid #e8e8e8', borderRadius: 7, padding: '6px 10px', cursor: 'pointer', width: '100%', color: '#555', fontSize: 12, transition: 'background 0.12s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid var(--fd-border)', borderRadius: 7, padding: '6px 10px', cursor: 'pointer', width: '100%', color: 'var(--fd-text-secondary)', fontSize: 12, transition: 'background 0.12s' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
@@ -1651,7 +1652,7 @@ export default function ChatPage() {
             </button>
           </div>
 
-          <div style={{ borderTop: '1px solid #ebebeb', margin: '4px 0' }} />
+          <div style={{ borderTop: '1px solid var(--fd-border)', margin: '4px 0' }} />
 
           {/* 공유 파일 섹션 */}
           {(() => {
@@ -1677,11 +1678,11 @@ export default function ChatPage() {
                         style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 0', textDecoration: 'none', borderBottom: '1px solid #f5f5f5' }}
                       >
                         {isImage
-                          ? <img src={fullUrl} alt="" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 4, flexShrink: 0, border: '1px solid #eee' }} />
+                          ? <img src={fullUrl} alt="" style={{ width: 32, height: 32, objectFit: 'cover', borderRadius: 4, flexShrink: 0, border: '1px solid var(--fd-border)' }} />
                           : <FileOutlined style={{ fontSize: 24, color: '#1677ff', flexShrink: 0 }} />
                         }
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 11, color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{m.fileName || '파일'}</div>
+                          <div style={{ fontSize: 11, color: 'var(--fd-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{m.fileName || '파일'}</div>
                           <div style={{ fontSize: 10, color: '#bbb' }}>{m.sender?.displayName} · {dayjs(m.createdAt).format('MM/DD')}</div>
                         </div>
                       </a>
@@ -1696,24 +1697,24 @@ export default function ChatPage() {
 
       {/* ══ 오른쪽: 스레드 패널 ══ */}
       {threadData && (
-        <div style={{ width: 340, minWidth: 340, borderLeft: '1px solid #ebebeb', display: 'flex', flexDirection: 'column', background: '#fafbfc' }}>
-          <div style={{ padding: '0 14px', height: 52, borderBottom: '1px solid #ebebeb', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontWeight: 700, fontSize: 14, color: '#111' }}>스레드</span>
+        <div style={{ width: 340, minWidth: 340, borderLeft: '1px solid var(--fd-border)', display: 'flex', flexDirection: 'column', background: 'var(--fd-surface-sunken)' }}>
+          <div style={{ padding: '0 14px', height: 52, borderBottom: '1px solid var(--fd-border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontWeight: 700, fontSize: 14, color: 'var(--fd-text-primary)' }}>스레드</span>
             <Button type="text" size="small" icon={<CloseOutlined />} onClick={closeThread} style={{ color: '#aaa' }} />
           </div>
 
           {/* 원본 메시지 */}
-          <div style={{ padding: '14px 16px', borderBottom: '1px solid #ebebeb', background: '#fff' }}>
+          <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--fd-border)', background: 'var(--fd-surface)' }}>
             {threadData.parent && (
               <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
                 <UserAvatar user={threadData.parent.sender} size={32} />
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 3 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a' }}>{threadData.parent.sender?.displayName}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--fd-text-primary)' }}>{threadData.parent.sender?.displayName}</span>
                     <span style={{ fontSize: 11, color: '#c0c0c0' }}>{fmtTime(threadData.parent.createdAt)}</span>
                   </div>
                   {threadData.parent.content && (
-                    <div dangerouslySetInnerHTML={{ __html: highlightMentions(threadData.parent.content) }} style={{ fontSize: 13, color: '#1a1a1a', wordBreak: 'break-word', lineHeight: 1.6 }} />
+                    <div dangerouslySetInnerHTML={{ __html: highlightMentions(threadData.parent.content) }} style={{ fontSize: 13, color: 'var(--fd-text-primary)', wordBreak: 'break-word', lineHeight: 1.6 }} />
                   )}
                 </div>
               </div>
@@ -1724,7 +1725,7 @@ export default function ChatPage() {
           {threadData.replies.length > 0 && (
             <div style={{ padding: '8px 16px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>{threadData.replies.length}개의 답글</span>
-              <div style={{ flex: 1, height: 1, background: '#ebebeb' }} />
+              <div style={{ flex: 1, height: 1, background: 'var(--fd-border)' }} />
             </div>
           )}
 
@@ -1750,7 +1751,7 @@ export default function ChatPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     {!isGrouped && (
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 2 }}>
-                        <span style={{ fontSize: 13, fontWeight: 700, color: '#1a1a1a' }}>{msg.sender?.displayName}</span>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--fd-text-primary)' }}>{msg.sender?.displayName}</span>
                         <span style={{ fontSize: 10, color: '#c0c0c0' }}>{fmtTime(msg.createdAt)}</span>
                       </div>
                     )}
@@ -1758,7 +1759,7 @@ export default function ChatPage() {
                       ? <span style={{ fontSize: 13, color: '#ccc', fontStyle: 'italic' }}>삭제된 메시지입니다.</span>
                       : (
                         <>
-                          {msg.content && <div dangerouslySetInnerHTML={{ __html: highlightMentions(msg.content) }} style={{ fontSize: 13, color: '#1a1a1a', wordBreak: 'break-word', lineHeight: 1.6 }} />}
+                          {msg.content && <div dangerouslySetInnerHTML={{ __html: highlightMentions(msg.content) }} style={{ fontSize: 13, color: 'var(--fd-text-primary)', wordBreak: 'break-word', lineHeight: 1.6 }} />}
                           {msg.fileUrl && <FileAttachment msg={msg} />}
                         </>
                       )
@@ -1767,8 +1768,8 @@ export default function ChatPage() {
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 4 }}>
                         {groupReactions(msg.reactions).map((r) => (
                           <button key={r.emoji} type="button" onClick={() => handleReact(msg.id, r.emoji)}
-                            style={{ background: '#f5f5f5', border: '1px solid #e8e8e8', borderRadius: 10, padding: '1px 7px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'inherit' }}>
-                            {r.emoji} <span style={{ fontSize: 11, color: '#666' }}>{r.users.length}</span>
+                            style={{ background: 'var(--fd-surface-sunken)', border: '1px solid var(--fd-border)', borderRadius: 10, padding: '1px 7px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'inherit' }}>
+                            {r.emoji} <span style={{ fontSize: 11, color: 'var(--fd-text-secondary)' }}>{r.users.length}</span>
                           </button>
                         ))}
                       </div>
@@ -1780,15 +1781,15 @@ export default function ChatPage() {
           </div>
 
           {/* 스레드 입력 */}
-          <div style={{ padding: '8px 12px 12px', background: '#fff', borderTop: '1px solid #ebebeb' }}>
+          <div style={{ padding: '8px 12px 12px', background: 'var(--fd-surface)', borderTop: '1px solid var(--fd-border)' }}>
             {threadFile && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, padding: '5px 8px', background: '#f5f5f5', borderRadius: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, padding: '5px 8px', background: 'var(--fd-surface-sunken)', borderRadius: 6 }}>
                 <FileTypeIcon type={threadFile.type} size={16} />
                 <span style={{ fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{threadFile.name}</span>
                 <Button type="text" size="small" icon={<CloseOutlined />} onClick={() => setThreadFile(null)} style={{ color: '#aaa' }} />
               </div>
             )}
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, border: '1px solid #e0e0e0', borderRadius: 8, padding: '6px 8px', background: '#fafafa' }}>
+            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, border: '1px solid var(--fd-border)', borderRadius: 8, padding: '6px 8px', background: 'var(--fd-surface-sunken)' }}>
               <label htmlFor="thread-file-input" style={{ cursor: 'pointer', color: '#ccc', display: 'flex', alignItems: 'center', flexShrink: 0, transition: 'color 0.12s' }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = '#1677ff'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = '#ccc'; }}
@@ -1856,7 +1857,7 @@ export default function ChatPage() {
           : (
             <div style={{ maxHeight: 400, overflowY: 'auto' }}>
               {publicRooms.map((r) => (
-                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 8px', borderBottom: '1px solid #f0f0f0' }}>
+                <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 8px', borderBottom: '1px solid var(--fd-border)' }}>
                   <Avatar icon={<GlobalOutlined />} style={{ background: '#52c41a', flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 14 }}>{r.name}</div>
@@ -1875,7 +1876,7 @@ export default function ChatPage() {
       </Modal>
 
       {/* ══ 고정 메시지 패널 ══ */}
-      <Drawer title={<><PushpinOutlined /> 고정 메시지</>} open={pinnedPanel} onClose={() => setPinnedPanel(false)} width={380} placement="right">
+      <ResizableDrawer title={<><PushpinOutlined /> 고정 메시지</>} open={pinnedPanel} onClose={() => setPinnedPanel(false)} width={380} placement="right">
         {pinnedMsgs.length === 0 ? <Empty description="고정된 메시지가 없습니다." /> : (
           <div>
             {pinnedMsgs.map((p) => (
@@ -1884,7 +1885,7 @@ export default function ChatPage() {
                   <UserAvatar user={p.message.sender} size={28} />
                   <div style={{ flex: 1 }}>
                     <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>
-                      <span style={{ fontWeight: 600, color: '#333' }}>{p.message.sender?.displayName}</span>
+                      <span style={{ fontWeight: 600, color: 'var(--fd-text-primary)' }}>{p.message.sender?.displayName}</span>
                       {' · '}{dayjs(p.message.createdAt).format('MM/DD HH:mm')}
                     </div>
                     {p.message.content && <div dangerouslySetInnerHTML={{ __html: p.message.content }} style={{ fontSize: 13, wordBreak: 'break-word' }} />}
@@ -1895,10 +1896,10 @@ export default function ChatPage() {
             ))}
           </div>
         )}
-      </Drawer>
+      </ResizableDrawer>
 
       {/* ══ 저장 메시지 패널 ══ */}
-      <Drawer title={<><BookOutlined /> 저장된 메시지</>} open={savedPanel} onClose={() => setSavedPanel(false)} width={400} placement="right">
+      <ResizableDrawer title={<><BookOutlined /> 저장된 메시지</>} open={savedPanel} onClose={() => setSavedPanel(false)} width={400} placement="right">
         {savedMessages.length === 0 ? <Empty description="저장된 메시지가 없습니다." /> : (
           <div>
             {savedMessages.map((s) => (
@@ -1913,10 +1914,10 @@ export default function ChatPage() {
             ))}
           </div>
         )}
-      </Drawer>
+      </ResizableDrawer>
 
       {/* ══ 검색 패널 ══ */}
-      <Drawer title={<><SearchOutlined /> 메시지 검색</>} open={searchOpen} onClose={() => { setSearchOpen(false); setSearchResults([]); setSearchQuery(''); }} width={420} placement="right">
+      <ResizableDrawer title={<><SearchOutlined /> 메시지 검색</>} open={searchOpen} onClose={() => { setSearchOpen(false); setSearchResults([]); setSearchQuery(''); }} width={420} placement="right">
         <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
           <Input placeholder="검색어 입력..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} onPressEnter={handleSearch} allowClear />
           <Button type="primary" icon={<SearchOutlined />} onClick={handleSearch} loading={searching}>검색</Button>
@@ -1927,13 +1928,13 @@ export default function ChatPage() {
             onClick={() => { setSearchOpen(false); setActiveRoom(msg.roomId); }}>
             <div style={{ fontSize: 12, color: '#aaa', marginBottom: 4 }}>
               <span style={{ color: '#1677ff', fontWeight: 500 }}>{msg.room?.name || 'DM'}</span>
-              {' · '}<span style={{ fontWeight: 600, color: '#333' }}>{msg.sender?.displayName}</span>
+              {' · '}<span style={{ fontWeight: 600, color: 'var(--fd-text-primary)' }}>{msg.sender?.displayName}</span>
               {' · '}{dayjs(msg.createdAt).format('MM/DD HH:mm')}
             </div>
             {msg.content && <div dangerouslySetInnerHTML={{ __html: msg.content }} style={{ fontSize: 13, wordBreak: 'break-word', maxHeight: 60, overflow: 'hidden' }} />}
           </div>
         ))}
-      </Drawer>
+      </ResizableDrawer>
 
       {/* ══ 메시지 전달 모달 ══ */}
       <Modal title={<><ShareAltOutlined /> 메시지 전달</>} open={!!forwardMsg} onOk={handleForwardSend} onCancel={() => setForwardMsg(null)} okText="전달" cancelText="취소" okButtonProps={{ disabled: forwardTargets.length === 0 }}>
@@ -1943,7 +1944,7 @@ export default function ChatPage() {
             options={rooms.filter((r) => r.id !== activeRoomId).map((r) => ({ value: r.id, label: roomDisplayName(r, user.id) }))} />
         </div>
         {forwardMsg?.content && (
-          <div style={{ padding: '8px 12px', background: '#f8f9fa', borderRadius: 6, fontSize: 13, maxHeight: 80, overflow: 'hidden' }}
+          <div style={{ padding: '8px 12px', background: 'var(--fd-surface-sunken)', borderRadius: 6, fontSize: 13, maxHeight: 80, overflow: 'hidden' }}
             dangerouslySetInnerHTML={{ __html: forwardMsg.content }} />
         )}
       </Modal>
@@ -1962,14 +1963,14 @@ export default function ChatPage() {
 
       {/* ══ @멘션 드롭다운 ══ */}
       {mentionActive && mentionMembers.length > 0 && createPortal(
-        <div style={{ position: 'fixed', top: mentionPos.top - 8 - Math.min(mentionMembers.length, 6) * 36, left: mentionPos.left, zIndex: 2000, background: '#fff', border: '1px solid #e0e0e0', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: 200, overflow: 'hidden' }}>
+        <div style={{ position: 'fixed', top: mentionPos.top - 8 - Math.min(mentionMembers.length, 6) * 36, left: mentionPos.left, zIndex: 2000, background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 8, boxShadow: '0 4px 16px rgba(0,0,0,0.12)', minWidth: 200, overflow: 'hidden' }}>
           {mentionMembers.map((m, idx) => (
             <div key={m.userId}
               onMouseDown={(e) => { e.preventDefault(); insertMention(m); }}
               style={{ padding: '7px 12px', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', background: idx === mentionIndex ? '#f0f5ff' : 'transparent', borderLeft: idx === mentionIndex ? '3px solid #1677ff' : '3px solid transparent' }}>
               <UserAvatar user={m.user} size={22} />
               <div>
-                <div style={{ fontSize: 13, fontWeight: 500, color: '#222' }}>{m.user.username}</div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fd-text-primary)' }}>{m.user.username}</div>
                 {m.user.displayName && m.user.displayName !== m.user.username && <div style={{ fontSize: 11, color: '#aaa' }}>{m.user.displayName}</div>}
               </div>
             </div>
@@ -1983,7 +1984,7 @@ export default function ChatPage() {
         onOk={handleScheduleSend} onCancel={() => { setScheduleModal(false); setScheduleDate(null); }}
         okText="예약" cancelText="취소" okButtonProps={{ disabled: !scheduleDate }}>
         <div style={{ marginTop: 12 }}>
-          <div style={{ marginBottom: 8, fontSize: 13, color: '#555' }}>현재 입력창의 내용을 아래 시간에 발송합니다.</div>
+          <div style={{ marginBottom: 8, fontSize: 13, color: 'var(--fd-text-secondary)' }}>현재 입력창의 내용을 아래 시간에 발송합니다.</div>
           <DatePicker
             showTime format="YYYY-MM-DD HH:mm"
             value={scheduleDate ? dayjs(scheduleDate) : null}

@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Button, Card, Tag, Space, Modal, Popconfirm, Empty,
-  Typography, Row, Col, Input, Select, Tooltip, Badge, Divider, message,
+  Typography, Row, Col, Input, Select, Tooltip, Badge, Divider, message, Table,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, PlayCircleOutlined,
   BookOutlined, CopyOutlined, SearchOutlined, ClockCircleOutlined,
-  UnorderedListOutlined, AppstoreOutlined,
+  UnorderedListOutlined, AppstoreOutlined, TableOutlined,
 } from '@ant-design/icons';
 import * as pbApi from '../../api/playbook';
 import useAuthStore from '../../store/authStore';
@@ -35,6 +35,12 @@ export default function PlaybookListPage({ onNew } = {}) {
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState(null);
+  const [viewMode, setViewMode] = useState(() => localStorage.getItem('playbook_viewMode') || 'card');
+
+  const handleViewMode = (mode) => {
+    setViewMode(mode);
+    localStorage.setItem('playbook_viewMode', mode);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -75,16 +81,34 @@ export default function PlaybookListPage({ onNew } = {}) {
   );
 
   return (
-    <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ padding: 24, maxWidth: 1200, margin: '0 auto', minHeight: '100vh', background: 'var(--fd-surface-muted)' }}>
       {/* 헤더 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <Title level={4} style={{ margin: 0 }}>
           <BookOutlined style={{ marginRight: 8, color: '#1677ff' }} />
           Playbook
         </Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => (onNew ? onNew() : navigate('/playbooks/new'))}>
-          새 Playbook
-        </Button>
+        <Space>
+          <Space.Compact>
+            <Button
+              icon={<AppstoreOutlined />}
+              type={viewMode === 'card' ? 'primary' : 'default'}
+              onClick={() => handleViewMode('card')}
+            >
+              카드
+            </Button>
+            <Button
+              icon={<TableOutlined />}
+              type={viewMode === 'table' ? 'primary' : 'default'}
+              onClick={() => handleViewMode('table')}
+            >
+              테이블
+            </Button>
+          </Space.Compact>
+          <Button type="primary" icon={<PlusOutlined />} onClick={() => (onNew ? onNew() : navigate('/playbooks/new'))}>
+            새 Playbook
+          </Button>
+        </Space>
       </div>
 
       {/* 필터 바 */}
@@ -109,10 +133,10 @@ export default function PlaybookListPage({ onNew } = {}) {
         </Select>
       </div>
 
-      {/* 카드 목록 */}
+      {/* 목록 */}
       {filtered.length === 0 && !loading ? (
         <Empty description="Playbook이 없습니다. 새로 만들어보세요!" />
-      ) : (
+      ) : viewMode === 'card' ? (
         <Row gutter={[16, 16]}>
           {filtered.map((pb) => {
             const cat = CATEGORY_MAP[pb.category] || { label: pb.category, color: 'default' };
@@ -145,14 +169,15 @@ export default function PlaybookListPage({ onNew } = {}) {
                       />
                     </Tooltip>,
                     ...(canEdit ? [
-                      <Popconfirm
-                        key="del"
-                        title="삭제하시겠습니까?"
-                        onConfirm={(e) => { e?.stopPropagation?.(); handleDelete(pb.id); }}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <DeleteOutlined style={{ color: '#ff4d4f' }} />
-                      </Popconfirm>,
+                      <Tooltip title="삭제" key="del">
+                        <Popconfirm
+                          title="삭제하시겠습니까?"
+                          onConfirm={(e) => { e?.stopPropagation?.(); handleDelete(pb.id); }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <DeleteOutlined style={{ color: '#ff4d4f' }} />
+                        </Popconfirm>
+                      </Tooltip>,
                     ] : []),
                   ]}
                 >
@@ -213,6 +238,118 @@ export default function PlaybookListPage({ onNew } = {}) {
             );
           })}
         </Row>
+      ) : (
+        <Table
+          loading={loading}
+          dataSource={filtered}
+          rowKey="id"
+          size="middle"
+          style={{ background: 'var(--fd-surface)', borderRadius: 8 }}
+          onRow={(pb) => ({ onClick: () => navigate(`/playbooks/${pb.id}`), style: { cursor: 'pointer' } })}
+          columns={[
+            {
+              title: '이름',
+              dataIndex: 'name',
+              key: 'name',
+              render: (name) => <Text strong>{name}</Text>,
+            },
+            {
+              title: '카테고리',
+              dataIndex: 'category',
+              key: 'category',
+              width: 110,
+              render: (cat) => {
+                const c = CATEGORY_MAP[cat] || { label: cat, color: 'default' };
+                return <Tag color={c.color}>{c.label}</Tag>;
+              },
+            },
+            {
+              title: '태그',
+              dataIndex: 'tags',
+              key: 'tags',
+              render: (tags) =>
+                Array.isArray(tags) && tags.length > 0
+                  ? tags.slice(0, 3).map((t) => <Tag key={t} style={{ fontSize: 11 }}>{t}</Tag>)
+                  : <Text type="secondary" style={{ fontSize: 12 }}>-</Text>,
+            },
+            {
+              title: '페이즈',
+              key: 'phases',
+              width: 80,
+              align: 'center',
+              render: (_, pb) => <Text>{pb.phases?.length ?? 0}</Text>,
+            },
+            {
+              title: '단계',
+              key: 'steps',
+              width: 80,
+              align: 'center',
+              render: (_, pb) => <Text>{pb._count?.steps ?? pb.steps?.length ?? 0}</Text>,
+            },
+            {
+              title: '실행',
+              key: 'runs',
+              width: 70,
+              align: 'center',
+              render: (_, pb) => <Text>{pb._count?.runs ?? 0}회</Text>,
+            },
+            {
+              title: '버전',
+              dataIndex: 'version',
+              key: 'version',
+              width: 60,
+              align: 'center',
+              render: (v) => <Text type="secondary">v{v}</Text>,
+            },
+            {
+              title: '작성자',
+              key: 'creator',
+              width: 90,
+              render: (_, pb) => <Text type="secondary" style={{ fontSize: 12 }}>{pb.creator?.displayName ?? '-'}</Text>,
+            },
+            {
+              title: '작업',
+              key: 'actions',
+              width: 130,
+              align: 'center',
+              render: (_, pb) => {
+                const canEdit = isAdmin || pb.createdBy === user?.id;
+                return (
+                  <Space size={4} onClick={(e) => e.stopPropagation()}>
+                    <Tooltip title="Run 시작">
+                      <Button
+                        type="text" size="small" icon={<PlayCircleOutlined style={{ color: '#52c41a' }} />}
+                        onClick={() => navigate(`/runs?playbookId=${pb.id}`)}
+                      />
+                    </Tooltip>
+                    <Tooltip title="편집">
+                      <Button
+                        type="text" size="small" icon={<EditOutlined />}
+                        onClick={() => navigate(`/playbooks/${pb.id}/edit`)}
+                      />
+                    </Tooltip>
+                    <Tooltip title="복제">
+                      <Button
+                        type="text" size="small" icon={<CopyOutlined />}
+                        onClick={() => handleClone(pb.id)}
+                      />
+                    </Tooltip>
+                    {canEdit && (
+                      <Tooltip title="삭제">
+                        <Popconfirm
+                          title="삭제하시겠습니까?"
+                          onConfirm={() => handleDelete(pb.id)}
+                        >
+                          <Button type="text" size="small" icon={<DeleteOutlined style={{ color: '#ff4d4f' }} />} />
+                        </Popconfirm>
+                      </Tooltip>
+                    )}
+                  </Space>
+                );
+              },
+            },
+          ]}
+        />
       )}
     </div>
   );

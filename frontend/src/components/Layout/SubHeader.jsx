@@ -5,6 +5,7 @@ import 'dayjs/locale/ko';
 import { getTasks } from '../../api/tasks';
 import useTaskStore from '../../store/taskStore';
 import useAuthStore from '../../store/authStore';
+import useThemeStore from '../../store/themeStore';
 import { isOverdue } from '../../utils/dday';
 
 dayjs.locale('ko');
@@ -22,6 +23,7 @@ export default function SubHeader() {
   const navigate = useNavigate();
   const user     = useAuthStore((s) => s.user);
   const calVer   = useTaskStore((s) => s.calendarVersion);
+  const isDark   = useThemeStore((s) => s.isDark);
 
   const [tasks, setTasks] = useState([]);
 
@@ -49,13 +51,14 @@ export default function SubHeader() {
   const displayName = user?.displayName || user?.username || '';
   const dateStr     = dayjs().format('YYYY년 M월 D일');
 
-  const BORDER = '#E8ECF4';
-  const TEXT2  = '#94A3B8';
-  const TEXT1  = '#0F172A';
+  const BORDER = isDark ? '#303030' : '#E8ECF4';
+  const TEXT2  = isDark ? 'rgba(255,255,255,0.45)' : '#94A3B8';
+  const TEXT1  = isDark ? 'rgba(255,255,255,0.88)' : '#0F172A';
+  const BG     = isDark ? '#141414' : '#ffffff';
 
   const stats = [
     { v: counts.total,      l: '전체',   c: TEXT1     },
-    { v: counts.pending,    l: '대기',   c: '#94A3B8' },
+    { v: counts.pending,    l: '대기',   c: TEXT2     },
     { v: counts.inProgress, l: '진행중', c: '#3B82F6' },
     { v: counts.hold,       l: '보류',   c: '#FA8C16' },
     { v: counts.done,       l: '완료',   c: '#059669' },
@@ -65,7 +68,7 @@ export default function SubHeader() {
   return (
     <div style={{
       padding: '12px 24px',
-      background: '#ffffff',
+      background: BG,
       borderBottom: `1px solid ${BORDER}`,
       display: 'flex',
       alignItems: 'center',

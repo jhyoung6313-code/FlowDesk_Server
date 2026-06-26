@@ -239,7 +239,7 @@ export function OtpSection({ totpEnabled: initialEnabled }) {
           <img
             src={qrDataUrl}
             alt="OTP QR Code"
-            style={{ width: 180, height: 180, border: '1px solid #f0f0f0', borderRadius: 8, marginBottom: 16 }}
+            style={{ width: 180, height: 180, border: '1px solid var(--fd-border)', borderRadius: 8, marginBottom: 16 }}
           />
           <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
             스캔 후 앱에 표시된 6자리 코드를 입력하세요.

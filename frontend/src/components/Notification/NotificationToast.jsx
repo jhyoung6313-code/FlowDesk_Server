@@ -105,7 +105,7 @@ function ToastItem({ toast, onDismiss, onNavigate }) {
       {displayBody && (
         <div style={{
           fontSize: 12,
-          color: '#595959',
+          color: 'var(--fd-text-secondary)',
           marginBottom: 4,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
@@ -119,7 +119,7 @@ function ToastItem({ toast, onDismiss, onNavigate }) {
       {!isTransient && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {toast.task?.dueDate && (
-            <span style={{ fontSize: 11, color: '#595959' }}>
+            <span style={{ fontSize: 11, color: 'var(--fd-text-secondary)' }}>
               마감: {dayjs(toast.task.dueDate).format('MM/DD')}
             </span>
           )}

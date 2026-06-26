@@ -11,7 +11,7 @@ const list = async (req, res, next) => {
   try {
     const taskId = Number(req.params.id);
     const attachments = await prisma.taskAttachment.findMany({
-      where: { taskId },
+      where: { taskId, commentId: null },
       include: { uploader: { select: { id: true, displayName: true } } },
       orderBy: { createdAt: 'asc' },
     });

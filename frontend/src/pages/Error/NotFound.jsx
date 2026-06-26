@@ -12,7 +12,7 @@ export default function NotFound() {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#f5f5f5',
+        background: 'var(--fd-surface-sunken)',
       }}
     >
       <Result

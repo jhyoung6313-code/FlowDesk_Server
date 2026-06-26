@@ -311,6 +311,7 @@ const logout = async (req, res, next) => {
       where: { id: req.user.id },
       data: { sessionNonce: null },
     });
+    await audit.record({ action: AUDIT_ACTION.LOGOUT, req, userId: req.user.id, username: req.user.username, resource: 'auth/logout' });
     res.json({ message: '로그아웃 되었습니다.' });
   } catch (err) {
     next(err);

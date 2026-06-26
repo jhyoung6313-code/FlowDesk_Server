@@ -186,23 +186,26 @@ model TaskComment {
   content   String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task        Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments TaskAttachment[]
 
   @@map("task_comments")
 }
 
 model TaskAttachment {
-  id           Int      @id @default(autoincrement())
-  taskId       Int      @map("task_id")
-  uploadedBy   Int      @map("uploaded_by")
-  originalName String   @map("original_name") @db.VarChar(255)
-  storedName   String   @map("stored_name") @db.VarChar(255)
-  mimeType     String   @map("mime_type") @db.VarChar(100)
+  id           Int          @id @default(autoincrement())
+  taskId       Int          @map("task_id")
+  commentId    Int?         @map("comment_id")
+  uploadedBy   Int          @map("uploaded_by")
+  originalName String       @map("original_name") @db.VarChar(255)
+  storedName   String       @map("stored_name") @db.VarChar(255)
+  mimeType     String       @map("mime_type") @db.VarChar(100)
   size         Int
-  createdAt    DateTime @default(now()) @map("created_at")
-  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  uploader     User     @relation("AttachmentUploader", fields: [uploadedBy], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  task         Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  comment      TaskComment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  uploader     User         @relation("AttachmentUploader", fields: [uploadedBy], references: [id], onDelete: Cascade)
 
   @@map("task_attachments")
 }

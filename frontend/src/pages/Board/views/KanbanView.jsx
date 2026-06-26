@@ -213,7 +213,7 @@ function ColumnHeader({ col, count, wipLimit, onAddCard }) {
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: col.color, flexShrink: 0 }} />
-        <Text strong style={{ fontSize: 12, color: '#333', letterSpacing: 0.2 }}>{col.label}</Text>
+        <Text strong style={{ fontSize: 12, color: 'var(--fd-text-primary)', letterSpacing: 0.2 }}>{col.label}</Text>
         <span style={{
           fontSize: 10, fontWeight: 700,
           padding: '1px 6px', borderRadius: 8,
@@ -470,7 +470,7 @@ function BoardCard({ card, dragging, visibleProps, onDragStart, onEdit, onDelete
         opacity: dragging ? 0.4 : 1,
         marginBottom: 8,
         cursor: onDragStart ? 'grab' : 'pointer',
-        background: '#fff',
+        background: 'var(--fd-surface)',
         borderRadius: 10,
         border: `1px solid ${hover ? '#d0d0d0' : '#ebebeb'}`,
         boxShadow: hover ? '0 4px 14px rgba(0,0,0,0.1)' : '0 1px 3px rgba(0,0,0,0.05)',
@@ -531,7 +531,7 @@ function BoardCard({ card, dragging, visibleProps, onDragStart, onEdit, onDelete
               const pv = card.properties?.find(p => p.propertyId === prop.id);
               if (!pv?.value) return null;
               return (
-                <span key={prop.id} style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: '#f5f5f5', color: '#666', border: '1px solid #e8e8e8', display: 'inline-block' }}>
+                <span key={prop.id} style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: 'var(--fd-surface-sunken)', color: 'var(--fd-text-secondary)', border: '1px solid var(--fd-border)', display: 'inline-block' }}>
                   <PropertyValue property={prop} value={pv.value} />
                 </span>
               );
@@ -546,7 +546,7 @@ function BoardCard({ card, dragging, visibleProps, onDragStart, onEdit, onDelete
               <span style={{ fontSize: 10, color: '#bbb' }}>진행도</span>
               <span style={{ fontSize: 10, fontWeight: 600, color: card.progress === 100 ? '#52c41a' : '#1677ff' }}>{card.progress}%</span>
             </div>
-            <div style={{ height: 4, background: '#f0f0f0', borderRadius: 2, overflow: 'hidden' }}>
+            <div style={{ height: 4, background: 'var(--fd-surface-muted)', borderRadius: 2, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${card.progress}%`, background: card.progress === 100 ? '#52c41a' : '#1677ff', borderRadius: 2 }} />
             </div>
           </div>

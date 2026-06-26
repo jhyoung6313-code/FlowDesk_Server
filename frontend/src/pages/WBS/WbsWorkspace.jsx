@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Button, Input, Modal, Form, DatePicker, Tag, Space, message, Tooltip, Spin, Drawer,
+  Button, Input, Modal, Form, DatePicker, Tag, Space, message, Tooltip, Spin,
 } from 'antd';
+import ResizableDrawer from '../../components/common/ResizableDrawer';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, ApartmentOutlined,
   FolderOutlined, SearchOutlined,
@@ -141,9 +142,9 @@ export default function WbsWorkspace() {
   const filtered = projects.filter((p) => !search || p.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
-    <div style={{ display: 'flex', height: '100%', background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e8e8e8' }}>
+    <div style={{ display: 'flex', height: '100%', background: 'var(--fd-surface)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--fd-border)' }}>
       {/* ── 좌측 프로젝트 목록 ── */}
-      <div style={{ width: 260, flexShrink: 0, borderRight: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div style={{ width: 260, flexShrink: 0, borderRight: '1px solid var(--fd-border)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={{ padding: '14px 14px 10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 15, fontWeight: 700 }}>
@@ -186,7 +187,7 @@ export default function WbsWorkspace() {
                     display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
                     padding: '7px 8px', borderRadius: 6, fontSize: 14, marginBottom: 1,
                     background: active ? '#e6f4ff' : 'transparent',
-                    color: active ? '#1677ff' : '#262626',
+                    color: active ? '#1677ff' : 'var(--fd-text-primary)',
                     fontWeight: active ? 600 : 400,
                   }}
                 >
@@ -217,7 +218,7 @@ export default function WbsWorkspace() {
       </div>
 
       {/* ── 프로젝트 생성/수정 드로어 (오른쪽 슬라이드) ── */}
-      <Drawer
+      <ResizableDrawer
         title={editing ? '프로젝트 수정' : '새 프로젝트'}
         open={modalOpen}
         onClose={() => setModalOpen(false)}
@@ -244,7 +245,7 @@ export default function WbsWorkspace() {
             <MemberEditor members={members} onChange={setMembers} />
           </Form.Item>
         </Form>
-      </Drawer>
+      </ResizableDrawer>
 
       <style>{`
         .fd-wbs-row .fd-wbs-actions { opacity: 0; transition: opacity .12s; }

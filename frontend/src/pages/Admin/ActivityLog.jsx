@@ -103,7 +103,7 @@ export default function ActivityLogPage() {
       title: '필드',
       dataIndex: 'field',
       width: 90,
-      render: (v) => v ? <span style={{ fontSize: 12, color: '#595959' }}>{FIELD_LABELS[v] || v}</span> : '-',
+      render: (v) => v ? <span style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }}>{FIELD_LABELS[v] || v}</span> : '-',
     },
     {
       title: '변경 내용',

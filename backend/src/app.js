@@ -87,8 +87,25 @@ app.use('/api', auditForbidden);
 // API 라우터
 app.use('/api', routes);
 
+// DB 연결 실패 판별 (PostgreSQL 다운/네트워크 단절 등)
+// Prisma: P1001=서버 도달 불가, P1002=연결 타임아웃, PrismaClientInitializationError=초기화 실패
+function isDbUnreachable(err) {
+  return (
+    err?.code === 'P1001' ||
+    err?.code === 'P1002' ||
+    err?.constructor?.name === 'PrismaClientInitializationError' ||
+    /Can't reach database server/i.test(err?.message || '')
+  );
+}
+
 // 글로벌 에러 핸들러
 app.use((err, req, res, next) => {
+  // DB 연결 실패는 503으로 분리해 사용자에게 명확한 안내를 준다 (코드 버그와 구분)
+  if (isDbUnreachable(err)) {
+    console.error(`[${new Date().toISOString()}] 503 ${req.method} ${req.path} — DB 연결 실패: ${err.message}`);
+    return res.status(503).json({ error: '데이터베이스에 연결할 수 없습니다. 잠시 후 다시 시도하거나 관리자에게 문의해주세요.' });
+  }
+
   const status = err.status || 500;
 
   // 개발 환경: 상세 에러 출력 / 운영 환경: 내부 정보 숨김

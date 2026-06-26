@@ -1,6 +1,6 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Spin } from 'antd';
+import { Spin, message } from 'antd';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -13,6 +13,7 @@ import useMemoStore from '../../store/memoStore';
 import { isOverdue } from '../../utils/dday';
 import { AVATAR_COLOR_PRESETS } from '../../utils/colors';
 import MemoCard from '../../components/Memo/MemoCard';
+import TaskForm from '../../components/Task/TaskForm';
 
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
@@ -43,10 +44,14 @@ export default function DashboardPage() {
   const isDark     = useThemeStore((s) => s.isDark);
   const user       = useAuthStore((s) => s.user);
   const calVer     = useTaskStore((s) => s.calendarVersion);
+  const { addTask, editTask, fetchTasks } = useTaskStore();
 
   const [tasks,   setTasks]   = useState([]);
   const [notifs,  setNotifs]  = useState([]);
   const [loading, setLoading] = useState(true);
+  const [formOpen, setFormOpen] = useState(false);
+  const [formStatus, setFormStatus] = useState('pending');
+  const [selectedTask, setSelectedTask] = useState(null);
 
   const memos        = useMemoStore((s) => s.memos);
   const fetchMemos   = useMemoStore((s) => s.fetch);
@@ -56,36 +61,51 @@ export default function DashboardPage() {
 
   useEffect(() => { fetchMemos(); }, [fetchMemos]);
 
-  useEffect(() => {
+  const loadTasks = useCallback(() => {
     setLoading(true);
     Promise.all([getTasks(), getNotifications()])
       .then(([t, n]) => { setTasks(t); setNotifs(Array.isArray(n) ? n : []); })
       .finally(() => setLoading(false));
-  }, [calVer]);
+  }, []);
+
+  useEffect(() => { loadTasks(); }, [calVer, loadTasks]);
+
+  const handleFormSubmit = useCallback(async (data) => {
+    if (selectedTask) {
+      await editTask(selectedTask.id, data);
+      message.success('업무가 수정되었습니다.');
+    } else {
+      await addTask(data);
+      message.success('업무가 등록되었습니다.');
+    }
+    fetchTasks();
+    loadTasks();
+  }, [selectedTask, addTask, editTask, fetchTasks, loadTasks]);
 
   const active  = useMemo(() => tasks.filter((t) => t.delYn !== '1'), [tasks]);
-  const overdue = useMemo(() => active.filter((t) => isOverdue(t.dueDate, t.status)), [active]);
+  const overdue = useMemo(() => active.filter((t) => t.status !== 'hold' && isOverdue(t.dueDate, t.status)), [active]);
 
   const cols = useMemo(() => ({
     pending:     active.filter((t) => t.status === 'pending'     && !isOverdue(t.dueDate, t.status)),
     in_progress: active.filter((t) => t.status === 'in_progress' && !isOverdue(t.dueDate, t.status)),
+    hold:        active.filter((t) => t.status === 'hold'),
     done:        active.filter((t) => t.status === 'done'),
     overdue,
   }), [active, overdue]);
 
   /* ── 색상 (라이트/다크) ── */
   const D = isDark ? {
-    pageBg:   '#0f1117',
-    navBg:    '#161922',
-    border:   'rgba(255,255,255,.07)',
+    pageBg:   '#181b24',
+    navBg:    '#1e222c',
+    border:   'rgba(255,255,255,.1)',
     text1:    '#e8e8ee',
-    text2:    '#64748b',
-    colBg:    'rgba(255,255,255,.03)',
-    cardBg:   'rgba(255,255,255,.04)',
-    cardBor:  'rgba(255,255,255,.07)',
-    addBor:   'rgba(255,255,255,.1)',
-    addTxt:   '#555',
-    stripBg:  '#161922',
+    text2:    '#94a3b8',
+    colBg:    '#20242f',           // 컬럼: 페이지보다 한 단계 위
+    cardBg:   '#2b313d',           // 카드: 솔리드 elevated 로 또렷하게 구분
+    cardBor:  'rgba(255,255,255,.1)',
+    addBor:   'rgba(255,255,255,.14)',
+    addTxt:   '#94a3b8',
+    stripBg:  '#1e222c',
   } : {
     pageBg:   '#F8F9FC',
     navBg:    '#fff',
@@ -102,7 +122,7 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: D.pageBg }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: D.pageBg }}>
         <Spin size="large" />
       </div>
     );
@@ -115,8 +135,9 @@ export default function DashboardPage() {
       label: '대기',
       dot:   '#94A3B8',
       cntBg: isDark ? 'rgba(255,255,255,.06)' : '#F1F5F9',
-      cntC:  isDark ? '#666' : '#64748B',
-      colBg: D.colBg,
+      cntC:  isDark ? '#cbd5e1' : '#64748B',
+      colBg: isDark ? 'rgba(148,163,184,.08)' : '#F8FAFC',
+      borderColor: isDark ? 'rgba(148,163,184,.15)' : '#E2E8F0',
       tasks: cols.pending,
     },
     {
@@ -125,8 +146,19 @@ export default function DashboardPage() {
       dot:   '#3B82F6',
       cntBg: isDark ? 'rgba(59,130,246,.15)' : '#EFF6FF',
       cntC:  '#3B82F6',
-      colBg: D.colBg,
+      colBg: isDark ? 'rgba(59,130,246,.05)' : '#F0F7FF',
+      borderColor: isDark ? 'rgba(59,130,246,.2)' : '#BFDBFE',
       tasks: cols.in_progress,
+    },
+    {
+      key: 'hold',
+      label: '보류',
+      dot:   '#F59E0B',
+      cntBg: isDark ? 'rgba(245,158,11,.15)' : '#FEF3C7',
+      cntC:  '#D97706',
+      colBg: isDark ? 'rgba(245,158,11,.05)' : '#FFFBEB',
+      borderColor: isDark ? 'rgba(245,158,11,.2)' : '#FDE68A',
+      tasks: cols.hold,
     },
     {
       key: 'done',
@@ -134,7 +166,8 @@ export default function DashboardPage() {
       dot:   '#059669',
       cntBg: isDark ? 'rgba(5,150,105,.15)' : '#F0FDF4',
       cntC:  '#059669',
-      colBg: D.colBg,
+      colBg: isDark ? 'rgba(5,150,105,.05)' : '#F0FDF9',
+      borderColor: isDark ? 'rgba(5,150,105,.2)' : '#A7F3D0',
       tasks: cols.done,
     },
     {
@@ -144,6 +177,7 @@ export default function DashboardPage() {
       cntBg: isDark ? 'rgba(239,68,68,.15)' : '#FEE2E2',
       cntC:  '#DC2626',
       colBg: isDark ? 'rgba(239,68,68,.05)' : '#FFF5F5',
+      borderColor: isDark ? 'rgba(239,68,68,.2)' : '#FECACA',
       tasks: cols.overdue,
     },
   ];
@@ -157,7 +191,8 @@ export default function DashboardPage() {
 
   return (
     <div style={{
-      height: '100%',
+      flex: 1,
+      minHeight: 0,
       display: 'flex',
       flexDirection: 'column',
       background: D.pageBg,
@@ -204,23 +239,27 @@ export default function DashboardPage() {
 
       {/* ── 칸반 보드 ── */}
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'flex-start',
         gap: 12,
         padding: '14px 24px',
         flex: 1,
         minHeight: 0,
-        overflowY: 'auto',
-        alignContent: 'start',
+        overflow: 'hidden',
+        boxSizing: 'border-box',
       }}>
         {COLUMNS.map((col) => (
           <div key={col.key} style={{
+            flex: 1,
+            minWidth: 0,
+            maxHeight: '100%',
             background: col.colBg,
             borderRadius: 12,
-            overflow: 'hidden',
             display: 'flex',
             flexDirection: 'column',
-            border: col.key === 'overdue' ? `1px solid ${isDark ? 'rgba(239,68,68,.2)' : '#FECACA'}` : undefined,
+            border: `1px solid ${col.borderColor}`,
+            overflow: 'hidden',
           }}>
             {/* 열 헤더 */}
             <div style={{
@@ -242,7 +281,7 @@ export default function DashboardPage() {
             </div>
 
             {/* 카드 목록 */}
-            <div style={{ padding: '0 10px 0', display: 'flex', flexDirection: 'column', gap: 7 }}>
+            <div style={{ padding: '0 10px 7px', flex: 1, minHeight: 0, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 7 }}>
               {col.tasks.map((task) => {
                 const late    = isOverdue(task.dueDate, task.status);
                 const prio    = task.priority ? PRIO[task.priority] : null;
@@ -255,7 +294,7 @@ export default function DashboardPage() {
                 return (
                   <div
                     key={task.id}
-                    onClick={() => navigate('/tasks')}
+                    onClick={() => { setSelectedTask(task); setFormOpen(true); }}
                     style={{
                       background: D.cardBg,
                       borderRadius: 9,
@@ -264,6 +303,7 @@ export default function DashboardPage() {
                       cursor: 'pointer',
                       position: 'relative',
                       overflow: 'hidden',
+                      flexShrink: 0,
                       transition: 'box-shadow .12s, border-color .12s, transform .12s',
                     }}
                     onMouseEnter={(e) => {
@@ -352,41 +392,48 @@ export default function DashboardPage() {
               })}
             </div>
 
-            {/* + 업무 추가 */}
-            <div
-              onClick={() => navigate('/tasks')}
-              style={{
-                margin: '7px 10px 10px',
-                padding: 7,
-                borderRadius: 8,
-                border: `1.5px dashed ${col.key === 'overdue' ? (isDark ? 'rgba(239,68,68,.25)' : '#FECACA') : D.addBor}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                fontSize: 11,
-                color: col.key === 'overdue' ? (isDark ? '#F87171' : '#FCA5A5') : D.addTxt,
-                cursor: 'pointer',
-                transition: '.12s',
-                flexShrink: 0,
-              }}
-              onMouseEnter={(e) => {
-                if (col.key !== 'overdue') {
+            {/* + 업무 추가 (지연 열 제외) */}
+            {col.key !== 'overdue' && (
+              <div
+                onClick={() => { setSelectedTask(null); setFormStatus(col.key); setFormOpen(true); }}
+                style={{
+                  margin: '7px 10px 10px',
+                  padding: 7,
+                  borderRadius: 8,
+                  border: `1.5px dashed ${D.addBor}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
+                  fontSize: 11,
+                  color: D.addTxt,
+                  cursor: 'pointer',
+                  transition: '.12s',
+                  flexShrink: 0,
+                }}
+                onMouseEnter={(e) => {
                   e.currentTarget.style.borderColor = '#93C5FD';
                   e.currentTarget.style.color = '#3B82F6';
                   e.currentTarget.style.background = isDark ? 'rgba(59,130,246,.08)' : '#EFF6FF';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (col.key !== 'overdue') {
+                }}
+                onMouseLeave={(e) => {
                   e.currentTarget.style.borderColor = D.addBor;
                   e.currentTarget.style.color = D.addTxt;
                   e.currentTarget.style.background = 'transparent';
-                }
-              }}
-            >
-              <span style={{ fontSize: 10 }}>+</span> 업무 추가
-            </div>
+                }}
+              >
+                <span style={{ fontSize: 10 }}>+</span> 업무 추가
+              </div>
+            )}
           </div>
         ))}
       </div>
+
+      {/* ── 업무 등록 폼 ── */}
+      <TaskForm
+        open={formOpen}
+        task={selectedTask}
+        initialStatus={formStatus}
+        onClose={() => { setFormOpen(false); setSelectedTask(null); }}
+        onSubmit={async (data) => { await handleFormSubmit(data); setFormOpen(false); setSelectedTask(null); }}
+      />
 
       {/* ── 하단 활동 스트립 ── */}
       <div style={{

@@ -346,7 +346,7 @@ export default function CalendarView({ isActive }) {
         </Tooltip>
       </div>
 
-      <div style={{ background: '#fff', borderRadius: 8, padding: 16 }}>
+      <div style={{ background: 'var(--fd-surface)', borderRadius: 8, padding: 16 }}>
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}

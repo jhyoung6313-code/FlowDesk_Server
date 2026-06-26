@@ -6,7 +6,13 @@ const list = async (req, res, next) => {
     const taskId = parseInt(req.params.id);
     const comments = await prisma.taskComment.findMany({
       where: { taskId },
-      include: { user: { select: { id: true, displayName: true } } },
+      include: {
+        user: { select: { id: true, displayName: true } },
+        attachments: {
+          include: { uploader: { select: { id: true, displayName: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
       orderBy: { createdAt: 'asc' },
     });
     res.json(comments);
@@ -25,7 +31,13 @@ const create = async (req, res, next) => {
     }
     const comment = await prisma.taskComment.create({
       data: { taskId, userId: req.user.id, content: content.trim() },
-      include: { user: { select: { id: true, displayName: true } } },
+      include: {
+        user: { select: { id: true, displayName: true } },
+        attachments: {
+          include: { uploader: { select: { id: true, displayName: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
     res.status(201).json(comment);
   } catch (err) {
@@ -49,7 +61,13 @@ const update = async (req, res, next) => {
     const comment = await prisma.taskComment.update({
       where: { id: commentId },
       data: { content: content.trim() },
-      include: { user: { select: { id: true, displayName: true } } },
+      include: {
+        user: { select: { id: true, displayName: true } },
+        attachments: {
+          include: { uploader: { select: { id: true, displayName: true } } },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
     });
     res.json(comment);
   } catch (err) {
@@ -73,4 +91,34 @@ const remove = async (req, res, next) => {
   }
 };
 
-module.exports = { list, create, update, remove };
+// POST /api/tasks/:id/comments/:commentId/attachment  (multipart/form-data, field: file)
+const uploadAttachment = async (req, res, next) => {
+  try {
+    const taskId = parseInt(req.params.id);
+    const commentId = parseInt(req.params.commentId);
+    if (!req.file) return res.status(400).json({ error: '파일이 없습니다.' });
+
+    const comment = await prisma.taskComment.findFirst({ where: { id: commentId, taskId } });
+    if (!comment) return res.status(404).json({ error: '댓글을 찾을 수 없습니다.' });
+
+    const originalName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+    const attachment = await prisma.taskAttachment.create({
+      data: {
+        taskId,
+        commentId,
+        uploadedBy: req.user.id,
+        originalName,
+        storedName: req.file.filename,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+      },
+      include: { uploader: { select: { id: true, displayName: true } } },
+    });
+
+    res.status(201).json(attachment);
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { list, create, update, remove, uploadAttachment };

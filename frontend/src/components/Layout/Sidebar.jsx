@@ -26,6 +26,7 @@ import {
   FileTextOutlined,
   MailOutlined,
   HistoryOutlined,
+  SafetyCertificateOutlined,
   DatabaseOutlined,
   GlobalOutlined,
   SnippetsOutlined,
@@ -538,6 +539,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
           },
           { key: '/admin/email-settings', icon: <MailOutlined />, label: '이메일 알림 설정', onClick: () => go('/admin/email-settings') },
           { key: '/admin/activity-log', icon: <HistoryOutlined />, label: '활동 로그', onClick: () => go('/admin/activity-log') },
+          { key: '/admin/audit-log', icon: <SafetyCertificateOutlined />, label: '접속기록', onClick: () => go('/admin/audit-log') },
           { key: '/admin/backup', icon: <DatabaseOutlined />, label: '백업/복원', onClick: () => go('/admin/backup') },
         ]
       : []),

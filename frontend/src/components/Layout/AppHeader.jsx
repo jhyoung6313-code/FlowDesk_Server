@@ -11,6 +11,8 @@ import {
   BookOutlined,
   ApartmentOutlined,
   SnippetsOutlined,
+  BulbOutlined,
+  BulbFilled,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import useNotificationStore from '../../store/notificationStore';
@@ -262,6 +264,8 @@ export default function AppHeader({ collapsed, onCollapse }) {
   const boardUnread = useUnreadStore((s) => s.boardUnread);
   const playbookUnread = useUnreadStore((s) => s.playbookUnread);
   const { themeKey, theme, setTheme } = useThemeStore();
+  const isDark = useThemeStore((s) => s.isDark);
+  const toggleDark = useThemeStore((s) => s.toggleDark);
   const [themeOpen, setThemeOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
 
@@ -271,6 +275,22 @@ export default function AppHeader({ collapsed, onCollapse }) {
   const openChatPopup = () => openChatPopupWindow();
 
   const c = theme.colors;
+
+  // ── 라이트/다크 표면 팔레트 (셸 전용) ──
+  const surf = {
+    headerBg:     isDark ? '#141414' : '#ffffff',
+    headerBorder: isDark ? '#303030' : '#f1f5f9',
+    track:        isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9',
+    linkText:     isDark ? 'rgba(255,255,255,0.72)' : '#64748b',
+    linkHover:    isDark ? 'rgba(255,255,255,0.95)' : '#334155',
+    linkHoverBg:  isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.65)',
+    linkActiveBg: isDark ? '#1f1f1f' : '#ffffff',
+    iconBg:       isDark ? '#1f1f1f' : '#f8fafc',
+    iconBorder:   isDark ? '#303030' : '#e2e8f0',
+    iconColor:    isDark ? 'rgba(255,255,255,0.65)' : '#6b7280',
+    popBg:        isDark ? '#1f1f1f' : '#ffffff',
+    popBorder:    isDark ? '#303030' : '#e2e8f0',
+  };
 
   // ── 상단 2줄 그룹 메뉴 (워크스페이스 / 협업기능) ──
   // 업무관리: 칸반·캘린더·간트는 업무관리 페이지 내부 탭이므로 상단은 '업무관리' 하나
@@ -290,8 +310,8 @@ export default function AppHeader({ collapsed, onCollapse }) {
     padding: '5px 12px',
     fontSize: 13,
     fontWeight: active ? 700 : 500,
-    color: active ? c.accentMid : '#64748b',
-    background: active ? '#ffffff' : 'transparent',
+    color: active ? c.accentMid : surf.linkText,
+    background: active ? surf.linkActiveBg : 'transparent',
     borderRadius: 8,
     boxShadow: active ? '0 1px 4px rgba(15,23,42,0.10)' : 'none',
     cursor: 'pointer',
@@ -302,10 +322,10 @@ export default function AppHeader({ collapsed, onCollapse }) {
     gap: 5,
   });
   const linkEnter = (active) => (e) => {
-    if (!active) { e.currentTarget.style.color = '#334155'; e.currentTarget.style.background = 'rgba(255,255,255,0.65)'; }
+    if (!active) { e.currentTarget.style.color = surf.linkHover; e.currentTarget.style.background = surf.linkHoverBg; }
   };
   const linkLeave = (active) => (e) => {
-    if (!active) { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = 'transparent'; }
+    if (!active) { e.currentTarget.style.color = surf.linkText; e.currentTarget.style.background = 'transparent'; }
   };
 
   const renderLink = ({ key, icon, label, path, active, badge = 0 }) => (
@@ -329,7 +349,7 @@ export default function AppHeader({ collapsed, onCollapse }) {
     <div style={{
       display: 'flex',
       gap: 2,
-      background: '#f1f5f9',
+      background: surf.track,
       borderRadius: 11,
       padding: 3,
     }}>
@@ -345,22 +365,22 @@ export default function AppHeader({ collapsed, onCollapse }) {
     height: 36,
     borderRadius: 10,
     cursor: 'pointer',
-    background: '#f8fafc',
-    border: '1px solid #e2e8f0',
+    background: surf.iconBg,
+    border: `1px solid ${surf.iconBorder}`,
     transition: 'background 0.2s',
-    color: '#6b7280',
+    color: surf.iconColor,
     fontSize: 16,
   };
 
   return (
     <Header
       style={{
-        background: '#ffffff',
+        background: surf.headerBg,
         padding: '0 24px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        borderBottom: '1px solid #f1f5f9',
+        borderBottom: `1px solid ${surf.headerBorder}`,
         height: 52,
         lineHeight: 'normal',
         position: 'sticky',
@@ -400,6 +420,18 @@ export default function AppHeader({ collapsed, onCollapse }) {
         {/* 메모지 플로팅 위젯 (어느 화면에서든 빠른 메모) */}
         <MemoWidget />
 
+        {/* 라이트/다크 모드 토글 */}
+        <Tooltip title={isDark ? '라이트 모드' : '다크 모드'} placement="bottom">
+          <div
+            style={iconBtnStyle}
+            onClick={toggleDark}
+            onMouseEnter={(e) => { e.currentTarget.style.background = surf.linkHoverBg; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = surf.iconBg; }}
+          >
+            {isDark ? <BulbFilled style={{ color: '#fadb14' }} /> : <BulbOutlined />}
+          </div>
+        </Tooltip>
+
         {/* 테마 피커 */}
         <Popover
           open={themeOpen}
@@ -409,8 +441,8 @@ export default function AppHeader({ collapsed, onCollapse }) {
           arrow={false}
           overlayStyle={{ zIndex: 1050 }}
           styles={{ body: {
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
+            background: surf.popBg,
+            border: `1px solid ${surf.popBorder}`,
             borderRadius: 16,
             boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
             padding: '16px',
@@ -439,8 +471,8 @@ export default function AppHeader({ collapsed, onCollapse }) {
           arrow={false}
           overlayStyle={{ zIndex: 1050 }}
           styles={{ body: {
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
+            background: surf.popBg,
+            border: `1px solid ${surf.popBorder}`,
             borderRadius: 16,
             boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
             padding: '16px',

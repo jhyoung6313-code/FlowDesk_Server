@@ -9,6 +9,7 @@ import {
   EditOutlined, ProjectOutlined, UserOutlined, CalendarOutlined,
   DownloadOutlined, UploadOutlined, ApartmentOutlined, FilePdfOutlined,
   CameraOutlined, HistoryOutlined, DeleteOutlined, InfoCircleOutlined,
+  FileExcelOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import * as wbsApi from '../../api/wbs';
@@ -162,6 +163,15 @@ export default function WbsPage() {
       setExcelExporting(false);
     }
   }, [project]);
+
+  const handleTemplateDownload = useCallback(async (type) => {
+    try {
+      if (type === 'wbs') await wbsApi.downloadTasksTemplate();
+      else await wbsApi.downloadIssuesTemplate();
+    } catch {
+      message.error('샘플 양식 다운로드에 실패했습니다.');
+    }
+  }, []);
 
   const handleExcelImport = useCallback((type) => {
     const input = document.createElement('input');
@@ -344,6 +354,12 @@ export default function WbsPage() {
           PDF
         </Button>
       </Tooltip>
+      <Tooltip title="업로드용 샘플 양식 다운로드">
+        <Button size="small" icon={<FileExcelOutlined />}
+          onClick={() => handleTemplateDownload(activeTab === 'wbs' || activeTab === 'gantt' ? 'wbs' : 'issues')}>
+          샘플 양식
+        </Button>
+      </Tooltip>
       {isAdmin && (
         <Tooltip title="Excel 가져오기 (기존 데이터를 덮어씁니다)">
           <Button size="small" icon={<UploadOutlined />} loading={excelImporting}
@@ -477,7 +493,7 @@ export default function WbsPage() {
         cancelText="취소"
         okButtonProps={{ style: { background: '#722ed1', borderColor: '#722ed1' } }}
       >
-        <p style={{ color: '#666', fontSize: 13, marginBottom: 12 }}>
+        <p style={{ color: 'var(--fd-text-secondary)', fontSize: 13, marginBottom: 12 }}>
           현재 모든 항목의 계획/실적 진척률을 기준선으로 저장합니다.
           나중에 비교하여 진척 변화를 확인할 수 있습니다.
         </p>

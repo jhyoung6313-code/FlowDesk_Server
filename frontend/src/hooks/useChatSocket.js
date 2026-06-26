@@ -2,11 +2,13 @@ import { useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import useChatStore from '../store/chatStore';
 import useAuthStore from '../store/authStore';
+import useTaskStore from '../store/taskStore';
 import useNotificationStore from '../store/notificationStore';
 import useUnreadStore from '../store/unreadStore';
 import { getRooms } from '../api/chat';
 import { getBoardUnreadCount } from '../api/boards';
 import { getRunUnreadCount } from '../api/playbook';
+import { CLIENT_ID } from '../api/axios';
 
 function getRoomLabel(msg) {
   const rooms = useChatStore.getState().rooms;
@@ -102,6 +104,15 @@ export default function useChatSocket(token) {
         message: (content || '').replace(/<[^>]*>/g, '').slice(0, 80),
         path: '/chat',
       });
+    });
+
+    // ── 업무(Task) 실시간 동기화 ──────────────────────────────
+    // 업무를 생성/수정/상태변경/삭제하면 서버가 전역 broadcast 한다.
+    // 변경을 일으킨 "바로 그 탭"은 store 액션으로 이미 갱신됐으므로(중복 조회 방지)
+    // clientId로 식별해 건너뛴다. 같은 계정이라도 다른 탭/창은 정상 동기화한다.
+    socket.on('task-changed', ({ clientId }) => {
+      if (clientId && clientId === CLIENT_ID) return;
+      useTaskStore.getState().syncFromRemote();
     });
 
     // ── 타이핑 인디케이터 ──────────────────────────────────

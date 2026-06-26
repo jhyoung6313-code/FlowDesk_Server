@@ -138,9 +138,11 @@
   - 컬럼: 작업명, 산출물명, 시작일, 종료일, 계획진척률(%), 실적진척률(%), 메모
   - 산출물 파일 첨부 (업로드/다운로드/삭제)
   - Excel 내보내기 / Excel 가져오기 (표준 포맷 + 실무 WBS 포맷 자동 감지)
+  - 업로드용 샘플 양식 다운로드 (표준 포맷 헤더 + 예시 행 + 작성안내 시트)
   - 간트 차트 뷰 연동
 - **API**: `GET/POST /api/wbs/projects`, `PUT/DELETE /api/wbs/projects/:id`
 - **API**: `GET/POST /api/wbs/projects/:id/tasks`, `PUT/DELETE /api/wbs/tasks/:taskId`
+- **API**: `GET /api/wbs/tasks/template` (업로드용 샘플 양식)
 
 ### F-14. WBS 이슈사항
 - **화면**: S-11 WBS > 이슈 탭
@@ -148,17 +150,19 @@
   - 프로젝트별 이슈 등록·수정·삭제 (구분, 이슈내용, 발생일, 목표해결일, 진척률, 완료예정일, 상태, 비고)
   - 이슈 상태: 오픈/진행중/완료/보류
   - 등록자(User) 참조 및 표시
-  - Excel 내보내기 / Excel 가져오기
+  - Excel 내보내기 / Excel 가져오기 / 업로드용 샘플 양식 다운로드
 - **API**: `GET/POST /api/wbs/projects/:id/issues`, `PUT/DELETE /api/wbs/issues/:issueId`
+- **API**: `GET /api/wbs/issues/template` (업로드용 샘플 양식)
 
 ---
 
 ## 5. 협업 기능
 
-### F-17. 댓글
-- **화면**: S-04 업무 드로어 > 댓글 탭
-- **설명**: 업무별 댓글 CRUD. 작성자 표시, 수정 이력 없음
-- **API**: `GET/POST /api/tasks/:id/comments`, `PUT/DELETE /api/comments/:id`
+### F-17. 댓글 (진행사항)
+- **화면**: S-04 업무 **수정 폼**(TaskForm) 하단 — 취소/저장 버튼 위. 기존 업무 수정 시에만 노출
+- **설명**: 업무별 진행사항/댓글 CRUD. 작성자 표시, 수정 이력 없음. 댓글 작성 시 **파일 첨부 가능**(보드 카드 댓글과 동일 패턴, 최대 20MB). 댓글 첨부는 별도 첨부 목록과 분리(`commentId` 기준)
+- **API**: `GET/POST /api/tasks/:id/comments`, `PUT/DELETE /api/tasks/comments/:commentId`, `POST /api/tasks/:id/comments/:commentId/attachment`
+- **참고**: 상세보기(👁) 드로어에서는 댓글/첨부/캘린더이동 탭을 제거함. 모든 드로어는 좌우 너비 드래그 리사이즈 지원(`components/common/ResizableDrawer`)
 
 ### F-23. 업무 히스토리 (변경 이력)
 - **화면**: S-04 업무 드로어 > 히스토리 탭
@@ -219,6 +223,8 @@
 ### F-19. Excel 가져오기
 - **설명**: Excel 파일 업로드로 WBS 시트/이슈사항 일괄 등록 (기존 데이터 대체)
 - **API**: `POST /api/wbs/projects/:id/tasks/import`, `POST /api/wbs/projects/:id/issues/import`
+- **샘플 양식**: 표준 포맷 헤더 + 예시 행 + 작성안내 시트가 채워진 빈 양식 다운로드
+  - **API**: `GET /api/wbs/tasks/template`, `GET /api/wbs/issues/template`
 
 ### F-30. PDF 출력
 - **설명**: 업무 목록 / 상세를 PDF로 출력 (jsPDF 기반)
@@ -356,6 +362,14 @@
 - **화면**: 관리자 > 활동 로그
 - **설명**: 전체 업무 히스토리 조회 (관리자 전용)
 - **API**: `GET /api/admin/activity-log`
+
+### F-48. 접속기록 (보안 감사로그)
+- **화면**: 관리자 > 접속기록 (`frontend/src/pages/Admin/AuditLog.jsx`)
+- **설명**: 로그인/로그아웃을 포함한 보안 이벤트 이력 조회 (관리자 전용). 위·변조 방지를 위해 append-only로만 적재하며, 신용정보법상 접속기록 3년 보관 요건을 충족. 액션·사용자별 필터, "로그인만 보기" 빠른 필터 제공
+- **적재 액션**(`AUDIT_ACTION`, `backend/src/config/security.js`): `LOGIN_SUCCESS`, `LOGIN_FAIL`, `LOGOUT`, `ACCOUNT_LOCKED`, `PASSWORD_CHANGE`, `PASSWORD_RESET`, `PII_READ`, `DATA_EXPORT`, `PERMISSION_DENIED`, `DATA_PURGE`, `ANOMALY_DETECTED`
+- **기록 항목**: 사용자(삭제돼도 username 스냅샷 유지)·IP·User-Agent·결과(성공/실패)·대상 리소스·상세·일시
+- **구현**: `AuditLog` 모델 + `services/auditService.js`(`record`), `authController.finalizeLogin`(로그인)·`logout`(로그아웃)에서 적재. 조회 API는 `routes/admin.js`(`router.use(authenticate, adminOnly)`로 관리자 전용)
+- **API**: `GET /api/admin/audit-log` (query: `action`, `userId`, `limit`, `offset`)
 
 ### F-43. 앱 설정
 - **설명**: 이메일 SMTP 설정, 테마 등 앱 전역 설정을 AppSetting 테이블에 key-value로 관리

@@ -150,7 +150,7 @@ function LoginTab({ onSuccess }) {
           </Typography.Paragraph>
           {qrDataUrl && (
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
-              <img src={qrDataUrl} alt="OTP QR" style={{ width: 180, height: 180, background: '#fff', borderRadius: 8, padding: 8 }} />
+              <img src={qrDataUrl} alt="OTP QR" style={{ width: 180, height: 180, background: 'var(--fd-surface)', borderRadius: 8, padding: 8 }} />
             </div>
           )}
           <Input

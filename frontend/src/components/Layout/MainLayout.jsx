@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Layout, Drawer } from 'antd';
+import { Layout } from 'antd';
+import ResizableDrawer from '../common/ResizableDrawer';
 import Sidebar from './Sidebar';
 import AppHeader from './AppHeader';
 import SubHeader from './SubHeader';
@@ -77,7 +78,7 @@ export default function MainLayout() {
   return (
     <Layout hasSider style={{ height: '100vh', overflow: 'hidden' }}>
       {isMobile ? (
-        <Drawer
+        <ResizableDrawer
           open={mobileOpen}
           onClose={() => setMobileOpen(false)}
           placement="left"
@@ -90,7 +91,7 @@ export default function MainLayout() {
             onCollapse={() => setMobileOpen(false)}
             onNavigate={() => setMobileOpen(false)}
           />
-        </Drawer>
+        </ResizableDrawer>
       ) : (
         <Sidebar collapsed={collapsed} onCollapse={handleCollapse} />
       )}

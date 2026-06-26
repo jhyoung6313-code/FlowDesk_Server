@@ -1,6 +1,21 @@
 const XLSX = require('xlsx');
 
 const prisma = require('../lib/prisma');
+const { getIO } = require('../socket');
+
+// 업무 변경을 전체 접속자에게 알려 실시간 동기화 (요약 바·대시보드·캘린더·간트)
+// 가벼운 신호만 보내고 클라이언트가 서버에서 다시 읽도록 한다 (단일 진실 원천)
+// clientId(X-Client-Id 헤더)는 변경을 일으킨 "탭"을 식별한다 — 같은 계정이라도
+// 다른 탭은 동기화돼야 하므로 actorId(사용자)가 아닌 탭 단위로 echo를 거른다.
+const emitTaskChanged = (req, type, taskId) => {
+  const io = getIO();
+  if (io) io.emit('task-changed', {
+    type,
+    taskId,
+    actorId: req.user.id,
+    clientId: req.headers['x-client-id'] || null,
+  });
+};
 
 const taskInclude = {
   part: { select: { id: true, name: true } },
@@ -102,6 +117,7 @@ const create = async (req, res, next) => {
 
     await logHistory(task.id, req.user.id, 'create', null, null, title);
 
+    emitTaskChanged(req, 'create', task.id);
     res.status(201).json(task);
   } catch (err) {
     next(err);
@@ -224,6 +240,7 @@ const update = async (req, res, next) => {
       await logHistory(taskId, req.user.id, 'update', FIELD_LABELS[cf.field] || cf.field, cf.old, cf.new);
     }
 
+    emitTaskChanged(req, 'update', taskId);
     res.json(task);
   } catch (err) {
     next(err);
@@ -242,6 +259,7 @@ const remove = async (req, res, next) => {
     }
     await prisma.task.update({ where: { id: taskId }, data: { delYn: '1' } });
     await logHistory(taskId, req.user.id, 'delete', null, task.title, null);
+    emitTaskChanged(req, 'delete', taskId);
     res.json({ message: '업무가 삭제되었습니다.' });
   } catch (err) {
     next(err);
@@ -263,6 +281,7 @@ const updateStatus = async (req, res, next) => {
     });
     const statusMap = { pending: '대기', in_progress: '진행중', done: '완료', hold: '보류' };
     await logHistory(task.id, req.user.id, 'update', '상태', statusMap[existing?.status] || existing?.status, statusMap[status] || status);
+    emitTaskChanged(req, 'status', task.id);
     res.json(task);
   } catch (err) {
     next(err);
@@ -406,6 +425,7 @@ const bulkAction = async (req, res, next) => {
         where: { id: { in: numIds }, delYn: '0' },
         data: { delYn: '1' },
       });
+      emitTaskChanged(req, 'bulk-delete', null);
       return res.json({ message: `${numIds.length}건이 삭제 처리되었습니다.` });
     }
 
@@ -418,6 +438,7 @@ const bulkAction = async (req, res, next) => {
         where: { id: { in: numIds }, delYn: '0' },
         data: { status },
       });
+      emitTaskChanged(req, 'bulk-status', null);
       return res.json({ message: `${numIds.length}건의 상태가 변경되었습니다.` });
     }
 

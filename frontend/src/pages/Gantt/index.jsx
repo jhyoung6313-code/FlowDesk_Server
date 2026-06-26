@@ -13,6 +13,7 @@ import { getParts } from '../../api/parts';
 import { getUsers } from '../../api/users';
 import { STATUS_COLORS } from '../../utils/colors';
 import useAuthStore from '../../store/authStore';
+import useTaskStore from '../../store/taskStore';
 
 const { Option } = Select;
 
@@ -122,6 +123,7 @@ export default function GanttPage({ embedded = false }) {
   const [msColor, setMsColor]         = useState('#722ed1');
 
   const user = useAuthStore((s) => s.user);
+  const bumpVersion = useTaskStore((s) => s.bumpVersion);
   const isAdmin = user?.role === 'admin';
 
   const load = useCallback(() => {
@@ -182,11 +184,12 @@ export default function GanttPage({ embedded = false }) {
         dueDate: dayjs(task.end).format('YYYY-MM-DD'),
       });
       load();
+      bumpVersion(); // 마감일 변경 → 요약 바 지연 카운트 등 calVer 구독 화면 갱신
       message.success('기간이 업데이트되었습니다.');
     } catch {
       message.error('업데이트에 실패했습니다.');
     }
-  }, [load]);
+  }, [load, bumpVersion]);
 
   const handleProgressChange = useCallback(async (task) => {
     if (task.type === 'milestone') return;
@@ -196,10 +199,11 @@ export default function GanttPage({ embedded = false }) {
         dueDate: dayjs(task.end).format('YYYY-MM-DD'),
       });
       load();
+      bumpVersion();
     } catch {
       message.error('업데이트에 실패했습니다.');
     }
-  }, [load]);
+  }, [load, bumpVersion]);
 
   // 마일스톤 CRUD
   const openMsCreate = () => {
@@ -402,7 +406,7 @@ export default function GanttPage({ embedded = false }) {
       {ganttTasks.length === 0 ? (
         <Empty description="표시할 업무가 없습니다." style={{ marginTop: 40 }} />
       ) : (
-        <div style={{ overflowX: 'auto', background: '#fff', borderRadius: 8, padding: '12px 0' }}>
+        <div className="gantt-container" style={{ overflowX: 'auto', background: 'var(--fd-surface)', borderRadius: 8, padding: '12px 0' }}>
           <Gantt
             tasks={ganttTasks}
             viewMode={VIEW_MODE_MAP[viewMode]}
@@ -419,21 +423,21 @@ export default function GanttPage({ embedded = false }) {
                 const m = task._milestone;
                 return (
                   <div style={{
-                    background: '#fff', border: '1px solid #d9d9d9', borderRadius: 6,
+                    background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 6,
                     padding: '8px 12px', minWidth: 160, fontSize: 12,
                   }}>
                     <div style={{ fontWeight: 600, marginBottom: 4, color: m.color }}>
                       <FlagOutlined /> {m.name}
                     </div>
                     <div>날짜: {dayjs(m.date).format('YYYY-MM-DD')}</div>
-                    {m.description && <div style={{ marginTop: 4, color: '#666' }}>{m.description}</div>}
+                    {m.description && <div style={{ marginTop: 4, color: 'var(--fd-text-secondary)' }}>{m.description}</div>}
                   </div>
                 );
               }
               const raw = task._raw;
               return (
                 <div style={{
-                  background: '#fff', border: '1px solid #d9d9d9', borderRadius: 6,
+                  background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 6,
                   padding: '8px 12px', minWidth: 200, fontSize: 12,
                 }}>
                   <div style={{ fontWeight: 600, marginBottom: 4 }}>{raw?.title}</div>

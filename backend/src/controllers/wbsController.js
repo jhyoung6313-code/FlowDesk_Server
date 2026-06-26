@@ -153,6 +153,10 @@ exports.createTask = async (req, res, next) => {
     const projectId = Number(req.params.id);
     const { parentId, name, deliverable, startDate, endDate, plannedProgress, actualProgress } = req.body;
 
+    if (!name || !name.trim()) return res.status(400).json({ error: '작업명은 필수입니다.' });
+
+    const clamp = (v) => Math.min(100, Math.max(0, Number(v) || 0));
+
     // 같은 부모 하위에서 마지막 order 계산
     const lastTask = await prisma.wbsTask.findFirst({
       where: { projectId, parentId: parentId || null },
@@ -177,8 +181,8 @@ exports.createTask = async (req, res, next) => {
         deliverable: deliverable || null,
         startDate: startDate ? new Date(startDate) : null,
         endDate: endDate ? new Date(endDate) : null,
-        plannedProgress: plannedProgress ?? 0,
-        actualProgress: actualProgress ?? 0,
+        plannedProgress: clamp(plannedProgress ?? 0),
+        actualProgress: clamp(actualProgress ?? 0),
       },
     });
     res.status(201).json(task);
@@ -193,15 +197,19 @@ exports.updateTask = async (req, res, next) => {
     const id = Number(req.params.taskId);
     const { name, deliverable, startDate, endDate, plannedProgress, actualProgress, memo } = req.body;
 
+    if (name !== undefined && (!name || !name.trim())) return res.status(400).json({ error: '작업명은 필수입니다.' });
+
+    const clamp = (v) => Math.min(100, Math.max(0, Number(v) || 0));
+
     const task = await prisma.wbsTask.update({
       where: { id },
       data: {
-        ...(name !== undefined && { name }),
+        ...(name !== undefined && { name: name.trim() }),
         ...(deliverable !== undefined && { deliverable: deliverable || null }),
         ...(startDate !== undefined && { startDate: startDate ? new Date(startDate) : null }),
         ...(endDate !== undefined && { endDate: endDate ? new Date(endDate) : null }),
-        ...(plannedProgress !== undefined && { plannedProgress }),
-        ...(actualProgress !== undefined && { actualProgress }),
+        ...(plannedProgress !== undefined && { plannedProgress: clamp(plannedProgress) }),
+        ...(actualProgress !== undefined && { actualProgress: clamp(actualProgress) }),
         ...(memo !== undefined && { memo: memo || null }),
       },
     });
@@ -720,6 +728,97 @@ exports.importIssuesExcel = async (req, res, next) => {
     });
 
     res.json({ message: `${data.length}개 이슈가 가져오기 되었습니다.` });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── WBS 항목 업로드용 샘플 양식 다운로드 ─────────────
+// importTasksExcel 의 '표준 WBS 포맷' 헤더와 동일한 컬럼으로 예시 행을 채운 빈 양식을 생성한다.
+exports.downloadTasksTemplate = async (req, res, next) => {
+  try {
+    const sample = [
+      { 레벨: 0, 작업명: '1. 기획 단계', 산출물명: '', 시작일: '2026-01-02', 종료일: '2026-01-10', 계획진척률: 100, 실적진척률: 100, 메모: '대분류(레벨 0)' },
+      { 레벨: 1, 작업명: '  요구사항 정의', 산출물명: '요구사항정의서.docx', 시작일: '2026-01-02', 종료일: '2026-01-05', 계획진척률: 100, 실적진척률: 80, 메모: '중분류(레벨 1)' },
+      { 레벨: 2, 작업명: '    인터뷰 진행', 산출물명: '인터뷰록.xlsx', 시작일: '2026-01-02', 종료일: '2026-01-03', 계획진척률: 100, 실적진척률: 100, 메모: '소분류(레벨 2)' },
+      { 레벨: 0, 작업명: '2. 개발 단계', 산출물명: '', 시작일: '2026-01-11', 종료일: '2026-02-28', 계획진척률: 50, 실적진척률: 20, 메모: '' },
+    ];
+
+    const guide = [
+      ['■ WBS 업로드 양식 작성 안내'],
+      [''],
+      ['1. "WBS" 시트의 헤더(레벨/작업명/산출물명/시작일/종료일/계획진척률/실적진척률/메모) 행은 수정하지 마세요.'],
+      ['2. 레벨: 0=대분류, 1=중분류, 2=소분류 … (0~4). 작업명 앞 공백 들여쓰기는 선택사항이며 레벨 값이 우선합니다.'],
+      ['3. 시작일/종료일: YYYY-MM-DD 형식 (예: 2026-01-02). 비워두면 미지정으로 처리됩니다.'],
+      ['4. 계획진척률/실적진척률: 0~100 사이 숫자(%). 0~1 사이 소수로 입력하면 백분율로 환산됩니다.'],
+      ['5. 산출물명/메모: 선택 입력 항목입니다.'],
+      ['6. 업로드 시 해당 프로젝트의 기존 WBS 항목은 모두 삭제 후 새로 등록됩니다(덮어쓰기).'],
+      ['7. 예시 행은 삭제하고 실제 데이터를 입력하세요.'],
+    ];
+
+    const wb = XLSX.utils.book_new();
+
+    const ws = XLSX.utils.json_to_sheet(sample);
+    ws['!cols'] = [
+      { wch: 6 }, { wch: 36 }, { wch: 20 }, { wch: 12 },
+      { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 40 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, 'WBS');
+
+    const wsGuide = XLSX.utils.aoa_to_sheet(guide);
+    wsGuide['!cols'] = [{ wch: 100 }];
+    XLSX.utils.book_append_sheet(wb, wsGuide, '작성안내');
+
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const filename = encodeURIComponent('WBS_업로드_양식.xlsx');
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${filename}`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buf);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ─── 이슈사항 업로드용 샘플 양식 다운로드 ─────────────
+// importIssuesExcel 의 헤더와 동일한 컬럼으로 예시 행을 채운 빈 양식을 생성한다.
+exports.downloadIssuesTemplate = async (req, res, next) => {
+  try {
+    const sample = [
+      { 구분: '기술', 이슈내용: '로그인 시 간헐적 세션 만료 발생', 발생일: '2026-01-05', 목표해결일: '2026-01-10', '진척률(%)': 30, 완료예정일: '2026-01-12', 상태: '진행중', 비고: '재현 환경 확인 필요' },
+      { 구분: '일정', 이슈내용: '외부 API 연동 지연으로 일정 영향', 발생일: '2026-01-06', 목표해결일: '2026-01-15', '진척률(%)': 0, 완료예정일: '', 상태: '오픈', 비고: '' },
+    ];
+
+    const guide = [
+      ['■ 이슈사항 업로드 양식 작성 안내'],
+      [''],
+      ['1. "이슈사항" 시트의 헤더(구분/이슈내용/발생일/목표해결일/진척률(%)/완료예정일/상태/비고) 행은 수정하지 마세요.'],
+      ['2. 이슈내용은 필수 입력 항목입니다. (비어 있는 행은 무시됩니다)'],
+      ['3. 날짜(발생일/목표해결일/완료예정일): YYYY-MM-DD 형식. 비워두면 미지정으로 처리됩니다.'],
+      ['4. 진척률(%): 0~100 사이 숫자.'],
+      ['5. 상태: 오픈 / 진행중 / 완료 / 보류 중 하나로 입력하세요. (영문 open/in_progress/closed/hold 도 가능)'],
+      ['6. 구분/비고: 선택 입력 항목입니다.'],
+      ['7. 업로드 시 해당 프로젝트의 기존 이슈는 모두 삭제 후 새로 등록됩니다(덮어쓰기).'],
+      ['8. 예시 행은 삭제하고 실제 데이터를 입력하세요.'],
+    ];
+
+    const wb = XLSX.utils.book_new();
+
+    const ws = XLSX.utils.json_to_sheet(sample);
+    ws['!cols'] = [
+      { wch: 14 }, { wch: 40 }, { wch: 12 }, { wch: 12 },
+      { wch: 10 }, { wch: 12 }, { wch: 8 }, { wch: 30 },
+    ];
+    XLSX.utils.book_append_sheet(wb, ws, '이슈사항');
+
+    const wsGuide = XLSX.utils.aoa_to_sheet(guide);
+    wsGuide['!cols'] = [{ wch: 100 }];
+    XLSX.utils.book_append_sheet(wb, wsGuide, '작성안내');
+
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    const filename = encodeURIComponent('이슈사항_업로드_양식.xlsx');
+    res.setHeader('Content-Disposition', `attachment; filename*=UTF-8''${filename}`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buf);
   } catch (err) {
     next(err);
   }

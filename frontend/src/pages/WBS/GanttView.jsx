@@ -104,7 +104,7 @@ export default function GanttView({ tasks, project }) {
         />
       )}
       <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ fontSize: 13, color: '#555' }}>단위:</span>
+        <span style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }}>단위:</span>
         <Radio.Group
           value={viewMode}
           onChange={(e) => setViewMode(e.target.value)}
@@ -140,7 +140,7 @@ export default function GanttView({ tasks, project }) {
         />
       </div>
       <div style={{
-        display: 'flex', gap: 16, marginTop: 10, fontSize: 12, color: '#666',
+        display: 'flex', gap: 16, marginTop: 10, fontSize: 12, color: 'var(--fd-text-secondary)',
         flexWrap: 'wrap',
       }}>
         <span><span style={{ display:'inline-block', width:12, height:12, background:'#2e7d32', borderRadius:2, marginRight:4, verticalAlign:'middle' }} />대분류</span>

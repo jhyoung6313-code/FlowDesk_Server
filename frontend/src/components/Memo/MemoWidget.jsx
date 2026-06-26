@@ -8,7 +8,7 @@ import MemoCard from './MemoCard';
 const iconBtnStyle = {
   display: 'flex', alignItems: 'center', justifyContent: 'center',
   width: 36, height: 36, borderRadius: 10, cursor: 'pointer',
-  background: '#f8fafc', border: '1px solid #e2e8f0',
+  background: 'var(--fd-surface-sunken)', border: '1px solid var(--fd-border)',
   transition: 'background 0.2s', color: '#6b7280', fontSize: 16,
 };
 
@@ -50,7 +50,7 @@ export default function MemoWidget() {
     <div style={{ width: 320 }}>
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid #f0f0f0',
+        marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--fd-border)',
       }}>
         <span style={{ fontSize: 14, fontWeight: 700 }}>메모지</span>
         <Button
@@ -109,7 +109,7 @@ export default function MemoWidget() {
       arrow={false}
       overlayStyle={{ zIndex: 1050 }}
       styles={{ body: {
-        background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 16,
+        background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 16,
         boxShadow: '0 16px 48px rgba(0,0,0,0.2)', padding: '16px',
       }}}
       content={panel}

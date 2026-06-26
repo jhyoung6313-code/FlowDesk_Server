@@ -31,6 +31,7 @@ const EmailSettingsPage = lazy(() => import('./pages/Admin/EmailSettings'));
 const TemplatesAdminPage = lazy(() => import('./pages/Admin/Templates'));
 const BackupPage = lazy(() => import('./pages/Admin/Backup'));
 const ActivityLogPage = lazy(() => import('./pages/Admin/ActivityLog'));
+const AuditLogPage = lazy(() => import('./pages/Admin/AuditLog'));
 const NotificationsPage = lazy(() => import('./pages/Notifications'));
 const ProfilePage = lazy(() => import('./pages/Profile'));
 const WbsWorkspace = lazy(() => import('./pages/WBS/WbsWorkspace'));
@@ -63,6 +64,7 @@ export default function App() {
   const { init, loading, user, logout } = useAuthStore();
   const { locked, lock, unlock } = useLockStore();
   const currentTheme = useThemeStore((s) => s.theme);
+  const isDark = useThemeStore((s) => s.isDark);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const socketRef = useChatSocket(user ? token : null);
@@ -107,7 +109,7 @@ export default function App() {
   return (
     <ConfigProvider
       theme={{
-        algorithm: antTheme.defaultAlgorithm,
+        algorithm: isDark ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
         token: {
           colorPrimary:       c.accentMid,
           colorLink:          c.accentMid,
@@ -116,8 +118,18 @@ export default function App() {
           borderRadiusSM:     6,
           fontFamily:         "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif",
           fontSize:           13,
-          colorBgBase:        '#ffffff',
-          colorTextBase:      '#0f172a',
+          // 라이트는 흰 배경/짙은 텍스트 고정. 다크는 거의-검정 대신 부드러운 슬레이트 톤으로 상향
+          // (페이지<콘텐츠<카드<엘리베이티드 단계로 대비를 줘서 카드·행 구분이 살아나도록).
+          ...(isDark
+            ? {
+                colorBgBase:          '#1e222c',
+                colorBgLayout:        '#181b24',
+                colorBgContainer:     '#272c38',
+                colorBgElevated:      '#2f3543',
+                colorBorder:          '#3a4150',
+                colorBorderSecondary: '#2b313d',
+              }
+            : { colorBgBase: '#ffffff', colorTextBase: '#0f172a' }),
           controlHeight:      32,
           motion:             false,
         },
@@ -251,6 +263,14 @@ export default function App() {
             element={
               <PrivateRoute adminOnly>
                 <ActivityLogPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="admin/audit-log"
+            element={
+              <PrivateRoute adminOnly>
+                <AuditLogPage />
               </PrivateRoute>
             }
           />
