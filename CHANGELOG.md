@@ -7,6 +7,22 @@ Types: `Added` / `Changed` / `Fixed` / `Removed`
 
 ---
 
+## [1.9.2] - 2026-06-26
+
+### Added
+- **F-48 접속기록(보안 감사로그)**: 관리자 전용 조회 화면(`Admin/AuditLog.jsx`) — 로그인/로그아웃 등 보안 이벤트 이력 표시, 액션·사용자 필터, "로그인만 보기" 빠른 필터, 페이지네이션
+  - `authController.logout`에 `LOGOUT` 감사로그 적재 추가 (기존 정의만 있고 미사용이던 `AUDIT_ACTION.LOGOUT` 연결)
+  - 조회 API `GET /api/admin/audit-log` (백엔드는 기존부터 `adminOnly`로 보호) — 권한은 백엔드 미들웨어 + 프런트 `<PrivateRoute adminOnly>` + 사이드바 메뉴 조건부 노출로 삼중 방어
+  - 기록 항목: 사용자(삭제돼도 username 스냅샷)·IP·User-Agent·결과·대상·상세·일시. append-only(위·변조 방지, 신용정보법 접속기록 3년 보관)
+
+### Changed
+- 위 릴리즈 커밋에는 그간 누적된 미커밋 작업이 함께 포함됨 (별도 추적 없이 묶어 커밋):
+  - **다크모드 전면 적용**: Ant Design `darkAlgorithm` 연동 + 슬레이트 톤 배경/보더 색상 토큰(페이지<콘텐츠<카드<엘리베이티드 단계 대비)
+  - Board/WBS/Playbook/Task/Chat/Dashboard 등 다수 화면 UI 정리 및 공통 컴포넌트(`components/common/`) 도입
+  - DB: 업무 댓글/첨부 관련 마이그레이션(`20260624055333_task_comment_attachments`) 추가
+
+---
+
 ## [1.9.0] - 2026-05-21
 
 ### Added (Playbook 9대 개선)

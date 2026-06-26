@@ -54,6 +54,13 @@ export const exportIssuesExcel = (projectId, projectName) =>
     `이슈_${projectName}_${new Date().toISOString().slice(0, 10)}.xlsx`
   );
 
+// ─── 업로드용 샘플 양식 다운로드 ──────────────────────
+export const downloadTasksTemplate = () =>
+  downloadExcel('/api/wbs/tasks/template', 'WBS_업로드_양식.xlsx');
+
+export const downloadIssuesTemplate = () =>
+  downloadExcel('/api/wbs/issues/template', '이슈사항_업로드_양식.xlsx');
+
 // ─── Excel 업로드 (가져오기) ──────────────────────────
 export const importTasksExcel = (projectId, file) => {
   const form = new FormData();

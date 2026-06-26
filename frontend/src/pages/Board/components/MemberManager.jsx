@@ -97,7 +97,7 @@ export default function MemberManager({
         ) : filteredMembers.map(m => (
           <div
             key={m.userId}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--fd-border)' }}
           >
             <Space>
               <Avatar style={{ backgroundColor: m.user?.avatarColor || '#1677ff', fontSize: 12 }} size="small">
@@ -147,7 +147,7 @@ export default function MemberManager({
       </div>
 
       {/* 역할 설명 */}
-      <div style={{ background: '#f9f9f9', borderRadius: 6, padding: '8px 12px', marginBottom: 16 }}>
+      <div style={{ background: 'var(--fd-surface-sunken)', borderRadius: 6, padding: '8px 12px', marginBottom: 16 }}>
         <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4, fontWeight: 600 }}>역할 안내</Text>
         {ROLE_OPTIONS.map(r => (
           <div key={r.value} style={{ display: 'flex', gap: 6, marginBottom: 2 }}>

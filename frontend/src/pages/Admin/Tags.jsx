@@ -104,7 +104,7 @@ export default function TagsPage() {
         <Space size={4}>
           <span style={{
             display: 'inline-block', width: 18, height: 18,
-            borderRadius: 4, backgroundColor: v, border: '1px solid #d9d9d9',
+            borderRadius: 4, backgroundColor: v, border: '1px solid var(--fd-border)',
           }} />
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>{v}</Typography.Text>
         </Space>

@@ -3,8 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   Button, Input, Select, Form, Card, Typography, Space, Tag, Divider,
   Collapse, Switch, InputNumber, Tooltip, Popconfirm, message, Spin,
-  Row, Col, Badge, Drawer, List, TimePicker, DatePicker,
+  Row, Col, Badge, List, TimePicker, DatePicker,
 } from 'antd';
+import ResizableDrawer from '../../components/common/ResizableDrawer';
 import {
   PlusOutlined, DeleteOutlined, ArrowLeftOutlined, SaveOutlined,
   DragOutlined, CheckSquareOutlined, LikeOutlined, InfoCircleOutlined,
@@ -117,7 +118,7 @@ function StepCard({ step, phaseId, users, onUpdate, onDelete }) {
       />
 
       {open && (
-        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f0f0f0' }}>
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--fd-border)' }}>
           <Row gutter={[10, 10]}>
             <Col span={8}>
               <Text type="secondary" style={{ fontSize: 11 }}>유형</Text>
@@ -365,10 +366,14 @@ function VariableEditor({ variables, onChange }) {
 
 // ─── Main Editor ─────────────────────────────────────────────
 
-export default function PlaybookEditor() {
-  const { id } = useParams();
+export default function PlaybookEditor({ embedded = false, embeddedId = null, onClose, onSaved } = {}) {
+  const { id: routeId } = useParams();
   const navigate = useNavigate();
+  const id = embedded ? embeddedId : routeId;
   const isNew = !id || id === 'new';
+
+  // 목록(닫기) 이동: 임베드 시 드로어 닫기, 아니면 라우트 이동
+  const goList = () => (embedded ? onClose?.() : navigate('/playbooks'));
 
   const [form] = Form.useForm();
   const [schedForm] = Form.useForm();
@@ -467,11 +472,13 @@ export default function PlaybookEditor() {
       if (isNew) {
         const pb = await pbApi.createPlaybook(payload);
         message.success('Playbook이 생성되었습니다.');
-        navigate(`/playbooks/${pb.id}`);
+        if (embedded) { onSaved?.(pb); onClose?.(); }
+        else navigate(`/playbooks/${pb.id}`);
       } else {
         await pbApi.updatePlaybook(id, payload);
         message.success('저장되었습니다.');
-        navigate(`/playbooks/${id}`);
+        if (embedded) { onSaved?.(); onClose?.(); }
+        else navigate(`/playbooks/${id}`);
       }
     } catch (err) {
       if (!err?.errorFields) message.error('저장 실패');
@@ -583,10 +590,10 @@ export default function PlaybookEditor() {
   const freeSteps = steps.filter((s) => !s.phaseTempId);
 
   return (
-    <div style={{ padding: 24, maxWidth: 1000, margin: '0 auto' }}>
+    <div style={{ padding: embedded ? 0 : 24, maxWidth: embedded ? '100%' : 1000, margin: '0 auto' }}>
       {/* 헤더 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/playbooks')}>목록</Button>
+        <Button icon={<ArrowLeftOutlined />} onClick={goList}>{embedded ? '닫기' : '목록'}</Button>
         <Title level={4} style={{ margin: 0 }}>{isNew ? '새 Playbook' : 'Playbook 편집'}</Title>
         <Space>
           {!isNew && (
@@ -712,7 +719,7 @@ export default function PlaybookEditor() {
       </Row>
 
       {/* 버전 이력 Drawer */}
-      <Drawer
+      <ResizableDrawer
         title="버전 이력"
         open={versionDrawer}
         onClose={() => setVersionDrawer(false)}
@@ -750,16 +757,16 @@ export default function PlaybookEditor() {
             )}
           />
         )}
-      </Drawer>
+      </ResizableDrawer>
 
       {/* 자동 실행 스케줄 Drawer */}
-      <Drawer
+      <ResizableDrawer
         title="자동 실행 스케줄"
         open={scheduleDrawer}
         onClose={() => setScheduleDrawer(false)}
         width={520}
       >
-        <div style={{ marginBottom: 20, padding: 12, background: '#fafafa', borderRadius: 6, border: '1px solid #f0f0f0' }}>
+        <div style={{ marginBottom: 20, padding: 12, background: 'var(--fd-surface-sunken)', borderRadius: 6, border: '1px solid var(--fd-border)' }}>
           <div style={{ fontWeight: 600, marginBottom: 10, fontSize: 13 }}>새 스케줄 추가</div>
           <Form form={schedForm} layout="vertical" size="small" onFinish={handleCreateSchedule}>
             <Form.Item name="name" label="스케줄 이름" rules={[{ required: true, message: '이름을 입력하세요' }]}>
@@ -849,10 +856,10 @@ export default function PlaybookEditor() {
             )}
           />
         )}
-      </Drawer>
+      </ResizableDrawer>
 
       {/* 웹훅 Drawer */}
-      <Drawer
+      <ResizableDrawer
         title="웹훅 관리"
         open={webhookDrawer}
         onClose={() => setWebhookDrawer(false)}
@@ -898,7 +905,7 @@ export default function PlaybookEditor() {
                     title={h.name}
                     description={
                       <div>
-                        <div style={{ fontSize: 10, fontFamily: 'monospace', color: '#555', wordBreak: 'break-all' }}>
+                        <div style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--fd-text-secondary)', wordBreak: 'break-all' }}>
                           POST {url}
                         </div>
                         <Button
@@ -918,7 +925,7 @@ export default function PlaybookEditor() {
             }}
           />
         )}
-      </Drawer>
+      </ResizableDrawer>
     </div>
   );
 }

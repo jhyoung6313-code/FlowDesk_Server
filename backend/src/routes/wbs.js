@@ -16,6 +16,10 @@ router.get('/projects/:id', authenticate, wbs.getProject);
 router.put('/projects/:id', authenticate, adminOnly, wbs.updateProject);
 router.delete('/projects/:id', authenticate, adminOnly, wbs.deleteProject);
 
+// ─── 업로드용 샘플 양식 다운로드 ─────────────────────
+router.get('/tasks/template', authenticate, wbs.downloadTasksTemplate);
+router.get('/issues/template', authenticate, wbs.downloadIssuesTemplate);
+
 // ─── WBS 항목 ─────────────────────────────────────────
 router.get('/projects/:id/tasks/export', authenticate, auditAction(AUDIT_ACTION.DATA_EXPORT), wbs.exportTasksExcel);
 router.post('/projects/:id/tasks/import', authenticate, adminOnly, upload.single('file'), wbs.importTasksExcel);

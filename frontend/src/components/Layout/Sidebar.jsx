@@ -26,8 +26,10 @@ import {
   FileTextOutlined,
   MailOutlined,
   HistoryOutlined,
+  SafetyCertificateOutlined,
   DatabaseOutlined,
   GlobalOutlined,
+  SnippetsOutlined,
 } from '@ant-design/icons';
 import useAuthStore from '../../store/authStore';
 import useThemeStore from '../../store/themeStore';
@@ -46,11 +48,38 @@ const RAIL_WIDTH = 60;
 const CTX_WIDTH = 212;
 const RAIL_BG = '#101322';
 
-// 그룹(카테고리) 색상 — 테마와 무관하게 고정. 카드 틴트는 연하게.
-const GROUPS = {
-  view:   { color: '#3b82f6', tintLight: '#f4f8ff', tintDark: 'rgba(59,130,246,0.10)' },
-  collab: { color: '#10b981', tintLight: '#f2fbf7', tintDark: 'rgba(16,185,129,0.10)' },
-  admin:  { color: '#a855f7', tintLight: '#faf6ff', tintDark: 'rgba(168,85,247,0.10)' },
+// 테마별 섹션 카드 색상 (view/collab/admin 각각 테마와 어울리는 색)
+const THEME_GROUPS = {
+  slate: {
+    view:   { color: '#2563eb', tint: '#e8f2fe' },
+    collab: { color: '#10b981', tint: '#e4fdf3' },
+    admin:  { color: '#7c3aed', tint: '#f2efff' },
+  },
+  ocean: {
+    view:   { color: '#0891b2', tint: '#e2fbff' },
+    collab: { color: '#059669', tint: '#e4fdf3' },
+    admin:  { color: '#7c3aed', tint: '#f2efff' },
+  },
+  aurora: {
+    view:   { color: '#4f46e5', tint: '#ecedff' },
+    collab: { color: '#059669', tint: '#e4fdf3' },
+    admin:  { color: '#9333ea', tint: '#f5eeff' },
+  },
+  forest: {
+    view:   { color: '#2563eb', tint: '#e8f2fe' },
+    collab: { color: '#16a34a', tint: '#d8fce8' },
+    admin:  { color: '#7c3aed', tint: '#f2efff' },
+  },
+  sunset: {
+    view:   { color: '#2563eb', tint: '#e8f2fe' },
+    collab: { color: '#059669', tint: '#e4fdf3' },
+    admin:  { color: '#c026d3', tint: '#fceeff' },
+  },
+  rose: {
+    view:   { color: '#2563eb', tint: '#e8f2fe' },
+    collab: { color: '#059669', tint: '#e4fdf3' },
+    admin:  { color: '#9333ea', tint: '#f5eeff' },
+  },
 };
 
 // submenu 제목 클릭 시 펼침과 함께 이동할 대표 페이지
@@ -126,30 +155,23 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   const boardUnread = useUnreadStore((s) => s.boardUnread);
   const playbookUnread = useUnreadStore((s) => s.playbookUnread);
   const isAdmin = user?.role === 'admin';
-  const { isDark } = useThemeStore();
+  const { theme } = useThemeStore();
+  const c = theme.colors;
 
-  // 테마/다크모드 연동 팔레트 (레일은 항상 다크 고정)
-  const COLORS = isDark
-    ? {
-        ctxBg:        '#1a1a1f',
-        border:       'rgba(255,255,255,0.06)',
-        headText:     '#ffffff',
-        itemText:     'rgba(255,255,255,0.6)',
-        itemHoverBg:  'rgba(255,255,255,0.06)',
-        itemHoverText:'rgba(255,255,255,0.9)',
-        toggleText:   'rgba(255,255,255,0.4)',
-        toggleHoverBg:'rgba(255,255,255,0.08)',
-      }
-    : {
-        ctxBg:        '#ffffff',
-        border:       '#eceef1',
-        headText:     '#1a1d23',
-        itemText:     '#5b626e',
-        itemHoverBg:  'rgba(0,0,0,0.04)',
-        itemHoverText:'#1a1d23',
-        toggleText:   '#9499a3',
-        toggleHoverBg:'#f2f3f5',
-      };
+  // 현재 테마에 맞는 섹션 그룹 색상 (없으면 slate 기본값)
+  const GROUPS = THEME_GROUPS[theme.key] ?? THEME_GROUPS.slate;
+
+  // 테마 sidebar 토큰으로 컨텍스트 패널 팔레트 구성 (레일은 항상 다크 고정)
+  const COLORS = {
+    ctxBg:        c.sidebarBg,
+    border:       c.sidebarDivider,
+    headText:     c.sidebarText,
+    itemText:     c.sidebarText,
+    itemHoverBg:  c.sidebarHoverBg,
+    itemHoverText:c.sidebarHoverText,
+    toggleText:   c.sidebarGroup,
+    toggleHoverBg:c.sidebarHoverBg,
+  };
 
   // WBS 프로젝트 목록 상태
   const [wbsProjects, setWbsProjects] = useState([]);
@@ -213,6 +235,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     if (pathname.startsWith('/tasks')) return '/tasks';
     if (pathname.startsWith('/kanban')) return '/tasks';
     if (pathname.startsWith('/calendar')) return '/calendar';
+    if (pathname.startsWith('/memos')) return '/memos';
     if (pathname.startsWith('/gantt')) return '/gantt';
     if (pathname.startsWith('/boards')) return '/boards';
     if (pathname.startsWith('/playbooks')) return '/playbooks';
@@ -371,6 +394,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     { key: '/tasks', icon: <CheckSquareOutlined style={{ color: GROUPS.view.color }} />, label: '업무 관리' },
     { key: '/gantt', icon: <BarChartOutlined style={{ color: GROUPS.view.color }} />, label: '간트 차트' },
     { key: '/calendar', icon: <CalendarOutlined style={{ color: GROUPS.view.color }} />, label: '캘린더' },
+    { key: '/memos', icon: <SnippetsOutlined style={{ color: GROUPS.view.color }} />, label: '메모지' },
   ];
 
   const collabItems = [
@@ -435,7 +459,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
           margin: '8px 10px',
           borderRadius: 14,
           padding: '2px 2px 6px',
-          background: isDark ? g.tintDark : g.tintLight,
+          background: g.tint,
         }}
       >
         <div
@@ -459,8 +483,8 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
                 itemColor:        COLORS.itemText,
                 itemHoverBg:      COLORS.itemHoverBg,
                 itemHoverColor:   COLORS.itemHoverText,
-                itemSelectedBg:   isDark ? `${g.color}26` : `${g.color}1f`,
-                itemSelectedColor:g.color,
+                itemSelectedBg:   `${g.color}1f`,
+                itemSelectedColor: g.color,
                 fontSize:         15,
                 iconSize:         17,
                 itemMarginInline: 6,
@@ -515,6 +539,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
           },
           { key: '/admin/email-settings', icon: <MailOutlined />, label: '이메일 알림 설정', onClick: () => go('/admin/email-settings') },
           { key: '/admin/activity-log', icon: <HistoryOutlined />, label: '활동 로그', onClick: () => go('/admin/activity-log') },
+          { key: '/admin/audit-log', icon: <SafetyCertificateOutlined />, label: '접속기록', onClick: () => go('/admin/audit-log') },
           { key: '/admin/backup', icon: <DatabaseOutlined />, label: '백업/복원', onClick: () => go('/admin/backup') },
         ]
       : []),
@@ -526,8 +551,10 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   const railItems = [
     { key: '/', icon: <DashboardOutlined />, title: '대시보드', color: GROUPS.view.color },
     { key: '/tasks', icon: <CheckSquareOutlined />, title: '업무 관리', color: GROUPS.view.color },
+    { key: '/memos', icon: <SnippetsOutlined />, title: '메모지', color: GROUPS.view.color },
     { key: '/chat', icon: <MessageOutlined />, title: '채팅', color: GROUPS.collab.color, dot: totalUnread > 0 },
     { key: '/boards', icon: <AppstoreOutlined />, title: '보드', color: GROUPS.collab.color, dot: boardUnread > 0 },
+    { key: '/playbooks', icon: <BookOutlined />, title: 'Playbook', color: GROUPS.collab.color, dot: playbookUnread > 0 },
     { key: '/wbs', icon: <ProjectOutlined />, title: '프로젝트', color: GROUPS.collab.color },
   ];
   const railActive = (key) => (key === '/' ? pathname === '/' : pathname.startsWith(key));
@@ -603,150 +630,20 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
           {isAdmin && (
             <RailIcon itemKey="/admin/users" icon={<UserOutlined />} title="사용자 관리" color={GROUPS.admin.color} />
           )}
-        </div>
 
-        {/* ── 2차 컨텍스트 패널 (최소화 가능) ── */}
-        <div
-          style={{
-            width: collapsed ? 0 : CTX_WIDTH,
-            flexShrink: 0,
-            background: COLORS.ctxBg,
-            borderRight: collapsed ? 'none' : `1px solid ${COLORS.border}`,
-            overflow: 'hidden',
-            whiteSpace: 'nowrap',
-            opacity: collapsed ? 0 : 1,
-            transition: 'width 0.26s cubic-bezier(0.4,0,0.2,1), opacity 0.2s, padding 0.26s',
-            display: 'flex',
-            flexDirection: 'column',
-          }}
-        >
-          {/* 패널 헤더 + 최소화 토글 */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              padding: '14px 14px 8px 18px',
-              flexShrink: 0,
-            }}
-          >
-            <span style={{ flex: 1, fontSize: 17, fontWeight: 800, color: COLORS.headText, letterSpacing: -0.2 }}>
-              메뉴
-            </span>
-            <Tooltip title="패널 접기" placement="bottom">
-              <div
-                onClick={() => onCollapse?.(true)}
-                style={{
-                  width: 26,
-                  height: 26,
-                  borderRadius: 7,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  color: COLORS.toggleText,
-                  transition: 'background 0.15s, color 0.15s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = COLORS.toggleHoverBg;
-                  e.currentTarget.style.color = COLORS.headText;
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = COLORS.toggleText;
-                }}
-              >
-                <DoubleLeftOutlined style={{ fontSize: 14 }} />
-              </div>
-            </Tooltip>
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
-            <Section grp="view" title="보기" menuItems={viewItems} />
-            <Section grp="collab" title="협업" menuItems={collabItems} />
-            {isAdmin && <Section grp="admin" title="관리자" menuItems={adminItems} />}
-          </div>
-
-          {/* ── 사용자 정보 카드 (하단 고정) ── */}
-          <div style={{ flexShrink: 0, borderTop: `1px solid ${COLORS.border}`, padding: '8px 8px 10px' }}>
-            <Dropdown menu={{ items: userMenuItems }} placement="topLeft" trigger={['click']}>
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '8px 10px',
-                  borderRadius: 10,
-                  cursor: 'pointer',
-                  transition: 'background 0.15s',
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = COLORS.itemHoverBg; }}
-                onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
-              >
+          {/* ── 사용자 메뉴 (프로필·비밀번호·관리자·로그아웃) ── */}
+          <Dropdown menu={{ items: userMenuItems }} placement="topRight" trigger={['click']}>
+            <Tooltip title={user?.displayName ? `${user.displayName} (@${user.username})` : '내 계정'} placement="right">
+              <div style={{ marginTop: 8, cursor: 'pointer', display: 'flex', justifyContent: 'center' }}>
                 <Avatar
-                  size={36}
-                  style={{ backgroundColor: getAvatarColor(user?.id, user?.avatarColor), flexShrink: 0 }}
+                  size={38}
+                  style={{ backgroundColor: getAvatarColor(user?.id, user?.avatarColor), border: '2px solid rgba(255,255,255,0.15)' }}
                 >
                   {userInitials}
                 </Avatar>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: 13,
-                      fontWeight: 700,
-                      color: COLORS.headText,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                    title={user?.displayName}
-                  >
-                    {user?.displayName}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: COLORS.itemText,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                    }}
-                    title={user?.username}
-                  >
-                    @{user?.username}
-                  </div>
-                </div>
               </div>
-            </Dropdown>
-
-            {/* IP 정보 + 로그아웃 버튼 */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '2px 6px 0 10px',
-              }}
-            >
-              <Tooltip title="접속 IP" placement="top">
-                <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: COLORS.toggleText, overflow: 'hidden' }}>
-                  <GlobalOutlined style={{ fontSize: 11 }} />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {user?.clientIp || '—'}
-                  </span>
-                </span>
-              </Tooltip>
-              <Button
-                size="small"
-                type="text"
-                icon={<LogoutOutlined />}
-                onClick={handleLogout}
-                style={{ fontSize: 12, color: COLORS.itemText, flexShrink: 0 }}
-              >
-                로그아웃
-              </Button>
-            </div>
-          </div>
+            </Tooltip>
+          </Dropdown>
         </div>
       </div>
 

@@ -125,7 +125,7 @@ export default function TimeTracker({ taskId, currentUser }) {
       {/* 합계 표시 */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        marginBottom: 12, background: '#f5f5f5', borderRadius: 6, padding: '8px 12px',
+        marginBottom: 12, background: 'var(--fd-surface-sunken)', borderRadius: 6, padding: '8px 12px',
       }}>
         <Space>
           <ClockCircleOutlined style={{ color: '#1677ff' }} />

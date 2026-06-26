@@ -201,7 +201,7 @@ export default function KanbanView() {
                   <div className="kanban-column-header" style={{
                     display: 'flex', alignItems: 'center', gap: 7,
                     marginBottom: 8, padding: '2px 4px 8px',
-                    borderBottom: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid #e2e8f0',
+                    borderBottom: isDark ? '1px solid rgba(255,255,255,0.07)' : '1px solid var(--fd-border)',
                   }}>
                     <div style={{
                       width: 7, height: 7, borderRadius: '50%',
@@ -219,7 +219,7 @@ export default function KanbanView() {
                       color: isDark ? 'rgba(255,255,255,0.35)' : '#94a3b8',
                       background: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9',
                       borderRadius: 4, padding: '1px 6px',
-                      border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e2e8f0',
+                      border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid var(--fd-border)',
                     }}>
                       {colTasks.length}
                     </span>
@@ -282,7 +282,7 @@ function KanbanCard({ task, isDark, dragging, canEdit, canDelete, onEdit, onDele
         background: isDark ? '#1a1927' : '#ffffff',
         border: overdue
           ? (isDark ? '1px solid rgba(239,68,68,0.35)' : '1px solid #fca5a5')
-          : (isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #e2e8f0'),
+          : (isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid var(--fd-border)'),
         borderLeft: overdue ? '2px solid #ef4444' : '2px solid transparent',
         boxShadow: isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.04)',
         borderRadius: 6,
@@ -336,7 +336,7 @@ function KanbanCard({ task, isDark, dragging, canEdit, canDelete, onEdit, onDele
       </div>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
-        <Avatar.Group maxCount={3} size={20}>
+        <Avatar.Group max={{ count: 3 }} size={20}>
           {task.assignees?.map((a) => {
             const uid = a.userId ?? a.user?.id;
             return (

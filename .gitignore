@@ -28,6 +28,17 @@ backend/uploads/
 frontend/public/preview-*.html
 frontend/public/preview-index.html
 
+# 루트 디자인 mockup / 탐색용 HTML (repo 비포함)
+/design-*.html
+/v2-*.html
+/dashboard-designs*.html
+/sidebar-*.html
+/login-designs-*.html
+*.pia
+
+# 매뉴얼 산출물(빌드 결과물) — 소스는 MANUAL.md
+/FlowDesk_사용자메뉴얼.html
+
 # 설치 패키지 압축 파일
 *.zip
 

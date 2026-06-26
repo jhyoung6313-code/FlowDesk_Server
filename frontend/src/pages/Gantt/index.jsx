@@ -13,6 +13,7 @@ import { getParts } from '../../api/parts';
 import { getUsers } from '../../api/users';
 import { STATUS_COLORS } from '../../utils/colors';
 import useAuthStore from '../../store/authStore';
+import useTaskStore from '../../store/taskStore';
 
 const { Option } = Select;
 
@@ -98,7 +99,7 @@ function toGanttMilestone(m) {
   };
 }
 
-export default function GanttPage() {
+export default function GanttPage({ embedded = false }) {
   const [tasks, setTasks]           = useState([]);
   const [milestones, setMilestones] = useState([]);
   const [parts, setParts]           = useState([]);
@@ -122,6 +123,7 @@ export default function GanttPage() {
   const [msColor, setMsColor]         = useState('#722ed1');
 
   const user = useAuthStore((s) => s.user);
+  const bumpVersion = useTaskStore((s) => s.bumpVersion);
   const isAdmin = user?.role === 'admin';
 
   const load = useCallback(() => {
@@ -182,11 +184,12 @@ export default function GanttPage() {
         dueDate: dayjs(task.end).format('YYYY-MM-DD'),
       });
       load();
+      bumpVersion(); // 마감일 변경 → 요약 바 지연 카운트 등 calVer 구독 화면 갱신
       message.success('기간이 업데이트되었습니다.');
     } catch {
       message.error('업데이트에 실패했습니다.');
     }
-  }, [load]);
+  }, [load, bumpVersion]);
 
   const handleProgressChange = useCallback(async (task) => {
     if (task.type === 'milestone') return;
@@ -196,10 +199,11 @@ export default function GanttPage() {
         dueDate: dayjs(task.end).format('YYYY-MM-DD'),
       });
       load();
+      bumpVersion();
     } catch {
       message.error('업데이트에 실패했습니다.');
     }
-  }, [load]);
+  }, [load, bumpVersion]);
 
   // 마일스톤 CRUD
   const openMsCreate = () => {
@@ -262,9 +266,9 @@ export default function GanttPage() {
       {/* 상단 제목 + 뷰 전환 + 마일스톤 버튼 */}
       <Space style={{ marginBottom: 12, justifyContent: 'space-between', width: '100%' }} wrap>
         <Typography.Title level={4} style={{ margin: 0 }}>
-          간트 차트
+          {!embedded && '간트 차트'}
           {hasFilter && (
-            <Tag color="blue" style={{ marginLeft: 8, fontSize: 12, fontWeight: 400 }}>
+            <Tag color="blue" style={{ marginLeft: embedded ? 0 : 8, fontSize: 12, fontWeight: 400 }}>
               {filteredTasks.length}/{tasks.length}건 표시
             </Tag>
           )}
@@ -402,7 +406,7 @@ export default function GanttPage() {
       {ganttTasks.length === 0 ? (
         <Empty description="표시할 업무가 없습니다." style={{ marginTop: 40 }} />
       ) : (
-        <div style={{ overflowX: 'auto', background: '#fff', borderRadius: 8, padding: '12px 0' }}>
+        <div className="gantt-container" style={{ overflowX: 'auto', background: 'var(--fd-surface)', borderRadius: 8, padding: '12px 0' }}>
           <Gantt
             tasks={ganttTasks}
             viewMode={VIEW_MODE_MAP[viewMode]}
@@ -419,21 +423,21 @@ export default function GanttPage() {
                 const m = task._milestone;
                 return (
                   <div style={{
-                    background: '#fff', border: '1px solid #d9d9d9', borderRadius: 6,
+                    background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 6,
                     padding: '8px 12px', minWidth: 160, fontSize: 12,
                   }}>
                     <div style={{ fontWeight: 600, marginBottom: 4, color: m.color }}>
                       <FlagOutlined /> {m.name}
                     </div>
                     <div>날짜: {dayjs(m.date).format('YYYY-MM-DD')}</div>
-                    {m.description && <div style={{ marginTop: 4, color: '#666' }}>{m.description}</div>}
+                    {m.description && <div style={{ marginTop: 4, color: 'var(--fd-text-secondary)' }}>{m.description}</div>}
                   </div>
                 );
               }
               const raw = task._raw;
               return (
                 <div style={{
-                  background: '#fff', border: '1px solid #d9d9d9', borderRadius: 6,
+                  background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 6,
                   padding: '8px 12px', minWidth: 200, fontSize: 12,
                 }}>
                   <div style={{ fontWeight: 600, marginBottom: 4 }}>{raw?.title}</div>

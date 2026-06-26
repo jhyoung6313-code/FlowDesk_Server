@@ -28,7 +28,7 @@ const LOCKOUT = {
 
 // ── 비밀번호 정책 ────────────────────────────────────────────
 const PASSWORD = {
-  MIN_LENGTH: num('PASSWORD_MIN_LENGTH', 9),
+  MIN_LENGTH: num('PASSWORD_MIN_LENGTH', 8),
   // 4종(영대문자·영소문자·숫자·특수문자) 중 최소 충족 종류 수
   MIN_CHAR_CLASSES: num('PASSWORD_MIN_CLASSES', 3),
   // 변경 주기(일). 경과 시 변경 요구
@@ -46,6 +46,8 @@ const RETENTION = {
   SOFT_DELETED_TASK_DAYS: num('RETENTION_SOFT_TASK_DAYS', 90),
   // 읽은 알림 보관
   READ_NOTIFICATION_DAYS: num('RETENTION_NOTIFICATION_DAYS', 90),
+  // 채팅 첨부파일 보관(메시지 작성일 기준): 경과 시 실제 파일만 파기(메시지 텍스트는 유지)
+  CHAT_ATTACHMENT_DAYS: num('RETENTION_CHAT_ATTACHMENT_DAYS', 30),
   // 자동 파기 cron 실행 시각 (매일)
   PURGE_CRON: env.RETENTION_PURGE_CRON || '0 3 * * *', // 매일 03:00
 };

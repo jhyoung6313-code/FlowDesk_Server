@@ -1,6 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import {
-  Drawer,
   Form,
   Input,
   Select,
@@ -12,15 +11,29 @@ import {
   Dropdown,
   Modal,
   Tag,
+  Avatar,
+  Typography,
+  Popconfirm,
+  Spin,
+  Upload,
 } from 'antd';
-import { SaveOutlined, FileTextOutlined, DownOutlined } from '@ant-design/icons';
+import {
+  SaveOutlined, FileTextOutlined, DownOutlined, SendOutlined,
+  PaperClipOutlined, DeleteOutlined, DownloadOutlined, MessageOutlined,
+} from '@ant-design/icons';
 import dayjs from 'dayjs';
+import ResizableDrawer from '../common/ResizableDrawer';
 import { getParts } from '../../api/parts';
 import { getUsers } from '../../api/users';
-import { getTasks } from '../../api/tasks';
+import { getTasks, getAttachmentDownloadUrl, deleteAttachment } from '../../api/tasks';
 import { getTags, createTag } from '../../api/tags';
 import { getTemplates, createTemplate } from '../../api/templates';
+import {
+  getComments, createComment, updateComment, deleteComment, uploadCommentAttachment,
+} from '../../api/comments';
 import { buildUserOptions, filterUserOption, getMyDepartment } from '../../utils/userOptions';
+import { getAvatarColor } from '../../utils/colors';
+import useAuthStore from '../../store/authStore';
 
 const { TextArea } = Input;
 const { Option } = Select;
@@ -33,7 +46,7 @@ const TAG_PRESET_COLORS = [
   '#eb2f96', '#8c8c8c',
 ];
 
-export default function TaskForm({ open, task, onClose, onSubmit }) {
+export default function TaskForm({ open, task, onClose, onSubmit, initialStatus }) {
   const [form] = Form.useForm();
   const [parts, setParts]       = useState([]);
   const [users, setUsers]       = useState([]);
@@ -46,6 +59,15 @@ export default function TaskForm({ open, task, onClose, onSubmit }) {
   const [saveTemplateOpen, setSaveTemplateOpen]   = useState(false);
   const [templateName, setTemplateName]           = useState('');
   const [savingTemplate, setSavingTemplate]       = useState(false);
+
+  // 진행사항(댓글)
+  const user = useAuthStore((s) => s.user);
+  const [comments, setComments]             = useState([]);
+  const [commentsLoading, setCommentsLoading] = useState(false);
+  const [commentText, setCommentText]       = useState('');
+  const [commentSending, setCommentSending] = useState(false);
+  const [editingComment, setEditingComment] = useState(null);
+  const [commentFile, setCommentFile]       = useState(null);
 
   useEffect(() => {
     if (open) {
@@ -83,9 +105,100 @@ export default function TaskForm({ open, task, onClose, onSubmit }) {
         });
       } else {
         form.resetFields();
+        if (initialStatus) {
+          form.setFieldsValue({ status: initialStatus });
+        }
       }
     }
-  }, [open, task]);
+  }, [open, task, initialStatus]);
+
+  // 진행사항(댓글) 로드 - 기존 업무 수정 시에만
+  useEffect(() => {
+    setCommentText('');
+    setEditingComment(null);
+    setCommentFile(null);
+    if (open && task?.id) {
+      setCommentsLoading(true);
+      getComments(task.id)
+        .then(setComments)
+        .catch(() => {})
+        .finally(() => setCommentsLoading(false));
+    } else {
+      setComments([]);
+    }
+  }, [open, task?.id]);
+
+  const handleCommentSubmit = useCallback(async () => {
+    if ((!commentText.trim() && !commentFile) || !task?.id) return;
+    setCommentSending(true);
+    try {
+      const content = commentText.trim() || '📎';
+      let created = await createComment(task.id, content);
+      if (commentFile) {
+        try {
+          const att = await uploadCommentAttachment(task.id, created.id, commentFile);
+          created = { ...created, attachments: [...(created.attachments ?? []), att] };
+        } catch {
+          message.error('첨부파일 업로드에 실패했습니다.');
+        }
+      }
+      setComments((prev) => [...prev, created]);
+      setCommentText('');
+      setCommentFile(null);
+    } catch {
+      message.error('댓글 등록에 실패했습니다.');
+    } finally {
+      setCommentSending(false);
+    }
+  }, [commentText, commentFile, task]);
+
+  const handleCommentUpdate = useCallback(async () => {
+    if (!editingComment?.content.trim()) return;
+    try {
+      const updated = await updateComment(editingComment.id, editingComment.content);
+      setComments((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
+      setEditingComment(null);
+    } catch {
+      message.error('댓글 수정에 실패했습니다.');
+    }
+  }, [editingComment]);
+
+  const handleCommentDelete = useCallback(async (commentId) => {
+    try {
+      await deleteComment(commentId);
+      setComments((prev) => prev.filter((c) => c.id !== commentId));
+    } catch {
+      message.error('댓글 삭제에 실패했습니다.');
+    }
+  }, []);
+
+  const handleCommentAttachmentDelete = useCallback(async (commentId, attId) => {
+    try {
+      await deleteAttachment(attId);
+      setComments((prev) => prev.map((c) =>
+        c.id === commentId
+          ? { ...c, attachments: (c.attachments ?? []).filter((a) => a.id !== attId) }
+          : c,
+      ));
+    } catch {
+      message.error('첨부파일 삭제에 실패했습니다.');
+    }
+  }, []);
+
+  const downloadCommentAttachment = useCallback((att) => {
+    const token = localStorage.getItem('token');
+    fetch(getAttachmentDownloadUrl(att.id), { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.blob())
+      .then((blob) => {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = att.originalName;
+        a.click();
+        URL.revokeObjectURL(url);
+      })
+      .catch(() => message.error('다운로드에 실패했습니다.'));
+  }, []);
 
   const handleSubmit = async () => {
     try {
@@ -190,7 +303,7 @@ export default function TaskForm({ open, task, onClose, onSubmit }) {
   }));
 
   return (
-    <Drawer
+    <ResizableDrawer
       title={task ? '업무 수정' : '업무 등록'}
       open={open}
       onClose={onClose}
@@ -312,6 +425,148 @@ export default function TaskForm({ open, task, onClose, onSubmit }) {
         </Form.Item>
       </Form>
 
+      {/* 진행사항 (댓글) - 기존 업무 수정 시에만 노출 */}
+      {task?.id && (
+        <>
+          <Divider style={{ margin: '8px 0 12px' }} />
+          <div style={{ marginBottom: 4 }}>
+            <Typography.Text strong>
+              <MessageOutlined style={{ marginRight: 6 }} />
+              진행사항 / 댓글{comments.length > 0 ? ` (${comments.length})` : ''}
+            </Typography.Text>
+          </div>
+
+          {commentsLoading ? (
+            <div style={{ textAlign: 'center', padding: '16px 0' }}><Spin size="small" /></div>
+          ) : (
+            <div>
+              {comments.map((c) => (
+                <div key={c.id} style={{
+                  background: 'var(--fd-surface-sunken)', borderRadius: 6, padding: '8px 10px',
+                  marginBottom: 8, border: '1px solid var(--fd-border)',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <Space size={6}>
+                      <Avatar size={20} style={{ backgroundColor: getAvatarColor(c.userId), fontSize: 10 }}>
+                        {c.user?.displayName?.slice(0, 1)}
+                      </Avatar>
+                      <Typography.Text strong style={{ fontSize: 12 }}>{c.user?.displayName}</Typography.Text>
+                      <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                        {dayjs(c.createdAt).format('MM/DD HH:mm')}
+                      </Typography.Text>
+                    </Space>
+                    {(c.userId === user?.id || user?.role === 'admin') && (
+                      <Space size={2}>
+                        {c.userId === user?.id && (
+                          <Button className="fd-comment-act" type="text" size="small"
+                            onClick={() => setEditingComment({ id: c.id, content: c.content })}>
+                            수정
+                          </Button>
+                        )}
+                        <Popconfirm title="댓글을 삭제하시겠습니까?"
+                          onConfirm={() => handleCommentDelete(c.id)}
+                          okText="삭제" cancelText="취소" okButtonProps={{ danger: true }}>
+                          <Button className="fd-comment-act" type="text" size="small" danger>
+                            삭제
+                          </Button>
+                        </Popconfirm>
+                      </Space>
+                    )}
+                  </div>
+                  {editingComment?.id === c.id ? (
+                    <div className="fd-comment-row" style={{ display: 'flex', gap: 4, alignItems: 'center', width: '100%' }}>
+                      <Input
+                        size="small"
+                        style={{ flex: 1 }}
+                        value={editingComment.content}
+                        onChange={(e) => setEditingComment((p) => ({ ...p, content: e.target.value }))}
+                        onPressEnter={handleCommentUpdate}
+                      />
+                      <Button size="small" type="primary" onClick={handleCommentUpdate}>저장</Button>
+                      <Button size="small" onClick={() => setEditingComment(null)}>취소</Button>
+                    </div>
+                  ) : (
+                    <>
+                      {c.content !== '📎' && (
+                        <Typography.Text style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{c.content}</Typography.Text>
+                      )}
+                      {(c.attachments ?? []).map((att) => (
+                        <div key={att.id} style={{
+                          display: 'flex', alignItems: 'center', gap: 6, marginTop: 4,
+                          background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 4,
+                          padding: '2px 6px', maxWidth: 320,
+                        }}>
+                          <PaperClipOutlined style={{ color: '#1677ff', fontSize: 12 }} />
+                          <Typography.Text style={{ fontSize: 12, flex: 1 }} ellipsis>{att.originalName}</Typography.Text>
+                          <Button type="text" size="small" icon={<DownloadOutlined />}
+                            style={{ height: 18, padding: '0 2px' }}
+                            onClick={() => downloadCommentAttachment(att)} />
+                          {(user?.role === 'admin' || att.uploadedBy === user?.id) && (
+                            <Popconfirm title="첨부파일을 삭제하시겠습니까?"
+                              onConfirm={() => handleCommentAttachmentDelete(c.id, att.id)}
+                              okText="삭제" cancelText="취소" okButtonProps={{ danger: true }}>
+                              <Button type="text" size="small" danger icon={<DeleteOutlined />}
+                                style={{ height: 18, padding: '0 2px' }} />
+                            </Popconfirm>
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                </div>
+              ))}
+
+              {commentFile && (
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: 6, marginTop: 4,
+                  background: '#f0f5ff', border: '1px solid #adc6ff', borderRadius: 4,
+                  padding: '2px 8px',
+                }}>
+                  <PaperClipOutlined style={{ color: '#1677ff', fontSize: 12 }} />
+                  <Typography.Text style={{ fontSize: 12, flex: 1 }} ellipsis>{commentFile.name}</Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                    {commentFile.size < 1024 * 1024
+                      ? `${(commentFile.size / 1024).toFixed(1)}KB`
+                      : `${(commentFile.size / (1024 * 1024)).toFixed(1)}MB`}
+                  </Typography.Text>
+                  <Button type="text" size="small" icon={<DeleteOutlined />}
+                    style={{ height: 18, padding: '0 2px' }}
+                    onClick={() => setCommentFile(null)} />
+                </div>
+              )}
+              <div className="fd-comment-row" style={{ display: 'flex', gap: 4, marginTop: 4, alignItems: 'center' }}>
+                <Upload
+                  showUploadList={false}
+                  beforeUpload={(file) => {
+                    if (file.size > 20 * 1024 * 1024) {
+                      message.error('파일 크기는 20MB를 초과할 수 없습니다.');
+                    } else {
+                      setCommentFile(file);
+                    }
+                    return false;
+                  }}
+                >
+                  <Button size="small" icon={<PaperClipOutlined />} disabled={commentSending} />
+                </Upload>
+                <Input
+                  size="small"
+                  style={{ flex: 1 }}
+                  placeholder="진행사항 또는 댓글을 입력하세요"
+                  value={commentText}
+                  onChange={(e) => setCommentText(e.target.value)}
+                  onPressEnter={handleCommentSubmit}
+                  disabled={commentSending}
+                />
+                <Button className="fd-comment-send" type="primary" icon={<SendOutlined />}
+                  loading={commentSending} onClick={handleCommentSubmit}>
+                  등록
+                </Button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
       {/* 템플릿 저장 모달 */}
       <Modal
         title="템플릿으로 저장"
@@ -330,6 +585,6 @@ export default function TaskForm({ open, task, onClose, onSubmit }) {
           style={{ marginTop: 8 }}
         />
       </Modal>
-    </Drawer>
+    </ResizableDrawer>
   );
 }

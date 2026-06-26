@@ -82,17 +82,17 @@ export default function RichEditor({
     display: 'flex', alignItems: 'center', justifyContent: 'center',
     border: '1px solid transparent', borderRadius: 4,
     background: 'transparent', cursor: 'pointer',
-    fontSize: 12, color: '#555', flexShrink: 0,
+    fontSize: 12, color: 'var(--fd-text-secondary)', flexShrink: 0,
   };
   const sep = { width: 1, height: 14, background: '#e0e0e0', margin: '0 3px', flexShrink: 0 };
 
   return (
-    <div style={{ border: '1px solid #d9d9d9', borderRadius: 6, overflow: 'hidden', ...style }}>
+    <div style={{ border: '1px solid var(--fd-border)', borderRadius: 6, overflow: 'hidden', ...style }}>
       {/* 서식 툴바 */}
       <div style={{
         display: 'flex', alignItems: 'center', gap: 2,
-        padding: '4px 8px', borderBottom: '1px solid #f0f0f0',
-        background: '#fafafa', flexWrap: 'wrap',
+        padding: '4px 8px', borderBottom: '1px solid var(--fd-border)',
+        background: 'var(--fd-surface-sunken)', flexWrap: 'wrap',
       }}>
         <Tooltip title="굵게"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('bold'); }}><BoldOutlined /></button></Tooltip>
         <Tooltip title="기울임"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('italic'); }}><ItalicOutlined /></button></Tooltip>
@@ -102,14 +102,14 @@ export default function RichEditor({
         <select
           value={fontSize}
           onChange={(e) => applySpan('fontSize', e.target.value, setFontSize)}
-          style={{ height: 24, fontSize: 11, border: '1px solid #ddd', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: '#fff', width: 54 }}
+          style={{ height: 24, fontSize: 11, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: 'var(--fd-surface)', width: 54 }}
         >
           {FONT_SIZES.map((s) => <option key={s} value={s}>{s}px</option>)}
         </select>
         <select
           value={fontFamily}
           onChange={(e) => applySpan('fontFamily', e.target.value, setFontFamily)}
-          style={{ height: 24, fontSize: 11, border: '1px solid #ddd', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: '#fff', width: 80 }}
+          style={{ height: 24, fontSize: 11, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: 'var(--fd-surface)', width: 80 }}
         >
           {FONT_FAMILIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
         </select>
@@ -119,7 +119,7 @@ export default function RichEditor({
             onMouseDown={saveSelection}
             style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0, padding: '0 3px' }}
           >
-            <FontColorsOutlined style={{ fontSize: 13, color: '#555' }} />
+            <FontColorsOutlined style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }} />
             <div style={{ position: 'absolute', bottom: -1, left: 2, right: 2, height: 3, background: fontColor, borderRadius: 1 }} />
             <input
               type="color"
@@ -151,8 +151,8 @@ export default function RichEditor({
           outline: 'none',
           cursor: 'text',
           wordBreak: 'break-word',
-          color: '#333',
-          background: '#fff',
+          color: 'var(--fd-text-primary)',
+          background: 'var(--fd-surface)',
         }}
       />
     </div>

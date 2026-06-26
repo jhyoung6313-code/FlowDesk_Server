@@ -2,23 +2,19 @@ import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import {
   Table, Button, Space, Select, Input, Popconfirm, message,
-  Typography, Tag, Avatar, Tooltip, Row, Col, Card, Drawer,
-  Descriptions, Divider, List, Form, Input as AntInput, Spin,
-  Tabs, Upload, Timeline,
+  Typography, Tag, Avatar, Tooltip, Row, Col, Card,
+  Descriptions, Divider, Spin,
+  Tabs, Timeline,
 } from 'antd';
 import {
   PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined,
-  CalendarOutlined, EyeOutlined, SendOutlined, FileExcelOutlined,
-  PaperClipOutlined, UploadOutlined, HistoryOutlined, MessageOutlined,
-  InboxOutlined, DownloadOutlined, FilePdfOutlined, ClockCircleOutlined,
+  CalendarOutlined, EyeOutlined, FileExcelOutlined,
+  HistoryOutlined, FilePdfOutlined, ClockCircleOutlined,
 } from '@ant-design/icons';
 import { exportTasksPdf } from '../../utils/pdf';
 import TimeTracker from '../../components/Task/TimeTracker';
-import { getComments, createComment, updateComment, deleteComment } from '../../api/comments';
-import {
-  getAttachments, uploadAttachment, deleteAttachment,
-  getAttachmentDownloadUrl, getTaskHistory, bulkAction,
-} from '../../api/tasks';
+import ResizableDrawer from '../../components/common/ResizableDrawer';
+import { getTaskHistory, bulkAction } from '../../api/tasks';
 import dayjs from 'dayjs';
 import useTaskStore from '../../store/taskStore';
 import useAuthStore from '../../store/authStore';
@@ -41,7 +37,7 @@ export default function ListView() {
   const {
     tasks, loading,
     fetchTasks, addTask, editTask: storeEditTask,
-    removeTask, changeStatus,
+    removeTask, changeStatus, bumpVersion,
   } = useTaskStore();
   const user = useAuthStore((s) => s.user);
 
@@ -52,16 +48,7 @@ export default function ListView() {
   const [users, setUsers]   = useState([]);
   const [tags, setTags]     = useState([]);
 
-  const [comments, setComments]         = useState([]);
-  const [commentsLoading, setCommentsLoading] = useState(false);
-  const [commentText, setCommentText]   = useState('');
-  const [commentSending, setCommentSending] = useState(false);
-  const [editingComment, setEditingComment] = useState(null);
   const [excelExporting, setExcelExporting] = useState(false);
-
-  const [attachments, setAttachments]     = useState([]);
-  const [attachLoading, setAttachLoading] = useState(false);
-  const [uploading, setUploading]         = useState(false);
 
   const [histories, setHistories]         = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
@@ -149,67 +136,16 @@ export default function ListView() {
 
   useEffect(() => {
     if (!detailTask) {
-      setComments([]);
-      setAttachments([]);
       setHistories([]);
       setDrawerTab('detail');
       return;
     }
-    setCommentsLoading(true);
-    getComments(detailTask.id)
-      .then(setComments)
-      .catch(() => {})
-      .finally(() => setCommentsLoading(false));
-
-    setAttachLoading(true);
-    getAttachments(detailTask.id)
-      .then(setAttachments)
-      .catch(() => {})
-      .finally(() => setAttachLoading(false));
-
     setHistoryLoading(true);
     getTaskHistory(detailTask.id)
       .then(setHistories)
       .catch(() => {})
       .finally(() => setHistoryLoading(false));
-
-    setCommentText('');
-    setEditingComment(null);
   }, [detailTask?.id]);
-
-  const handleCommentSubmit = useCallback(async () => {
-    if (!commentText.trim() || !detailTask) return;
-    setCommentSending(true);
-    try {
-      const created = await createComment(detailTask.id, commentText.trim());
-      setComments((prev) => [...prev, created]);
-      setCommentText('');
-    } catch {
-      message.error('댓글 등록에 실패했습니다.');
-    } finally {
-      setCommentSending(false);
-    }
-  }, [commentText, detailTask]);
-
-  const handleCommentUpdate = useCallback(async () => {
-    if (!editingComment?.content.trim()) return;
-    try {
-      const updated = await updateComment(editingComment.id, editingComment.content);
-      setComments((prev) => prev.map((c) => (c.id === updated.id ? updated : c)));
-      setEditingComment(null);
-    } catch {
-      message.error('댓글 수정에 실패했습니다.');
-    }
-  }, [editingComment]);
-
-  const handleCommentDelete = useCallback(async (commentId) => {
-    try {
-      await deleteComment(commentId);
-      setComments((prev) => prev.filter((c) => c.id !== commentId));
-    } catch {
-      message.error('댓글 삭제에 실패했습니다.');
-    }
-  }, []);
 
   const handleExcelExport = useCallback(async () => {
     setExcelExporting(true);
@@ -246,12 +182,13 @@ export default function ListView() {
       message.success(result.message);
       setSelectedRowKeys([]);
       fetchTasks();
+      bumpVersion(); // 요약 바·캘린더 등 calVer 구독 화면도 함께 갱신
     } catch (err) {
       message.error(err?.response?.data?.error || '일괄 처리에 실패했습니다.');
     } finally {
       setBulkLoading(false);
     }
-  }, [selectedRowKeys, fetchTasks]);
+  }, [selectedRowKeys, fetchTasks, bumpVersion]);
 
   const handleGoCalendar = useCallback((task) => {
     if (task.dueDate) {
@@ -362,7 +299,7 @@ export default function ListView() {
       key: 'assignees',
       width: 120,
       render: (_, record) => (
-        <Avatar.Group maxCount={4} size="small">
+        <Avatar.Group max={{ count: 4 }} size="small">
           {record.assignees?.map((a) => {
             const uid = a.userId ?? a.user?.id;
             return (
@@ -549,7 +486,7 @@ export default function ListView() {
       {/* 일괄 처리 툴바 */}
       {selectedRowKeys.length > 0 && (
         <Card
-          style={{ marginBottom: 8, borderRadius: 8, border: '1.5px solid #1677ff', background: '#e6f4ff' }}
+          style={{ marginBottom: 8, borderRadius: 8, border: '1.5px solid #1677ff', background: 'rgba(22,119,255,0.12)' }}
           styles={{ body: { padding: '8px 16px' } }}
         >
           <Space wrap>
@@ -613,7 +550,7 @@ export default function ListView() {
       />
 
       {/* 업무 상세보기 Drawer */}
-      <Drawer
+      <ResizableDrawer
         title={
           <Space>
             <span>{detailTask?.title}</span>
@@ -627,25 +564,13 @@ export default function ListView() {
         onClose={() => setDetailTask(null)}
         width={420}
         extra={
-          detailTask && (
-            <Space>
-              {canEdit(detailTask) && (
-                <Button
-                  type="primary" size="small" icon={<EditOutlined />}
-                  onClick={() => handleOpenEdit(detailTask)}
-                >
-                  수정
-                </Button>
-              )}
-              {detailTask.dueDate && (
-                <Button
-                  size="small" icon={<CalendarOutlined />}
-                  onClick={() => handleGoCalendar(detailTask)}
-                >
-                  캘린더
-                </Button>
-              )}
-            </Space>
+          detailTask && canEdit(detailTask) && (
+            <Button
+              type="primary" size="small" icon={<EditOutlined />}
+              onClick={() => handleOpenEdit(detailTask)}
+            >
+              수정
+            </Button>
           )
         }
       >
@@ -702,17 +627,7 @@ export default function ListView() {
                         {detailTask.startDate ? dayjs(detailTask.startDate).format('YYYY-MM-DD') : '-'}
                       </Descriptions.Item>
                       <Descriptions.Item label="마감일">
-                        <Space>
-                          {detailTask.dueDate ? dayjs(detailTask.dueDate).format('YYYY-MM-DD') : '-'}
-                          {detailTask.dueDate && (
-                            <Tooltip title="캘린더에서 보기">
-                              <CalendarOutlined
-                                style={{ color: '#1677ff', cursor: 'pointer' }}
-                                onClick={() => handleGoCalendar(detailTask)}
-                              />
-                            </Tooltip>
-                          )}
-                        </Space>
+                        {detailTask.dueDate ? dayjs(detailTask.dueDate).format('YYYY-MM-DD') : '-'}
                       </Descriptions.Item>
                       {detailTask.predecessors?.length > 0 && (
                         <Descriptions.Item label="선행 업무">
@@ -749,199 +664,6 @@ export default function ListView() {
                             이 업무 삭제
                           </Button>
                         </Popconfirm>
-                      </>
-                    )}
-                  </>
-                ),
-              },
-              {
-                key: 'comments',
-                label: (
-                  <span>
-                    <MessageOutlined style={{ marginRight: 4 }} />댓글{comments.length > 0 ? ` (${comments.length})` : ''}
-                  </span>
-                ),
-                children: (
-                  <>
-                    {commentsLoading ? (
-                      <div style={{ textAlign: 'center', padding: '16px 0' }}><Spin size="small" /></div>
-                    ) : (
-                      <div>
-                        {comments.map((c) => (
-                          <div key={c.id} style={{
-                            background: '#fafafa', borderRadius: 6, padding: '8px 10px',
-                            marginBottom: 8, border: '1px solid #f0f0f0',
-                          }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                              <Space size={6}>
-                                <Avatar size={20} style={{ backgroundColor: getAvatarColor(c.userId), fontSize: 10 }}>
-                                  {c.user?.displayName?.slice(0, 1)}
-                                </Avatar>
-                                <Typography.Text strong style={{ fontSize: 12 }}>{c.user?.displayName}</Typography.Text>
-                                <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                                  {dayjs(c.createdAt).format('MM/DD HH:mm')}
-                                </Typography.Text>
-                              </Space>
-                              {(c.userId === user?.id || user?.role === 'admin') && (
-                                <Space size={2}>
-                                  {c.userId === user?.id && (
-                                    <Button type="text" size="small" style={{ fontSize: 11, height: 20, padding: '0 4px' }}
-                                      onClick={() => setEditingComment({ id: c.id, content: c.content })}>
-                                      수정
-                                    </Button>
-                                  )}
-                                  <Popconfirm title="댓글을 삭제하시겠습니까?"
-                                    onConfirm={() => handleCommentDelete(c.id)}
-                                    okText="삭제" cancelText="취소" okButtonProps={{ danger: true }}>
-                                    <Button type="text" size="small" danger style={{ fontSize: 11, height: 20, padding: '0 4px' }}>
-                                      삭제
-                                    </Button>
-                                  </Popconfirm>
-                                </Space>
-                              )}
-                            </div>
-                            {editingComment?.id === c.id ? (
-                              <Space.Compact style={{ width: '100%' }}>
-                                <AntInput
-                                  size="small"
-                                  value={editingComment.content}
-                                  onChange={(e) => setEditingComment((p) => ({ ...p, content: e.target.value }))}
-                                  onPressEnter={handleCommentUpdate}
-                                />
-                                <Button size="small" type="primary" onClick={handleCommentUpdate}>저장</Button>
-                                <Button size="small" onClick={() => setEditingComment(null)}>취소</Button>
-                              </Space.Compact>
-                            ) : (
-                              <Typography.Text style={{ fontSize: 13, whiteSpace: 'pre-wrap' }}>{c.content}</Typography.Text>
-                            )}
-                          </div>
-                        ))}
-                        <Space.Compact style={{ width: '100%', marginTop: 4 }}>
-                          <AntInput
-                            placeholder="댓글을 입력하세요"
-                            value={commentText}
-                            onChange={(e) => setCommentText(e.target.value)}
-                            onPressEnter={handleCommentSubmit}
-                            disabled={commentSending}
-                          />
-                          <Button type="primary" icon={<SendOutlined />}
-                            loading={commentSending} onClick={handleCommentSubmit}>
-                            등록
-                          </Button>
-                        </Space.Compact>
-                      </div>
-                    )}
-                  </>
-                ),
-              },
-              {
-                key: 'attachments',
-                label: (
-                  <span>
-                    <PaperClipOutlined style={{ marginRight: 4 }} />첨부{attachments.length > 0 ? ` (${attachments.length})` : ''}
-                  </span>
-                ),
-                children: (
-                  <>
-                    {attachLoading ? (
-                      <div style={{ textAlign: 'center', padding: '16px 0' }}><Spin size="small" /></div>
-                    ) : (
-                      <>
-                        {detailTask.delYn !== '1' && (
-                          <Upload.Dragger
-                            multiple={false}
-                            showUploadList={false}
-                            beforeUpload={async (file) => {
-                              setUploading(true);
-                              try {
-                                const created = await uploadAttachment(detailTask.id, file);
-                                setAttachments((prev) => [...prev, created]);
-                                message.success(`${file.name} 업로드 완료`);
-                              } catch {
-                                message.error('업로드에 실패했습니다.');
-                              } finally {
-                                setUploading(false);
-                              }
-                              return false;
-                            }}
-                            style={{ marginBottom: 12 }}
-                          >
-                            <p className="ant-upload-drag-icon">
-                              <InboxOutlined style={{ fontSize: 24, color: '#1677ff' }} />
-                            </p>
-                            <p style={{ fontSize: 13 }}>클릭 또는 파일을 드래그하여 업로드 (최대 20MB)</p>
-                          </Upload.Dragger>
-                        )}
-
-                        {attachments.length === 0 ? (
-                          <div style={{ textAlign: 'center', color: '#bbb', padding: '16px 0', fontSize: 13 }}>
-                            첨부파일이 없습니다.
-                          </div>
-                        ) : (
-                          <List
-                            size="small"
-                            dataSource={attachments}
-                            renderItem={(att) => (
-                              <List.Item
-                                actions={[
-                                  <Tooltip title="다운로드" key="dl">
-                                    <Button
-                                      type="text" size="small" icon={<DownloadOutlined />}
-                                      onClick={() => {
-                                        const token = localStorage.getItem('token');
-                                        fetch(getAttachmentDownloadUrl(att.id), {
-                                          headers: { Authorization: `Bearer ${token}` },
-                                        })
-                                          .then((r) => r.blob())
-                                          .then((blob) => {
-                                            const url = URL.createObjectURL(blob);
-                                            const a = document.createElement('a');
-                                            a.href = url;
-                                            a.download = att.originalName;
-                                            a.click();
-                                            URL.revokeObjectURL(url);
-                                          })
-                                          .catch(() => message.error('다운로드에 실패했습니다.'));
-                                      }}
-                                    />
-                                  </Tooltip>,
-                                  (user?.role === 'admin' || att.uploadedBy === user?.id) && (
-                                    <Popconfirm
-                                      key="del"
-                                      title="파일을 삭제하시겠습니까?"
-                                      onConfirm={async () => {
-                                        try {
-                                          await deleteAttachment(att.id);
-                                          setAttachments((prev) => prev.filter((a) => a.id !== att.id));
-                                          message.success('파일이 삭제되었습니다.');
-                                        } catch {
-                                          message.error('삭제에 실패했습니다.');
-                                        }
-                                      }}
-                                      okText="삭제" cancelText="취소" okButtonProps={{ danger: true }}
-                                    >
-                                      <Button type="text" size="small" danger icon={<DeleteOutlined />} />
-                                    </Popconfirm>
-                                  ),
-                                ].filter(Boolean)}
-                              >
-                                <Space size={6}>
-                                  <PaperClipOutlined style={{ color: '#1677ff' }} />
-                                  <div>
-                                    <Typography.Text style={{ fontSize: 13 }} ellipsis={{ tooltip: att.originalName }}>
-                                      {att.originalName}
-                                    </Typography.Text>
-                                    <div>
-                                      <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                                        {(att.size / 1024).toFixed(1)} KB · {att.uploader?.displayName} · {dayjs(att.createdAt).format('MM/DD HH:mm')}
-                                      </Typography.Text>
-                                    </div>
-                                  </div>
-                                </Space>
-                              </List.Item>
-                            )}
-                          />
-                        )}
                       </>
                     )}
                   </>
@@ -1001,7 +723,7 @@ export default function ListView() {
                                   </Typography.Text>
                                 </Space>
                                 {desc && (
-                                  <div style={{ color: '#595959', marginTop: 2 }}>{desc}</div>
+                                  <div style={{ color: 'var(--fd-text-secondary)', marginTop: 2 }}>{desc}</div>
                                 )}
                               </div>
                             ),
@@ -1026,7 +748,7 @@ export default function ListView() {
             ]}
           />
         )}
-      </Drawer>
+      </ResizableDrawer>
     </div>
   );
 }

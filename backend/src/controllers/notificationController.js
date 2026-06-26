@@ -6,7 +6,14 @@ const prisma = require('../lib/prisma');
 const list = async (req, res, next) => {
   try {
     const notifications = await prisma.notification.findMany({
-      where: { userId: req.user.id },
+      where: {
+        userId: req.user.id,
+        delYn: '0',
+        OR: [
+          { taskId: null },
+          { task: { delYn: '0' } },
+        ],
+      },
       include: {
         task: { select: { id: true, title: true, dueDate: true } },
       },
@@ -21,9 +28,9 @@ const list = async (req, res, next) => {
 
 const read = async (req, res, next) => {
   try {
-    const notification = await prisma.notification.updateMany({
+    await prisma.notification.updateMany({
       where: { id: Number(req.params.id), userId: req.user.id },
-      data: { isRead: true },
+      data: { isRead: true, delYn: '1' },
     });
     res.json({ message: '읽음 처리되었습니다.' });
   } catch (err) {
@@ -34,8 +41,8 @@ const read = async (req, res, next) => {
 const readAll = async (req, res, next) => {
   try {
     await prisma.notification.updateMany({
-      where: { userId: req.user.id, isRead: false },
-      data: { isRead: true },
+      where: { userId: req.user.id, isRead: false, delYn: '0' },
+      data: { isRead: true, delYn: '1' },
     });
     res.json({ message: '전체 읽음 처리되었습니다.' });
   } catch (err) {

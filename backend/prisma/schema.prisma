@@ -34,9 +34,11 @@ model User {
   mustChangePassword Boolean         @default(false) @map("must_change_password")
   lastLoginAt      DateTime?         @map("last_login_at")
   lastLoginIp      String?           @map("last_login_ip") @db.VarChar(45)
+  sessionNonce     String?           @map("session_nonce") @db.VarChar(64)
   passwordHistories PasswordHistory[]
   auditLogs        AuditLog[]
   calendarNotes    CalendarNote[]    @relation("CalendarNoteCreator")
+  memos            Memo[]            @relation("MemoCreator")
   milestones       Milestone[]
   notifications    Notification[]
   recurringTasks   RecurringTask[]
@@ -167,6 +169,7 @@ model Notification {
   message    String?          @db.VarChar(500)
   type       NotificationType
   isRead     Boolean          @default(false) @map("is_read")
+  delYn      String           @default("0") @map("del_yn") @db.Char(1)
   createdAt  DateTime         @default(now()) @map("created_at")
   task       Task?            @relation(fields: [taskId], references: [id], onDelete: Cascade)
   run        PlaybookRun?     @relation("RunNotifications", fields: [runId], references: [id], onDelete: Cascade)
@@ -183,23 +186,26 @@ model TaskComment {
   content   String
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task        Task             @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attachments TaskAttachment[]
 
   @@map("task_comments")
 }
 
 model TaskAttachment {
-  id           Int      @id @default(autoincrement())
-  taskId       Int      @map("task_id")
-  uploadedBy   Int      @map("uploaded_by")
-  originalName String   @map("original_name") @db.VarChar(255)
-  storedName   String   @map("stored_name") @db.VarChar(255)
-  mimeType     String   @map("mime_type") @db.VarChar(100)
+  id           Int          @id @default(autoincrement())
+  taskId       Int          @map("task_id")
+  commentId    Int?         @map("comment_id")
+  uploadedBy   Int          @map("uploaded_by")
+  originalName String       @map("original_name") @db.VarChar(255)
+  storedName   String       @map("stored_name") @db.VarChar(255)
+  mimeType     String       @map("mime_type") @db.VarChar(100)
   size         Int
-  createdAt    DateTime @default(now()) @map("created_at")
-  task         Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  uploader     User     @relation("AttachmentUploader", fields: [uploadedBy], references: [id], onDelete: Cascade)
+  createdAt    DateTime     @default(now()) @map("created_at")
+  task         Task         @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  comment      TaskComment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  uploader     User         @relation("AttachmentUploader", fields: [uploadedBy], references: [id], onDelete: Cascade)
 
   @@map("task_attachments")
 }
@@ -229,6 +235,25 @@ model CalendarNote {
   creator   User     @relation("CalendarNoteCreator", fields: [createdBy], references: [id], onDelete: Cascade)
 
   @@map("calendar_notes")
+}
+
+/// 개인 메모지 (포스트잇 보드형 / 사이드 메모형 공용 데이터)
+model Memo {
+  id        Int      @id @default(autoincrement())
+  title     String?  @db.VarChar(200)
+  content   String   @db.Text
+  color     String   @default("yellow") @db.VarChar(20)
+  pinned    Boolean  @default(false)
+  posX      Int      @default(0) @map("pos_x")
+  posY      Int      @default(0) @map("pos_y")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdBy Int      @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  creator   User     @relation("MemoCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+
+  @@index([createdBy])
+  @@map("memos")
 }
 
 model WbsProject {

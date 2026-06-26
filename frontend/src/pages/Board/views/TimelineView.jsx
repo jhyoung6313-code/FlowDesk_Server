@@ -93,23 +93,23 @@ export default function TimelineView({ board, cards, onEditCard }) {
   if (curMonth) months.push({ label: curMonth, span: count });
 
   return (
-    <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 240px)', border: '1px solid #e8e8e8', borderRadius: 8 }}>
+    <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 240px)', border: '1px solid var(--fd-border)', borderRadius: 8 }}>
       <div style={{ display: 'flex', minWidth: LEFT_WIDTH + totalWidth }}>
         {/* 고정 왼쪽 열 */}
-        <div style={{ width: LEFT_WIDTH, flexShrink: 0, position: 'sticky', left: 0, zIndex: 10, background: '#fff', borderRight: '1px solid #e8e8e8' }}>
+        <div style={{ width: LEFT_WIDTH, flexShrink: 0, position: 'sticky', left: 0, zIndex: 10, background: 'var(--fd-surface)', borderRight: '1px solid var(--fd-border)' }}>
           {/* 헤더 - 월 */}
-          <div style={{ height: HEADER_HEIGHT / 2, borderBottom: '1px solid #e8e8e8', display: 'flex', alignItems: 'center', padding: '0 12px', background: '#fafafa' }}>
+          <div style={{ height: HEADER_HEIGHT / 2, borderBottom: '1px solid var(--fd-border)', display: 'flex', alignItems: 'center', padding: '0 12px', background: 'var(--fd-surface-sunken)' }}>
             <Text strong style={{ fontSize: 12 }}>카드</Text>
           </div>
           {/* 헤더 - 일 */}
-          <div style={{ height: HEADER_HEIGHT / 2, borderBottom: '1px solid #e8e8e8', background: '#fafafa' }} />
+          <div style={{ height: HEADER_HEIGHT / 2, borderBottom: '1px solid var(--fd-border)', background: 'var(--fd-surface-sunken)' }} />
           {/* 카드 행 */}
           {cardsWithDates.map(card => (
             <div
               key={card.id}
               style={{
                 height: ROW_HEIGHT,
-                borderBottom: '1px solid #f0f0f0',
+                borderBottom: '1px solid var(--fd-border)',
                 display: 'flex',
                 alignItems: 'center',
                 padding: '0 10px',
@@ -142,20 +142,20 @@ export default function TimelineView({ board, cards, onEditCard }) {
         {/* 오른쪽 타임라인 영역 */}
         <div style={{ flex: 1, minWidth: totalWidth }}>
           {/* 월 헤더 */}
-          <div style={{ height: HEADER_HEIGHT / 2, display: 'flex', borderBottom: '1px solid #e8e8e8', background: '#fafafa' }}>
+          <div style={{ height: HEADER_HEIGHT / 2, display: 'flex', borderBottom: '1px solid var(--fd-border)', background: 'var(--fd-surface-sunken)' }}>
             {months.map((m, i) => (
               <div
                 key={i}
                 style={{
                   width: m.span * DAY_WIDTH,
                   flexShrink: 0,
-                  borderRight: '1px solid #e8e8e8',
+                  borderRight: '1px solid var(--fd-border)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   fontSize: 11,
                   fontWeight: 600,
-                  color: '#595959',
+                  color: 'var(--fd-text-secondary)',
                 }}
               >
                 {m.label}
@@ -164,7 +164,7 @@ export default function TimelineView({ board, cards, onEditCard }) {
           </div>
 
           {/* 일 헤더 */}
-          <div style={{ height: HEADER_HEIGHT / 2, display: 'flex', borderBottom: '1px solid #e8e8e8', background: '#fafafa' }}>
+          <div style={{ height: HEADER_HEIGHT / 2, display: 'flex', borderBottom: '1px solid var(--fd-border)', background: 'var(--fd-surface-sunken)' }}>
             {days.map((d, i) => {
               const isToday = d.isSame(today, 'day');
               const isWeekend = d.day() === 0 || d.day() === 6;
@@ -180,7 +180,7 @@ export default function TimelineView({ board, cards, onEditCard }) {
                     fontSize: 10,
                     color: isToday ? '#1677ff' : isWeekend ? '#ff4d4f' : '#8c8c8c',
                     fontWeight: isToday ? 700 : 400,
-                    borderRight: '1px solid #f0f0f0',
+                    borderRight: '1px solid var(--fd-border)',
                     background: isToday ? '#e6f4ff' : undefined,
                   }}
                 >
@@ -208,7 +208,7 @@ export default function TimelineView({ board, cards, onEditCard }) {
                 key={card.id}
                 style={{
                   height: ROW_HEIGHT,
-                  borderBottom: '1px solid #f0f0f0',
+                  borderBottom: '1px solid var(--fd-border)',
                   position: 'relative',
                   overflow: 'visible',
                 }}

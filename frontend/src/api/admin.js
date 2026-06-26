@@ -20,3 +20,7 @@ export const restoreBackup = (file) => {
 
 export const getActivityLog = (params) =>
   api.get('/admin/activity-log', { params }).then((r) => r.data);
+
+// 보안 감사로그(접속기록·로그인/로그아웃 이력 등) — 관리자 전용
+export const getAuditLog = (params) =>
+  api.get('/admin/audit-log', { params }).then((r) => r.data);
