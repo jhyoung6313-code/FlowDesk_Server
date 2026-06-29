@@ -20,7 +20,7 @@ const ACTION_LABELS = {
 
 const FIELD_LABELS = {
   title: '제목', description: '설명', status: '상태', priority: '우선순위',
-  startDate: '시작일', dueDate: '마감일', partId: '파트', assignees: '담당자',
+  startDate: '시작일', dueDate: '마감일', partId: '팀', assignees: '담당자',
   predecessors: '선행업무', tags: '태그',
 };
 

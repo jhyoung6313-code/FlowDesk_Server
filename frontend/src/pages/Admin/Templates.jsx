@@ -121,7 +121,7 @@ export default function TemplatesPage() {
       ellipsis: true,
     },
     {
-      title: '파트',
+      title: '팀',
       dataIndex: 'partId',
       key: 'partId',
       render: (v) => v ? <Tag>{getPartName(v)}</Tag> : <Typography.Text type="secondary">-</Typography.Text>,
@@ -219,7 +219,7 @@ export default function TemplatesPage() {
             <Descriptions.Item label="설명">
               {viewTarget.description || <Typography.Text type="secondary">-</Typography.Text>}
             </Descriptions.Item>
-            <Descriptions.Item label="파트">
+            <Descriptions.Item label="팀">
               {viewTarget.partId ? getPartName(viewTarget.partId) : '-'}
             </Descriptions.Item>
             <Descriptions.Item label="우선순위">
@@ -274,8 +274,8 @@ export default function TemplatesPage() {
           <Form.Item name="description" label="설명">
             <Input.TextArea rows={3} placeholder="업무 설명" />
           </Form.Item>
-          <Form.Item name="partId" label="파트">
-            <Select placeholder="파트 선택" allowClear>
+          <Form.Item name="partId" label="팀">
+            <Select placeholder="팀 선택" allowClear>
               {parts.map((p) => <Option key={p.id} value={p.id}>{p.name}</Option>)}
             </Select>
           </Form.Item>

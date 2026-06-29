@@ -8,6 +8,7 @@ import {
   KeyOutlined, CrownOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { getUsers, createUser, updateUser, deactivateUser, activateUser, resetUserPassword } from '../../api/users';
+import { getDepartments } from '../../api/org';
 
 const { Option } = Select;
 
@@ -18,6 +19,10 @@ export default function UsersAdminPage() {
   const [editTarget, setEditTarget] = useState(null);
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  const selectedDeptId = Form.useWatch('departmentId', form);
+  const teamOptions = (departments.find((d) => d.id === selectedDeptId)?.teams || [])
+    .map((t) => ({ label: t.name, value: t.id }));
 
   /* 비밀번호 초기화 결과 모달 */
   const [resetResult, setResetResult] = useState(null); // { username, tempPassword }
@@ -29,7 +34,10 @@ export default function UsersAdminPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    getDepartments().then(setDepartments).catch(() => {});
+  }, []);
 
   const handleOpen = (user = null) => {
     setEditTarget(user);
@@ -39,6 +47,8 @@ export default function UsersAdminPage() {
         displayName: user.displayName,
         role: user.role,
         password: '',
+        departmentId: user.departmentId ?? undefined,
+        teamId: user.teamId ?? undefined,
       });
     } else {
       form.resetFields();
@@ -53,7 +63,12 @@ export default function UsersAdminPage() {
       setSaving(true);
 
       if (editTarget) {
-        const data = { displayName: values.displayName, role: values.role };
+        const data = {
+          displayName: values.displayName,
+          role: values.role,
+          departmentId: values.departmentId ?? null,
+          teamId: values.teamId ?? null,
+        };
         if (values.password) data.password = values.password;
         await updateUser(editTarget.id, data);
         message.success('사용자가 수정되었습니다.');
@@ -104,6 +119,22 @@ export default function UsersAdminPage() {
   const columns = [
     { title: '아이디', dataIndex: 'username', key: 'username', width: 130 },
     { title: '이름', dataIndex: 'displayName', key: 'displayName' },
+    {
+      title: '부서 / 팀',
+      key: 'org',
+      width: 200,
+      render: (_, r) => {
+        const dept = r.department?.name;
+        const team = r.team?.name;
+        if (!dept && !team) return <Typography.Text type="secondary">-</Typography.Text>;
+        return (
+          <Space size={4} wrap>
+            {dept && <Tag color="blue">{dept}</Tag>}
+            {team && <Tag color="green">{team}</Tag>}
+          </Space>
+        );
+      },
+    },
     {
       title: '권한',
       dataIndex: 'role',
@@ -218,7 +249,15 @@ export default function UsersAdminPage() {
         cancelText="취소"
         confirmLoading={saving}
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form
+          form={form}
+          layout="vertical"
+          style={{ marginTop: 16 }}
+          onValuesChange={(changed) => {
+            // 부서를 바꾸면 기존 팀 선택을 해제한다
+            if ('departmentId' in changed) form.setFieldValue('teamId', undefined);
+          }}
+        >
           <Form.Item
             name="username"
             label="아이디"
@@ -267,11 +306,26 @@ export default function UsersAdminPage() {
               </Option>
             </Select>
           </Form.Item>
+          <Form.Item name="departmentId" label="부서">
+            <Select
+              placeholder="부서 선택 (선택)"
+              allowClear
+              options={departments.map((d) => ({ label: d.name, value: d.id }))}
+            />
+          </Form.Item>
+          <Form.Item name="teamId" label="팀">
+            <Select
+              placeholder={selectedDeptId ? '팀 선택 (선택)' : '먼저 부서를 선택하세요'}
+              allowClear
+              disabled={!selectedDeptId}
+              options={teamOptions}
+            />
+          </Form.Item>
           {form.getFieldValue('role') === 'admin' && (
             <Alert
               type="warning"
               showIcon
-              message="관리자 권한 부여 시 사용자 관리, 파트 관리, 비밀번호 초기화 등 모든 관리 기능이 활성화됩니다."
+              message="관리자 권한 부여 시 사용자 관리, 부서·팀 관리, 비밀번호 초기화 등 모든 관리 기능이 활성화됩니다."
               style={{ marginBottom: 0 }}
             />
           )}

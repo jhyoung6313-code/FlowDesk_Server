@@ -5,6 +5,7 @@ import {
   DashboardOutlined,
   CheckSquareOutlined,
   BarChartOutlined,
+  TeamOutlined,
   UserOutlined,
   AppstoreOutlined,
   ApartmentOutlined,
@@ -30,11 +31,14 @@ import {
   DatabaseOutlined,
   GlobalOutlined,
   SnippetsOutlined,
+  ReadOutlined,
+  FileDoneOutlined,
 } from '@ant-design/icons';
 import useAuthStore from '../../store/authStore';
 import useThemeStore from '../../store/themeStore';
 import useChatStore from '../../store/chatStore';
 import useUnreadStore from '../../store/unreadStore';
+import { getApprovalPendingCount } from '../../api/approval';
 import { getAvatarColor } from '../../utils/colors';
 import { getMe } from '../../api/auth';
 import * as wbsApi from '../../api/wbs';
@@ -173,6 +177,8 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     toggleHoverBg:c.sidebarHoverBg,
   };
 
+  const [approvalPendingCount, setApprovalPendingCount] = useState(0);
+
   // WBS 프로젝트 목록 상태
   const [wbsProjects, setWbsProjects] = useState([]);
   const [openKeys, setOpenKeys] = useState([]);
@@ -203,6 +209,16 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     window.addEventListener('wbs-projects-changed', handler);
     return () => window.removeEventListener('wbs-projects-changed', handler);
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchPending = () => {
+      getApprovalPendingCount().then(r => setApprovalPendingCount(r.count || 0)).catch(() => {});
+    };
+    fetchPending();
+    const timer = setInterval(fetchPending, 60000);
+    return () => clearInterval(timer);
+  }, [user]);
 
   // 로그인 직후 user에 clientIp가 없으면 getMe로 보강
   useEffect(() => {
@@ -249,6 +265,10 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     if (pathname === '/wbs') return '/wbs';
     if (pathname.startsWith('/ledger')) return '/ledger';
     if (pathname.startsWith('/chat')) return '/chat';
+    if (pathname.startsWith('/workload')) return '/workload';
+    if (pathname.startsWith('/bbs')) return '/bbs';
+    if (pathname.startsWith('/approvals')) return '/approvals';
+    if (pathname.startsWith('/admin/approval')) return '/admin/approval';
     return '/';
   };
 
@@ -392,6 +412,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   const viewItems = [
     { key: '/', icon: <DashboardOutlined style={{ color: GROUPS.view.color }} />, label: '대시보드' },
     { key: '/tasks', icon: <CheckSquareOutlined style={{ color: GROUPS.view.color }} />, label: '업무 관리' },
+    { key: '/workload', icon: <TeamOutlined style={{ color: GROUPS.view.color }} />, label: '워크로드' },
     { key: '/gantt', icon: <BarChartOutlined style={{ color: GROUPS.view.color }} />, label: '간트 차트' },
     { key: '/calendar', icon: <CalendarOutlined style={{ color: GROUPS.view.color }} />, label: '캘린더' },
     { key: '/memos', icon: <SnippetsOutlined style={{ color: GROUPS.view.color }} />, label: '메모지' },
@@ -530,7 +551,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
             icon: <AppstoreOutlined />,
             label: '기준정보관리',
             children: [
-              { key: '/admin/parts', icon: <AppstoreOutlined />, label: '파트 관리', onClick: () => go('/admin/parts') },
+              { key: '/admin/departments', icon: <ApartmentOutlined />, label: '부서 · 팀 관리', onClick: () => go('/admin/departments') },
               { key: '/admin/recurring-tasks', icon: <ReloadOutlined />, label: '반복업무 관리', onClick: () => go('/admin/recurring-tasks') },
               { key: '/admin/tags', icon: <TagsOutlined />, label: '태그 관리', onClick: () => go('/admin/tags') },
               { key: '/admin/milestones', icon: <FlagOutlined />, label: '마일스톤 관리', onClick: () => go('/admin/milestones') },
@@ -541,6 +562,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
           { key: '/admin/activity-log', icon: <HistoryOutlined />, label: '활동 로그', onClick: () => go('/admin/activity-log') },
           { key: '/admin/audit-log', icon: <SafetyCertificateOutlined />, label: '접속기록', onClick: () => go('/admin/audit-log') },
           { key: '/admin/backup', icon: <DatabaseOutlined />, label: '백업/복원', onClick: () => go('/admin/backup') },
+          { key: '/admin/approval', icon: <FileDoneOutlined />, label: '결재 양식 관리', onClick: () => go('/admin/approval') },
         ]
       : []),
     { type: 'divider' },
@@ -551,6 +573,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   const railItems = [
     { key: '/', icon: <DashboardOutlined />, title: '대시보드', color: GROUPS.view.color },
     { key: '/tasks', icon: <CheckSquareOutlined />, title: '업무 관리', color: GROUPS.view.color },
+    { key: '/workload', icon: <TeamOutlined />, title: '워크로드', color: GROUPS.view.color },
     { key: '/memos', icon: <SnippetsOutlined />, title: '메모지', color: GROUPS.view.color },
     { key: '/chat', icon: <MessageOutlined />, title: '채팅', color: GROUPS.collab.color, dot: totalUnread > 0 },
     { key: '/boards', icon: <AppstoreOutlined />, title: '보드', color: GROUPS.collab.color, dot: boardUnread > 0 },
@@ -559,10 +582,10 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   ];
   const railActive = (key) => (key === '/' ? pathname === '/' : pathname.startsWith(key));
 
-  const RailIcon = ({ itemKey, icon, title, color, dot }) => {
+  const RailIcon = ({ itemKey, icon, title, color, dot, count }) => {
     const active = railActive(itemKey);
     return (
-      <Tooltip title={title} placement="right">
+      <Tooltip title={count > 0 ? `${title} (${count}건 미결재)` : title} placement="right">
         <div
           onClick={() => go(itemKey)}
           style={{
@@ -587,15 +610,25 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
             <span
               style={{
                 position: 'absolute',
-                top: 7,
-                right: 7,
-                width: 8,
-                height: 8,
+                top: 5,
+                right: 5,
+                minWidth: count > 9 ? 16 : 14,
+                height: 14,
                 borderRadius: 99,
-                background: color,
+                background: '#ff4d4f',
                 border: `2px solid ${RAIL_BG}`,
+                fontSize: 9,
+                fontWeight: 700,
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '0 2px',
+                lineHeight: 1,
               }}
-            />
+            >
+              {count > 99 ? '99+' : count || ''}
+            </span>
           )}
         </div>
       </Tooltip>

@@ -23,7 +23,7 @@ const CalendarPage = lazy(() => import('./pages/Calendar'));
 const MemosPage = lazy(() => import('./pages/Memos'));
 const GanttPage = lazy(() => import('./pages/Gantt'));
 const UsersAdminPage = lazy(() => import('./pages/Admin/Users'));
-const PartsAdminPage = lazy(() => import('./pages/Admin/Parts'));
+const DepartmentsAdminPage = lazy(() => import('./pages/Admin/Departments'));
 const RecurringTasksAdminPage = lazy(() => import('./pages/Admin/RecurringTasks'));
 const TagsAdminPage = lazy(() => import('./pages/Admin/Tags'));
 const MilestonesAdminPage = lazy(() => import('./pages/Admin/Milestones'));
@@ -33,6 +33,7 @@ const BackupPage = lazy(() => import('./pages/Admin/Backup'));
 const ActivityLogPage = lazy(() => import('./pages/Admin/ActivityLog'));
 const AuditLogPage = lazy(() => import('./pages/Admin/AuditLog'));
 const NotificationsPage = lazy(() => import('./pages/Notifications'));
+const WorkloadPage = lazy(() => import('./pages/Workload'));
 const ProfilePage = lazy(() => import('./pages/Profile'));
 const WbsWorkspace = lazy(() => import('./pages/WBS/WbsWorkspace'));
 const LedgerPage = lazy(() => import('./pages/Ledger'));
@@ -43,6 +44,12 @@ const PlaybookWorkspace = lazy(() => import('./pages/Playbook/PlaybookWorkspace'
 const PlaybookEditor = lazy(() => import('./pages/Playbook/PlaybookEditor'));
 const RunListPage = lazy(() => import('./pages/PlaybookRun'));
 const RunDetailPage = lazy(() => import('./pages/PlaybookRun/RunDetail'));
+const BbsPage = lazy(() => import('./pages/BBS'));
+const ApprovalPage = lazy(() => import('./pages/Approval'));
+const ApprovalDocumentForm = lazy(() => import('./pages/Approval/DocumentForm'));
+const ApprovalDocumentDetail = lazy(() => import('./pages/Approval/DocumentDetail'));
+const ApprovalAdminPage = lazy(() => import('./pages/Admin/ApprovalAdmin'));
+const MailPage = lazy(() => import('./pages/Mail'));
 
 const PrivateRoute = ({ children, adminOnly = false }) => {
   const { user, loading } = useAuthStore();
@@ -131,7 +138,10 @@ export default function App() {
               }
             : { colorBgBase: '#ffffff', colorTextBase: '#0f172a' }),
           controlHeight:      32,
-          motion:             false,
+          // 모션: 전역으로 끄지 않고 빠른 슬라이드로 통일 (Drawer/Modal이 번쩍이지 않고 매끄럽게 열림)
+          motionDurationFast: '0.1s',
+          motionDurationMid:  '0.15s',
+          motionDurationSlow: '0.2s',
         },
         components: {
           Card: {
@@ -181,6 +191,7 @@ export default function App() {
           <Route path="memos" element={<MemosPage />} />
           <Route path="gantt" element={<GanttPage />} />
           <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="workload" element={<WorkloadPage />} />
           <Route path="profile" element={<ProfilePage />} />
           <Route path="wbs" element={<WbsWorkspace />} />
           <Route path="wbs/:projectId" element={<WbsWorkspace />} />
@@ -194,6 +205,12 @@ export default function App() {
           <Route path="playbooks/:id/edit" element={<PlaybookEditor />} />
           <Route path="runs" element={<RunListPage />} />
           <Route path="runs/:id" element={<RunDetailPage />} />
+          <Route path="bbs" element={<BbsPage />} />
+          <Route path="approvals" element={<ApprovalPage />} />
+          <Route path="approvals/new" element={<ApprovalDocumentForm />} />
+          <Route path="approvals/:id" element={<ApprovalDocumentDetail />} />
+          <Route path="approvals/:id/edit" element={<ApprovalDocumentForm />} />
+          <Route path="mail" element={<MailPage />} />
           <Route
             path="admin/users"
             element={
@@ -203,10 +220,10 @@ export default function App() {
             }
           />
           <Route
-            path="admin/parts"
+            path="admin/departments"
             element={
               <PrivateRoute adminOnly>
-                <PartsAdminPage />
+                <DepartmentsAdminPage />
               </PrivateRoute>
             }
           />
@@ -271,6 +288,14 @@ export default function App() {
             element={
               <PrivateRoute adminOnly>
                 <AuditLogPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="admin/approval"
+            element={
+              <PrivateRoute adminOnly>
+                <ApprovalAdminPage />
               </PrivateRoute>
             }
           />

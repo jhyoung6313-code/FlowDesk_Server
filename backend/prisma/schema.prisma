@@ -21,8 +21,11 @@ model User {
   avatarColor      String?           @map("avatar_color") @db.VarChar(20)
   statusEmoji      String?           @map("status_emoji") @db.VarChar(10)
   statusText       String?           @map("status_text") @db.VarChar(100)
-  // ── 조직 정보(내 프로필에서 본인이 편집) ───────────────
-  department       String?           @map("department") @db.VarChar(100)
+  // ── 조직 정보 (부서·팀은 관리자 지정, 직책·직급은 본인 편집) ───────────────
+  departmentId     Int?              @map("department_id")
+  teamId           Int?              @map("team_id")
+  department       Department?       @relation("UserDepartment", fields: [departmentId], references: [id])
+  team             Team?             @relation("UserTeam", fields: [teamId], references: [id])
   position         String?           @map("position") @db.VarChar(100)
   jobGrade         String?           @map("job_grade") @db.VarChar(100)
   // ── 미사용 화면 잠금 시간(분). 0 = 사용 안 함 ──────────
@@ -41,6 +44,7 @@ model User {
   memos            Memo[]            @relation("MemoCreator")
   milestones       Milestone[]
   notifications    Notification[]
+  notificationsActed Notification[]  @relation("NotificationActor")
   recurringTasks   RecurringTask[]
   assignedTasks    TaskAssignee[]
   taskAttachments  TaskAttachment[]  @relation("AttachmentUploader")
@@ -80,20 +84,53 @@ model User {
   playbookVersions     PlaybookVersion[]      @relation("PlaybookVersionCreator")
   playbookSchedules    PlaybookSchedule[]     @relation("PlaybookScheduleCreator")
   playbookReadState    PlaybookReadState?     @relation("PlaybookReadStateUser")
+  bbsCategoriesCreated BbsCategory[]          @relation("BbsCategoryCreator")
+  bbsPosts             BbsPost[]              @relation("BbsPostCreator")
+  bbsComments          BbsComment[]           @relation("BbsCommentUser")
+  bbsAttachments       BbsAttachment[]        @relation("BbsAttachmentUploader")
+  approvalFormTypes    ApprovalFormType[]     @relation("ApprovalFormTypeCreator")
+  approvalTemplates    ApprovalTemplate[]     @relation("ApprovalTemplateCreator")
+  approvalDocuments    ApprovalDocument[]     @relation("ApprovalDocumentCreator")
+  approvalSteps        ApprovalStep[]         @relation("ApprovalStepApprover")
+  approvalComments     ApprovalComment[]      @relation("ApprovalCommentUser")
+  approvalAttachments  ApprovalAttachment[]   @relation("ApprovalAttachmentUploader")
+  sentMails            InternalMail[]         @relation("MailSender")
+  mailRecipients       InternalMailRecipient[] @relation("MailRecipient")
+  mailAttachments      InternalMailAttachment[] @relation("MailAttachmentUploader")
+  mailComments         InternalMailComment[]   @relation("MailCommentUser")
+  mailLabels           InternalMailLabel[]     @relation("MailLabelOwner")
+  dashboardBbsCategories UserDashboardBbsCategory[]
 
   @@map("users")
 }
 
-model Part {
+model Department {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(100)
+  description String?
+  order       Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  teams       Team[]
+  users       User[]   @relation("UserDepartment")
+
+  @@map("departments")
+}
+
+model Team {
   id             Int             @id @default(autoincrement())
-  name           String          @unique @db.VarChar(100)
+  name           String          @db.VarChar(100)
+  departmentId   Int             @map("department_id")
   description    String?
+  order          Int             @default(0)
   createdAt      DateTime        @default(now()) @map("created_at")
+  department     Department      @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  users          User[]          @relation("UserTeam")
   recurringTasks RecurringTask[]
   taskTemplates  TaskTemplate[]
   tasks          Task[]
 
-  @@map("parts")
+  @@unique([departmentId, name])
+  @@map("teams")
 }
 
 model Task {
@@ -120,7 +157,7 @@ model Task {
   histories       TaskHistory[]
   tags            TaskTag[]
   creator         User                @relation("TaskCreator", fields: [createdBy], references: [id])
-  part            Part?               @relation(fields: [partId], references: [id])
+  part            Team?               @relation(fields: [partId], references: [id])
   recurringTask   RecurringTask?      @relation(fields: [recurringTaskId], references: [id])
   timeEntries     TimeEntry[]
   boardCards      BoardCard[]
@@ -166,6 +203,8 @@ model Notification {
   taskId     Int?             @map("task_id")
   runId      Int?             @map("run_id")
   runStepId  Int?             @map("run_step_id")
+  actorId    Int?             @map("actor_id")
+  link       String?          @db.VarChar(300)
   message    String?          @db.VarChar(500)
   type       NotificationType
   isRead     Boolean          @default(false) @map("is_read")
@@ -175,6 +214,7 @@ model Notification {
   run        PlaybookRun?     @relation("RunNotifications", fields: [runId], references: [id], onDelete: Cascade)
   runStep    RunStep?         @relation("RunStepNotifications", fields: [runStepId], references: [id], onDelete: Cascade)
   user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  actor      User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@map("notifications")
 }
@@ -344,7 +384,7 @@ model RecurringTask {
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt @map("updated_at")
   creator         User           @relation(fields: [createdBy], references: [id])
-  part            Part?          @relation(fields: [partId], references: [id])
+  part            Team?          @relation(fields: [partId], references: [id])
   generatedTasks  Task[]
 
   @@map("recurring_tasks")
@@ -364,7 +404,7 @@ model TaskTemplate {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
   creator         User     @relation(fields: [createdBy], references: [id])
-  part            Part?    @relation(fields: [partId], references: [id])
+  part            Team?    @relation(fields: [partId], references: [id])
 
   @@map("task_templates")
 }
@@ -489,6 +529,11 @@ enum NotificationType {
   step_assigned
   step_reminder
   security_alert
+  mention
+  approval_requested
+  approval_approved
+  approval_rejected
+  mail_received
 }
 
 enum WbsIssueStatus {
@@ -1202,4 +1247,316 @@ model PlaybookSchedule {
   creator        User           @relation("PlaybookScheduleCreator", fields: [createdBy], references: [id])
 
   @@map("playbook_schedules")
+}
+
+// ───────────────────────── BBS 게시판 ─────────────────────────
+
+model BbsCategory {
+  id          Int           @id @default(autoincrement())
+  name        String        @db.VarChar(100)
+  description String?       @db.VarChar(300)
+  parentId    Int?          @map("parent_id")
+  icon        String?       @db.VarChar(10)
+  color       String?       @db.VarChar(30)
+  order       Int           @default(0)
+  writeRole   String        @default("all") @map("write_role") @db.VarChar(20)
+  isActive    Boolean       @default(true) @map("is_active")
+  showOnDashboard Boolean   @default(false) @map("show_on_dashboard")
+  createdBy   Int           @map("created_by")
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+  parent      BbsCategory?  @relation("BbsCategoryTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children    BbsCategory[] @relation("BbsCategoryTree")
+  posts       BbsPost[]
+  creator     User          @relation("BbsCategoryCreator", fields: [createdBy], references: [id])
+  dashboardUsers UserDashboardBbsCategory[]
+
+  @@map("bbs_categories")
+}
+
+model UserDashboardBbsCategory {
+  userId     Int         @map("user_id")
+  categoryId Int         @map("category_id")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   BbsCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([userId, categoryId])
+  @@map("user_dashboard_bbs_categories")
+}
+
+model BbsPost {
+  id          Int             @id @default(autoincrement())
+  categoryId  Int             @map("category_id")
+  title       String          @db.VarChar(200)
+  content     String          @db.Text
+  senderOrg      String?      @map("sender_org") @db.VarChar(200)
+  officialDueDate DateTime?   @map("official_due_date") @db.Date
+  recipientDepts String[]     @map("recipient_depts")
+  isPinned    Boolean         @default(false) @map("is_pinned")
+  viewCount   Int             @default(0) @map("view_count")
+  createdBy   Int             @map("created_by")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  delYn       String          @default("0") @map("del_yn") @db.Char(1)
+  category    BbsCategory     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  creator     User            @relation("BbsPostCreator", fields: [createdBy], references: [id])
+  comments    BbsComment[]
+  attachments BbsAttachment[]
+
+  @@index([categoryId, delYn])
+  @@map("bbs_posts")
+}
+
+model BbsComment {
+  id          Int             @id @default(autoincrement())
+  postId      Int             @map("post_id")
+  parentId    Int?            @map("parent_id")
+  userId      Int             @map("user_id")
+  content     String          @db.Text
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  delYn       String          @default("0") @map("del_yn") @db.Char(1)
+  post        BbsPost         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parent      BbsComment?     @relation("BbsCommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies     BbsComment[]    @relation("BbsCommentReplies")
+  user        User            @relation("BbsCommentUser", fields: [userId], references: [id], onDelete: Cascade)
+  attachments BbsAttachment[]
+
+  @@map("bbs_comments")
+}
+
+model BbsAttachment {
+  id           Int         @id @default(autoincrement())
+  postId       Int         @map("post_id")
+  commentId    Int?        @map("comment_id")
+  uploadedBy   Int         @map("uploaded_by")
+  originalName String      @map("original_name") @db.VarChar(255)
+  storedName   String      @map("stored_name") @db.VarChar(255)
+  mimeType     String      @map("mime_type") @db.VarChar(100)
+  size         Int
+  createdAt    DateTime    @default(now()) @map("created_at")
+  post         BbsPost     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  comment      BbsComment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
+  uploader     User        @relation("BbsAttachmentUploader", fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@map("bbs_attachments")
+}
+
+// ───────────────────────── 전자결재 ─────────────────────────
+
+enum ApprovalStatus {
+  draft
+  pending
+  approved
+  rejected
+  cancelled
+}
+
+enum ApprovalStepStatus {
+  pending
+  approved
+  rejected
+}
+
+model ApprovalFormType {
+  id          Int               @id @default(autoincrement())
+  name        String            @db.VarChar(100)
+  description String?           @db.VarChar(300)
+  parentId    Int?              @map("parent_id")
+  icon        String?           @db.VarChar(10)
+  color       String?           @db.VarChar(30)
+  order       Int               @default(0)
+  isActive    Boolean           @default(true) @map("is_active")
+  createdBy   Int               @map("created_by")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+  parent      ApprovalFormType?  @relation("ApprovalFormTypeTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children    ApprovalFormType[] @relation("ApprovalFormTypeTree")
+  templates   ApprovalTemplate[]
+  creator     User              @relation("ApprovalFormTypeCreator", fields: [createdBy], references: [id])
+
+  @@map("approval_form_types")
+}
+
+model ApprovalTemplate {
+  id          Int              @id @default(autoincrement())
+  formTypeId  Int              @map("form_type_id")
+  name        String           @db.VarChar(200)
+  description String?          @db.VarChar(500)
+  fieldsJson  String           @map("fields_json") @db.Text
+  lineJson    String?          @map("line_json") @db.Text
+  isActive    Boolean          @default(true) @map("is_active")
+  createdBy   Int              @map("created_by")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  formType    ApprovalFormType @relation(fields: [formTypeId], references: [id], onDelete: Cascade)
+  creator     User             @relation("ApprovalTemplateCreator", fields: [createdBy], references: [id])
+  documents   ApprovalDocument[]
+
+  @@map("approval_templates")
+}
+
+model ApprovalDocument {
+  id          Int                  @id @default(autoincrement())
+  templateId  Int                  @map("template_id")
+  title       String               @db.VarChar(200)
+  formData    String               @map("form_data") @db.Text
+  status      ApprovalStatus       @default(draft)
+  currentStep Int                  @default(0) @map("current_step")
+  totalSteps  Int                  @default(0) @map("total_steps")
+  createdBy   Int                  @map("created_by")
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
+  delYn       String               @default("0") @map("del_yn") @db.Char(1)
+  template    ApprovalTemplate     @relation(fields: [templateId], references: [id])
+  creator     User                 @relation("ApprovalDocumentCreator", fields: [createdBy], references: [id])
+  steps       ApprovalStep[]
+  attachments ApprovalAttachment[]
+  comments    ApprovalComment[]
+
+  @@index([createdBy, delYn])
+  @@map("approval_documents")
+}
+
+model ApprovalStep {
+  id         Int                @id @default(autoincrement())
+  documentId Int                @map("document_id")
+  stepOrder  Int                @map("step_order")
+  approverId Int                @map("approver_id")
+  status     ApprovalStepStatus @default(pending)
+  comment    String?            @db.VarChar(500)
+  actionAt   DateTime?          @map("action_at")
+  createdAt  DateTime           @default(now()) @map("created_at")
+  document   ApprovalDocument   @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  approver   User               @relation("ApprovalStepApprover", fields: [approverId], references: [id])
+
+  @@unique([documentId, stepOrder])
+  @@map("approval_steps")
+}
+
+model ApprovalAttachment {
+  id           Int              @id @default(autoincrement())
+  documentId   Int              @map("document_id")
+  uploadedBy   Int              @map("uploaded_by")
+  originalName String           @map("original_name") @db.VarChar(255)
+  storedName   String           @map("stored_name") @db.VarChar(255)
+  mimeType     String           @map("mime_type") @db.VarChar(100)
+  size         Int
+  createdAt    DateTime         @default(now()) @map("created_at")
+  document     ApprovalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  uploader     User             @relation("ApprovalAttachmentUploader", fields: [uploadedBy], references: [id], onDelete: Cascade)
+
+  @@map("approval_attachments")
+}
+
+model ApprovalComment {
+  id         Int              @id @default(autoincrement())
+  documentId Int              @map("document_id")
+  userId     Int              @map("user_id")
+  content    String           @db.Text
+  createdAt  DateTime         @default(now()) @map("created_at")
+  updatedAt  DateTime         @updatedAt @map("updated_at")
+  document   ApprovalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user       User             @relation("ApprovalCommentUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("approval_comments")
+}
+
+// ── 사내 메일 ────────────────────────────────────────────────
+
+model InternalMail {
+  id           Int      @id @default(autoincrement())
+  fromUserId   Int      @map("from_user_id")
+  subject      String   @db.VarChar(300)
+  body         String   @db.Text
+  isDraft      Boolean  @default(false) @map("is_draft")
+  priority     String   @default("normal") @db.VarChar(10)  // normal | urgent
+  parentId     Int?     @map("parent_id")   // 답장/전달 원본
+  threadId     Int?     @map("thread_id")   // 대화 스레드 루트 메일 id
+  forwardedFrom Int?    @map("forwarded_from")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  from         User                    @relation("MailSender", fields: [fromUserId], references: [id])
+  recipients   InternalMailRecipient[]
+  attachments  InternalMailAttachment[]
+  comments     InternalMailComment[]
+  labelLinks   InternalMailLabelLink[]
+
+  @@map("internal_mails")
+}
+
+model InternalMailLabel {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  name      String   @db.VarChar(50)
+  color     String   @default("#1677ff") @db.VarChar(20)
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User                    @relation("MailLabelOwner", fields: [userId], references: [id])
+  links     InternalMailLabelLink[]
+
+  @@map("internal_mail_labels")
+}
+
+model InternalMailLabelLink {
+  id       Int @id @default(autoincrement())
+  labelId  Int @map("label_id")
+  mailId   Int @map("mail_id")
+
+  label    InternalMailLabel @relation(fields: [labelId], references: [id], onDelete: Cascade)
+  mail     InternalMail      @relation(fields: [mailId], references: [id], onDelete: Cascade)
+
+  @@unique([labelId, mailId])
+  @@map("internal_mail_label_links")
+}
+
+model InternalMailComment {
+  id        Int      @id @default(autoincrement())
+  mailId    Int      @map("mail_id")
+  userId    Int      @map("user_id")
+  content   String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  mail      InternalMail @relation(fields: [mailId], references: [id], onDelete: Cascade)
+  user      User         @relation("MailCommentUser", fields: [userId], references: [id])
+
+  @@map("internal_mail_comments")
+}
+
+model InternalMailRecipient {
+  id        Int       @id @default(autoincrement())
+  mailId    Int       @map("mail_id")
+  userId    Int       @map("user_id")
+  type      String    @default("to") @db.VarChar(10)  // to | cc | bcc
+  isRead    Boolean   @default(false) @map("is_read")
+  readAt    DateTime? @map("read_at")
+  isStarred Boolean   @default(false) @map("is_starred")
+  folder    String    @default("inbox") @db.VarChar(20) // inbox | trash
+  deletedAt DateTime? @map("deleted_at")
+
+  mail      InternalMail @relation(fields: [mailId], references: [id], onDelete: Cascade)
+  user      User         @relation("MailRecipient", fields: [userId], references: [id])
+
+  @@unique([mailId, userId])
+  @@map("internal_mail_recipients")
+}
+
+model InternalMailAttachment {
+  id           Int      @id @default(autoincrement())
+  mailId       Int      @map("mail_id")
+  uploadedBy   Int      @map("uploaded_by")
+  originalName String   @map("original_name") @db.VarChar(500)
+  storedName   String   @map("stored_name") @db.VarChar(500)
+  mimeType     String   @map("mime_type") @db.VarChar(100)
+  size         Int
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  mail         InternalMail @relation(fields: [mailId], references: [id], onDelete: Cascade)
+  uploader     User         @relation("MailAttachmentUploader", fields: [uploadedBy], references: [id])
+
+  @@map("internal_mail_attachments")
 }

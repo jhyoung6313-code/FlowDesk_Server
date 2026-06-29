@@ -1,4 +1,4 @@
-# FlowDesk 기능정의서 v1.9
+# FlowDesk 기능정의서 v2.0
 
 > 소규모 팀(2~10명)을 위한 로컬 전용 풀스택 업무관리 시스템
 
@@ -18,6 +18,9 @@
 11. [가계부](#11-가계부) — F-45
 12. [시스템 관리](#12-시스템-관리) — F-40~F-43
 13. [메모지](#13-메모지) — F-47
+14. [전역 통합 검색](#14-전역-통합-검색) — F-49
+15. [통합 알림 인박스 및 @멘션](#15-통합-알림-인박스-및-멘션) — F-50
+16. [워크로드 밸런싱](#16-워크로드-밸런싱) — F-51
 
 ---
 
@@ -348,10 +351,12 @@
 
 ## 12. 시스템 관리
 
-### F-40. 파트 관리
-- **화면**: S-08 관리자 > 파트
-- **설명**: 업무·반복업무·템플릿에서 사용하는 파트(부서/팀) CRUD
-- **API**: `GET/POST /api/parts`, `PUT/DELETE /api/parts/:id`
+### F-40. 부서 · 팀 관리
+- **화면**: S-08 관리자 > 부서·팀 (`frontend/src/pages/Admin/Departments.jsx`)
+- **설명**: 조직을 **부서(Department) → 팀(Team)** 2단계 구조로 관리. 부서/팀 각각 CRUD하며, 팀은 소속 부서에 종속(부서 삭제 시 소속 팀 cascade 삭제). 업무·반복업무·템플릿의 분류와 사용자 소속, 게시판 수신부서가 이 구조를 사용한다. (기존 "파트"를 대체)
+  - 업무/반복업무/템플릿은 **팀** 단위로 분류 (내부 컬럼은 `part_id`를 유지하되 팀을 참조)
+  - 사용자는 **부서 + 팀**을 관리자가 지정 (사용자 등록/수정 모달)
+- **API**: `GET/POST /api/departments`, `PUT/DELETE /api/departments/:id` · `GET/POST /api/teams`, `PUT/DELETE /api/teams/:id`
 
 ### F-41. 업무 템플릿
 - **화면**: S-17 관리자 > 템플릿
@@ -394,8 +399,9 @@
 
 | 테이블 | 설명 |
 |--------|------|
-| users | 사용자 계정 (role: admin/member) |
-| parts | 파트(부서/팀) |
+| users | 사용자 계정 (role: admin/member, 부서·팀 FK: department_id·team_id) |
+| departments | 부서 |
+| teams | 팀 (부서 종속, department_id) — 업무/반복업무/템플릿 분류에 사용 (구 parts) |
 | tasks | 업무 (소프트 삭제: del_yn) |
 | task_assignees | 업무 담당자 (users 참조, PK: taskId+userId) |
 | task_extra_assignees | 외부 담당자 (자유 텍스트, users 참조 없음) |
@@ -447,6 +453,46 @@
 | run_participants | 런 참여자 |
 | run_updates | 런 업데이트(노트/알림) |
 | run_timeline | 런 타임라인 이벤트 |
+
+---
+
+## 14. 전역 통합 검색
+
+### F-49. Command Palette (Ctrl+K)
+- **화면**: 어느 페이지에서나 오버레이 팔레트
+- **단축키**: `Ctrl+K` (Mac: `Cmd+K`), 헤더 검색 버튼 클릭
+- **검색 대상**: 업무·보드카드·메모·플레이북·WBS프로젝트·채팅메시지 동시 검색
+- **UX**: 250ms 디바운스, 그룹별 결과, ↑↓ 키보드 네비게이션, Enter로 해당 페이지 이동
+- **API**: `GET /api/search?q=...&limit=8`
+- **파일**: `backend/src/controllers/searchController.js`, `frontend/src/components/common/CommandPalette.jsx`
+
+---
+
+## 15. 통합 알림 인박스 및 @멘션
+
+### F-50. @멘션 알림
+- **트리거**: 업무 댓글에 `@표시명` 또는 `@아이디` 입력 시 해당 사용자에게 실시간 알림(SSE)
+- **알림 타입**: `mention` — 알림 팝업·인박스에 '멘션' 태그(마젠타)로 구분
+- **클릭 이동**: 알림 클릭 시 해당 업무 페이지로 자동 이동
+- **댓글 입력**: TaskForm 댓글창이 `Mentions` 컴포넌트로 대체 — `@` 입력 시 사용자 자동완성
+- **API**: `POST /api/tasks/:id/comments` (기존 엔드포인트, 멘션 파싱 내부 처리)
+- **서비스**: `backend/src/services/mentionService.js`
+- **DB**: `notifications.actor_id`, `notifications.link`, `notifications.type='mention'` 필드 추가
+
+---
+
+## 16. 워크로드 밸런싱
+
+### F-51. 워크로드 대시보드
+- **화면**: `/workload` — 사이드바 '워크로드' 메뉴
+- **설명**: 멤버별 진행 중 업무 수·우선순위·지연 현황을 카드 형태로 시각화
+- **부하 등급**: idle(0건) / normal / warning(기본 ≥5건) / overload(기본 ≥8건)
+- **요약 배너**: 과부하·여유 멤버 이름을 상단에 표시, 업무 배정 대상 추천
+- **정렬**: 부하순 / 이름순 전환
+- **클릭**: 카드 클릭 시 해당 담당자 필터가 적용된 업무 페이지로 이동
+- **임계치**: `.env`의 `WORKLOAD_OVERLOAD_THRESHOLD`로 조정 (기본 8)
+- **API**: `GET /api/users/workload`
+- **파일**: `backend/src/controllers/userController.js` (workload), `frontend/src/pages/Workload/index.jsx`
 
 ---
 

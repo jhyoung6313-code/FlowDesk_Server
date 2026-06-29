@@ -326,7 +326,10 @@ const me = async (req, res, next) => {
       select: {
         id: true, username: true, displayName: true,
         role: true, isActive: true, totpEnabled: true, createdAt: true, avatarColor: true,
-        idleTimeoutMin: true, department: true, position: true, jobGrade: true,
+        idleTimeoutMin: true, position: true, jobGrade: true,
+        departmentId: true, teamId: true,
+        department: { select: { id: true, name: true } },
+        team: { select: { id: true, name: true } },
       },
     });
     res.json({ ...user, clientIp: audit.getClientIp(req) });
@@ -357,7 +360,8 @@ const PROFILE_FIELD_MAX_LEN = 100;
 
 const updateProfile = async (req, res, next) => {
   try {
-    const { department, position, jobGrade } = req.body;
+    // 부서·팀은 관리자가 지정하므로, 본인이 편집하는 항목은 직책·직급만 허용한다.
+    const { position, jobGrade } = req.body;
     // 빈 문자열은 null로 정규화하고, 길이 제한을 검증한다
     const normalize = (v) => {
       if (v === undefined || v === null) return null;
@@ -365,7 +369,6 @@ const updateProfile = async (req, res, next) => {
       return trimmed === '' ? null : trimmed;
     };
     const data = {
-      department: normalize(department),
       position: normalize(position),
       jobGrade: normalize(jobGrade),
     };
@@ -377,7 +380,7 @@ const updateProfile = async (req, res, next) => {
     const updated = await prisma.user.update({
       where: { id: req.user.id },
       data,
-      select: { department: true, position: true, jobGrade: true },
+      select: { position: true, jobGrade: true },
     });
     res.json(updated);
   } catch (err) {

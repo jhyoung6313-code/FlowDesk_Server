@@ -215,7 +215,7 @@ const update = async (req, res, next) => {
     // 변경된 필드 히스토리 기록
     const FIELD_LABELS = {
       title: '제목', description: '설명', status: '상태', priority: '우선순위',
-      partId: '파트', startDate: '시작일', dueDate: '마감일',
+      partId: '팀', startDate: '시작일', dueDate: '마감일',
     };
     const statusMap = { pending: '대기', in_progress: '진행중', done: '완료', hold: '보류' };
     const priorityMap = { high: '높음', normal: '보통', low: '낮음' };
@@ -382,7 +382,7 @@ const exportExcel = async (req, res, next) => {
       return {
         번호: t.id,
         업무명: t.title,
-        파트: t.part?.name ?? '',
+        팀: t.part?.name ?? '',
         담당자: assigneeNames,
         우선순위: priorityMap[t.priority] ?? t.priority,
         상태: getEffectiveStatus(t.status, t.dueDate),

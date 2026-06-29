@@ -305,7 +305,7 @@ export default function GanttPage({ embedded = false }) {
           size="small"
         />
         <Select
-          placeholder="파트"
+          placeholder="팀"
           allowClear
           value={filterPartId}
           onChange={setFilterPartId}
@@ -441,7 +441,7 @@ export default function GanttPage({ embedded = false }) {
                   padding: '8px 12px', minWidth: 200, fontSize: 12,
                 }}>
                   <div style={{ fontWeight: 600, marginBottom: 4 }}>{raw?.title}</div>
-                  {raw?.part && <div>파트: {raw.part.name}</div>}
+                  {raw?.part && <div>팀: {raw.part.name}</div>}
                   <div>상태: {STATUS_LABEL[raw?.status]}</div>
                   {raw?.startDate && <div>시작: {dayjs(raw.startDate).format('YYYY-MM-DD')}</div>}
                   {raw?.dueDate && <div>마감: {dayjs(raw.dueDate).format('YYYY-MM-DD')}</div>}

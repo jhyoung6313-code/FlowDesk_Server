@@ -16,6 +16,7 @@ import {
   Popconfirm,
   Spin,
   Upload,
+  Mentions,
 } from 'antd';
 import {
   SaveOutlined, FileTextOutlined, DownOutlined, SendOutlined,
@@ -346,8 +347,8 @@ export default function TaskForm({ open, task, onClose, onSubmit, initialStatus 
           <TextArea rows={3} placeholder="업무 내용을 입력하세요" />
         </Form.Item>
 
-        <Form.Item name="partId" label="담당파트">
-          <Select placeholder="파트 선택" allowClear>
+        <Form.Item name="partId" label="담당팀">
+          <Select placeholder="팀 선택" allowClear>
             {parts.map((p) => (
               <Option key={p.id} value={p.id}>{p.name}</Option>
             ))}
@@ -548,14 +549,25 @@ export default function TaskForm({ open, task, onClose, onSubmit, initialStatus 
                 >
                   <Button size="small" icon={<PaperClipOutlined />} disabled={commentSending} />
                 </Upload>
-                <Input
+                <Mentions
                   size="small"
                   style={{ flex: 1 }}
-                  placeholder="진행사항 또는 댓글을 입력하세요"
+                  placeholder="진행사항 또는 댓글 입력 ( @ 입력 시 멘션 )"
                   value={commentText}
-                  onChange={(e) => setCommentText(e.target.value)}
-                  onPressEnter={handleCommentSubmit}
+                  onChange={(val) => setCommentText(val)}
+                  onPressEnter={(e) => {
+                    // 멘션 추천 목록이 떠 있을 때는 Enter로 선택만 (제출 금지)
+                    if (e.target.getAttribute('aria-expanded') === 'true') return;
+                    e.preventDefault();
+                    handleCommentSubmit();
+                  }}
                   disabled={commentSending}
+                  autoSize={{ minRows: 1, maxRows: 4 }}
+                  options={users.map((u) => ({
+                    value: u.displayName,
+                    label: u.displayName,
+                    key: String(u.id),
+                  }))}
                 />
                 <Button className="fd-comment-send" type="primary" icon={<SendOutlined />}
                   loading={commentSending} onClick={handleCommentSubmit}>

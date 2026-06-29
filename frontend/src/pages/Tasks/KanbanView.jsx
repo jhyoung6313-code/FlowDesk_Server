@@ -153,7 +153,7 @@ export default function KanbanView() {
             />
           </Col>
           <Col xs={12} sm={4}>
-            <Select placeholder="파트" style={{ width: '100%' }}
+            <Select placeholder="팀" style={{ width: '100%' }}
               value={filterPart} onChange={setFilterPart} allowClear>
               {parts.map((p) => <Option key={p.id} value={p.id}>{p.name}</Option>)}
             </Select>

@@ -3,7 +3,8 @@ const router = express.Router();
 
 const authRoutes = require('./auth');
 const userRoutes = require('./users');
-const partRoutes = require('./parts');
+const departmentRoutes = require('./departments');
+const teamRoutes = require('./teams');
 const taskRoutes = require('./tasks');
 const notificationRoutes = require('./notifications');
 const calendarNoteRoutes = require('./calendarNotes');
@@ -24,10 +25,16 @@ const boardCategoryRoutes = require('./boardCategories');
 const playbookRoutes = require('./playbooks');
 const runRoutes = require('./runs');
 const webhookCtrl = require('../controllers/webhookController');
+const { authenticate } = require('../middlewares/auth');
+const searchController = require('../controllers/searchController');
+const bbsRoutes = require('./bbs');
+const approvalRoutes = require('./approvals');
+const mailRoutes = require('./mail');
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
-router.use('/parts', partRoutes);
+router.use('/departments', departmentRoutes);
+router.use('/teams', teamRoutes);
 router.use('/tasks', taskRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/calendar-notes', calendarNoteRoutes);
@@ -47,6 +54,14 @@ router.use('/board-categories', boardCategoryRoutes);
 router.use('/boards', boardRoutes);
 router.use('/playbooks', playbookRoutes);
 router.use('/runs', runRoutes);
+
+// BBS 게시판 + 전자결재 (라우트 내부에서 경로 처리)
+router.use('/', bbsRoutes);
+router.use('/', approvalRoutes);
+router.use('/mail', mailRoutes);
+
+// 전역 통합 검색
+router.get('/search', authenticate, searchController.search);
 
 // 웹훅 트리거 (인증 불필요 - 토큰 기반)
 router.post('/webhooks/trigger/:token', webhookCtrl.triggerWebhook);

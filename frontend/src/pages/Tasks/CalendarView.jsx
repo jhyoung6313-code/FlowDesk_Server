@@ -425,7 +425,7 @@ export default function CalendarView({ isActive }) {
                 )}
               </Space>
             </Descriptions.Item>
-            <Descriptions.Item label="담당파트">
+            <Descriptions.Item label="담당팀">
               {selected.part?.name || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="담당자">

@@ -48,8 +48,8 @@ export function ProfileFieldsSection({ user, onChange }) {
   const handleSave = async (values) => {
     setSaving(true);
     try {
+      // 부서·팀은 관리자가 지정하므로 본인은 직책·직급만 수정한다.
       const saved = await updateMyProfile({
-        department: values.department,
         position: values.position,
         jobGrade: values.jobGrade,
       });
@@ -72,16 +72,21 @@ export function ProfileFieldsSection({ user, onChange }) {
         layout="vertical"
         onFinish={handleSave}
         initialValues={{
-          department: user?.department || '',
           position: user?.position || '',
           jobGrade: user?.jobGrade || '',
         }}
       >
-        <Form.Item name="department" label="관리부서" rules={[{ max: PROFILE_FIELD_MAX_LEN, message: `${PROFILE_FIELD_MAX_LEN}자 이하로 입력하세요.` }]}>
-          <Input placeholder="예) 경영지원팀" allowClear />
+        <Form.Item label="부서 / 팀">
+          <Space size={6} wrap>
+            {user?.department?.name ? <Tag color="blue">{user.department.name}</Tag> : null}
+            {user?.team?.name ? <Tag color="green">{user.team.name}</Tag> : null}
+            {!user?.department?.name && !user?.team?.name && (
+              <Typography.Text type="secondary">관리자가 지정합니다.</Typography.Text>
+            )}
+          </Space>
         </Form.Item>
         <Form.Item name="position" label="직책" rules={[{ max: PROFILE_FIELD_MAX_LEN, message: `${PROFILE_FIELD_MAX_LEN}자 이하로 입력하세요.` }]}>
-          <Input placeholder="예) 팀장 / 파트장" allowClear />
+          <Input placeholder="예) 팀장 / 매니저" allowClear />
         </Form.Item>
         <Form.Item name="jobGrade" label="직급" rules={[{ max: PROFILE_FIELD_MAX_LEN, message: `${PROFILE_FIELD_MAX_LEN}자 이하로 입력하세요.` }]}>
           <Input placeholder="예) 차장 / 대리" allowClear />

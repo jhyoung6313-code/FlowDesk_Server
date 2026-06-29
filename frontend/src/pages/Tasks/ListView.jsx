@@ -435,7 +435,7 @@ export default function ListView() {
             />
           </Col>
           <Col xs={12} sm={4}>
-            <Select placeholder="파트" style={{ width: '100%' }}
+            <Select placeholder="팀" style={{ width: '100%' }}
               value={filters.partId} onChange={(v) => setFilters((f) => ({ ...f, partId: v }))} allowClear>
               {parts.map((p) => <Option key={p.id} value={p.id}>{p.name}</Option>)}
             </Select>
@@ -607,7 +607,7 @@ export default function ListView() {
                       <Descriptions.Item label="우선순위">
                         <PriorityBadge priority={detailTask.priority} />
                       </Descriptions.Item>
-                      <Descriptions.Item label="담당파트">
+                      <Descriptions.Item label="담당팀">
                         {detailTask.part?.name || '-'}
                       </Descriptions.Item>
                       <Descriptions.Item label="담당자">
