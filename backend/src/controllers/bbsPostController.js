@@ -8,11 +8,35 @@ if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 // GET /api/bbs  (query: categoryId, page, limit, search)
 const list = async (req, res, next) => {
   try {
-    const { categoryId, page = 1, limit = 20, search } = req.query;
+    const { categoryId, page = 1, limit = 20, search, searchField = 'title',
+            dateField = 'createdAt', dateFrom, dateTo } = req.query;
+
+    // 검색어를 게시글 입력 항목 기준으로 필터링
+    const buildSearch = (q, field) => {
+      const c = { contains: q, mode: 'insensitive' };
+      switch (field) {
+        case 'senderOrg': return { senderOrg: c };
+        case 'content': return { content: c };
+        case 'recipientDepts': return { recipientDepts: { has: q } };
+        case 'all': return {
+          OR: [{ title: c }, { content: c }, { senderOrg: c }, { recipientDepts: { has: q } }],
+        };
+        case 'title':
+        default: return { title: c };
+      }
+    };
+
+    // 기간 필터 (작성일 createdAt / 처리기한 officialDueDate)
+    const dateCol = ['createdAt', 'officialDueDate'].includes(dateField) ? dateField : 'createdAt';
+    const dateRange = {};
+    if (dateFrom) dateRange.gte = new Date(`${dateFrom}T00:00:00`);
+    if (dateTo) dateRange.lte = new Date(`${dateTo}T23:59:59.999`);
+
     const where = {
       delYn: '0',
       ...(categoryId && { categoryId: Number(categoryId) }),
-      ...(search && { title: { contains: search, mode: 'insensitive' } }),
+      ...(search && buildSearch(search, searchField)),
+      ...(Object.keys(dateRange).length && { [dateCol]: dateRange }),
     };
 
     const [total, pinned, normal] = await Promise.all([

@@ -20,3 +20,15 @@ export const updateMyAvatarColor = (color) =>
 
 export const setMyStatus = (statusEmoji, statusText) =>
   api.put('/users/me/status', { statusEmoji, statusText }).then((r) => r.data);
+
+export const uploadMySignature = (file, kind = 'sign') => {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('kind', kind);
+  return api.post('/users/me/signature', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }).then((r) => r.data);
+};
+
+export const deleteMySignature = (kind = 'sign') =>
+  api.delete('/users/me/signature', { params: { kind } }).then((r) => r.data);

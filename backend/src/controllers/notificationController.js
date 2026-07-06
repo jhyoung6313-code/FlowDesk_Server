@@ -16,6 +16,7 @@ const list = async (req, res, next) => {
       },
       include: {
         task: { select: { id: true, title: true, dueDate: true } },
+        actor: { select: { id: true, displayName: true, avatarColor: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 50,

@@ -28,6 +28,7 @@ import {
   MailOutlined,
   HistoryOutlined,
   SafetyCertificateOutlined,
+  StopOutlined,
   DatabaseOutlined,
   GlobalOutlined,
   SnippetsOutlined,
@@ -50,7 +51,6 @@ const { RangePicker } = DatePicker;
 
 const RAIL_WIDTH = 60;
 const CTX_WIDTH = 212;
-const RAIL_BG = '#101322';
 
 // 테마별 섹션 카드 색상 (view/collab/admin 각각 테마와 어울리는 색)
 const THEME_GROUPS = {
@@ -161,11 +161,12 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   const isAdmin = user?.role === 'admin';
   const { theme } = useThemeStore();
   const c = theme.colors;
+  const isDark = useThemeStore((s) => s.isDark);
 
   // 현재 테마에 맞는 섹션 그룹 색상 (없으면 slate 기본값)
   const GROUPS = THEME_GROUPS[theme.key] ?? THEME_GROUPS.slate;
 
-  // 테마 sidebar 토큰으로 컨텍스트 패널 팔레트 구성 (레일은 항상 다크 고정)
+  // 테마 sidebar 토큰으로 컨텍스트 패널 팔레트 구성
   const COLORS = {
     ctxBg:        c.sidebarBg,
     border:       c.sidebarDivider,
@@ -175,6 +176,15 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     itemHoverText:c.sidebarHoverText,
     toggleText:   c.sidebarGroup,
     toggleHoverBg:c.sidebarHoverBg,
+  };
+
+  // 1차 아이콘 레일 팔레트 — 라이트: 테마색으로 밝게, 다크: 다크 서피스 유지
+  const RAIL = {
+    bg:           isDark ? '#1f1f1f' : c.sidebarBg,
+    border:       isDark ? '#303030' : c.sidebarDivider,
+    idle:         isDark ? 'rgba(255,255,255,0.5)' : c.sidebarText,
+    hoverBg:      isDark ? 'rgba(255,255,255,0.08)' : c.sidebarHoverBg,
+    avatarBorder: isDark ? 'rgba(255,255,255,0.15)' : c.sidebarDivider,
   };
 
   const [approvalPendingCount, setApprovalPendingCount] = useState(0);
@@ -531,39 +541,13 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
 
   // ── 사용자 카드 드롭다운 메뉴 (비밀번호 변경 · 관리자 기능 · 로그아웃)
   const userInitials = user?.displayName?.slice(0, 2) || 'U';
+  const hasPiiAudit = (user?.permissions || []).includes('PII_AUDIT');
   const userMenuItems = [
     { key: 'profile', icon: <UserOutlined />, label: '내 프로필', onClick: () => setProfileOpen(true) },
     { key: 'password', icon: <LockOutlined />, label: '비밀번호 변경', onClick: () => setPasswordOpen(true) },
-    ...(isAdmin
-      ? [
-          { type: 'divider' },
-          {
-            key: 'admin-label',
-            label: (
-              <span style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.4px', textTransform: 'uppercase', color: COLORS.toggleText }}>
-                관리자
-              </span>
-            ),
-            disabled: true,
-          },
-          {
-            key: 'settings-submenu',
-            icon: <AppstoreOutlined />,
-            label: '기준정보관리',
-            children: [
-              { key: '/admin/departments', icon: <ApartmentOutlined />, label: '부서 · 팀 관리', onClick: () => go('/admin/departments') },
-              { key: '/admin/recurring-tasks', icon: <ReloadOutlined />, label: '반복업무 관리', onClick: () => go('/admin/recurring-tasks') },
-              { key: '/admin/tags', icon: <TagsOutlined />, label: '태그 관리', onClick: () => go('/admin/tags') },
-              { key: '/admin/milestones', icon: <FlagOutlined />, label: '마일스톤 관리', onClick: () => go('/admin/milestones') },
-              { key: '/admin/templates', icon: <FileTextOutlined />, label: '업무 템플릿 관리', onClick: () => go('/admin/templates') },
-            ],
-          },
-          { key: '/admin/email-settings', icon: <MailOutlined />, label: '이메일 알림 설정', onClick: () => go('/admin/email-settings') },
-          { key: '/admin/activity-log', icon: <HistoryOutlined />, label: '활동 로그', onClick: () => go('/admin/activity-log') },
-          { key: '/admin/audit-log', icon: <SafetyCertificateOutlined />, label: '접속기록', onClick: () => go('/admin/audit-log') },
-          { key: '/admin/backup', icon: <DatabaseOutlined />, label: '백업/복원', onClick: () => go('/admin/backup') },
-          { key: '/admin/approval', icon: <FileDoneOutlined />, label: '결재 양식 관리', onClick: () => go('/admin/approval') },
-        ]
+    // 감사권한(PII_AUDIT) 보유자에게만 노출 — role 과 무관
+    ...(hasPiiAudit
+      ? [{ key: 'pii-audit', icon: <StopOutlined />, label: '개인정보 검출내역', onClick: () => go('/pii-audit') }]
       : []),
     { type: 'divider' },
     { key: 'logout', icon: <LogoutOutlined />, label: '로그아웃', onClick: handleLogout },
@@ -598,11 +582,11 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
             justifyContent: 'center',
             fontSize: 21,
             cursor: 'pointer',
-            color: active ? '#fff' : 'rgba(255,255,255,0.5)',
+            color: active ? '#fff' : RAIL.idle,
             background: active ? color : 'transparent',
             transition: 'background 0.15s, color 0.15s',
           }}
-          onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+          onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = RAIL.hoverBg; }}
           onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
         >
           {icon}
@@ -616,7 +600,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
                 height: 14,
                 borderRadius: 99,
                 background: '#ff4d4f',
-                border: `2px solid ${RAIL_BG}`,
+                border: `2px solid ${RAIL.bg}`,
                 fontSize: 9,
                 fontWeight: 700,
                 color: '#fff',
@@ -641,12 +625,13 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
         className="flowdesk-sider"
         style={{ height: '100vh', display: 'flex', flexShrink: 0 }}
       >
-        {/* ── 1차 아이콘 레일 (다크) ── */}
+        {/* ── 1차 아이콘 레일 (테마색) ── */}
         <div
           style={{
             width: RAIL_WIDTH,
             flexShrink: 0,
-            background: RAIL_BG,
+            background: RAIL.bg,
+            borderRight: `1px solid ${RAIL.border}`,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
@@ -660,17 +645,13 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
 
           <div style={{ flex: 1 }} />
 
-          {isAdmin && (
-            <RailIcon itemKey="/admin/users" icon={<UserOutlined />} title="사용자 관리" color={GROUPS.admin.color} />
-          )}
-
-          {/* ── 사용자 메뉴 (프로필·비밀번호·관리자·로그아웃) ── */}
+          {/* ── 사용자 메뉴 (프로필·비밀번호·로그아웃) ── */}
           <Dropdown menu={{ items: userMenuItems }} placement="topRight" trigger={['click']}>
             <Tooltip title={user?.displayName ? `${user.displayName} (@${user.username})` : '내 계정'} placement="right">
               <div style={{ marginTop: 8, cursor: 'pointer', display: 'flex', justifyContent: 'center' }}>
                 <Avatar
                   size={38}
-                  style={{ backgroundColor: getAvatarColor(user?.id, user?.avatarColor), border: '2px solid rgba(255,255,255,0.15)' }}
+                  style={{ backgroundColor: getAvatarColor(user?.id, user?.avatarColor), border: `2px solid ${RAIL.avatarBorder}` }}
                 >
                   {userInitials}
                 </Avatar>

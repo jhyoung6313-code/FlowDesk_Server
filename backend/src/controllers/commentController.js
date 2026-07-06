@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { notifyMentions } = require('../services/mentionService');
 
 // GET /api/tasks/:id/comments
 const list = async (req, res, next) => {
@@ -39,6 +40,22 @@ const create = async (req, res, next) => {
         },
       },
     });
+
+    // @멘션 알림 (실패해도 댓글 등록은 성공)
+    try {
+      const task = await prisma.task.findUnique({ where: { id: taskId }, select: { title: true } });
+      await notifyMentions({
+        content,
+        actorId: req.user.id,
+        actorName: req.user.displayName,
+        context: `업무 "${task?.title ?? ''}"`,
+        link: `/tasks?taskId=${taskId}`,
+        taskId,
+      });
+    } catch (mentionErr) {
+      console.error('[멘션 알림] 실패:', mentionErr.message);
+    }
+
     res.status(201).json(comment);
   } catch (err) {
     next(err);

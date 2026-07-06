@@ -272,10 +272,9 @@ export default function PostDetail({ postId, onBack, onChanged }) {
           display: 'flex',
           alignItems: 'center',
           gap: 12,
-          marginBottom: 24,
-          padding: '12px 16px',
-          background: token.colorFillAlter,
-          borderRadius: 10,
+          paddingBottom: 16,
+          marginBottom: 16,
+          borderBottom: `1px solid ${token.colorBorderSecondary}`,
         }}>
           <Avatar size={40} style={{ background: getAvatarBg(post.creator?.avatarColor), flexShrink: 0 }}>
             {getInitial(post.creator?.displayName)}
@@ -297,14 +296,13 @@ export default function PostDetail({ postId, onBack, onChanged }) {
         {/* 공문 메타정보 (발신처 / 처리기한 / 수신부서) */}
         {(post.senderOrg || post.officialDueDate || post.recipientDepts?.length > 0) && (
           <div style={{
-            marginBottom: 24,
-            padding: '12px 16px',
-            background: token.colorFillAlter,
-            borderRadius: 10,
+            paddingBottom: 16,
+            marginBottom: 20,
+            borderBottom: `1px solid ${token.colorBorderSecondary}`,
             display: 'grid',
             gridTemplateColumns: 'auto 1fr',
-            rowGap: 8,
-            columnGap: 16,
+            rowGap: 10,
+            columnGap: 20,
             alignItems: 'center',
             fontSize: 13,
           }}>

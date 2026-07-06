@@ -609,3 +609,46 @@ export const THEMES = {
 
 export const THEME_LIST = Object.values(THEMES).map(t => ({ ...t, colors: flattenColors(t.tokens) }));
 export const DEFAULT_THEME = 'slate';
+
+/* ──────────────────────────────────────────────────────────────
+   커스텀 강조색(accent) 오버라이드
+   ・사용자가 컬러 피커로 고른 accent 를 베이스 테마 위에 덮어쓴다.
+   ・accent 그룹 + 로고색만 교체 → 표면 틴트(사이드바/헤더)는 베이스 유지.
+   ────────────────────────────────────────────────────────────── */
+function clampHex(h) {
+  if (!h) return null;
+  const s = h.trim();
+  return /^#([0-9a-fA-F]{6})$/.test(s) ? s.toLowerCase() : null;
+}
+function hexToRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+function rgbToHex({ r, g, b }) {
+  const to = (v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0');
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+/* ratio>0 이면 흰색과 혼합(밝게), ratio<0 이면 검정과 혼합(어둡게) */
+function mix(hex, ratio) {
+  const { r, g, b } = hexToRgb(hex);
+  const t = ratio >= 0 ? 255 : 0;
+  const p = Math.abs(ratio);
+  return rgbToHex({ r: r + (t - r) * p, g: g + (t - g) * p, b: b + (t - b) * p });
+}
+
+/* 베이스 테마 객체에 커스텀 accent 를 적용한 새 테마 객체를 반환 */
+export function applyCustomAccent(base, accentHex) {
+  const accent = clampHex(accentHex);
+  if (!accent) return base;
+  const { r, g, b } = hexToRgb(accent);
+  const dark = mix(accent, -0.28);
+  const light = mix(accent, 0.4);
+  return {
+    ...base,
+    tokens: {
+      ...base.tokens,
+      accent: { base: accent, light, mid: accent, dark, rgb: `${r},${g},${b}` },
+      misc: { ...base.tokens.misc, logoA: dark, logoB: accent, logoIcon: accent },
+    },
+  };
+}

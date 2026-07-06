@@ -10,6 +10,7 @@ const { scheduleNotifications } = require('./services/notificationService');
 const { scheduleRetention } = require('./services/retentionService');
 const { scheduleAnomalyScan } = require('./services/anomalyService');
 const { auditForbidden } = require('./middlewares/auditLogger');
+const { piiGuard } = require('./middlewares/piiGuard');
 const { setupSocketIO } = require('./socket');
 
 const app = express();
@@ -84,6 +85,9 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // 권한거부(403) 자동 감사로깅 — 권한 탐색 시도 탐지용
 app.use('/api', auditForbidden);
 
+// 개인정보/신용정보 입력 차단 (주민번호·카드번호·계좌번호·연락처) — 쓰기 요청 본문 스캔
+app.use('/api', piiGuard);
+
 // API 라우터
 app.use('/api', routes);
 
@@ -140,6 +144,7 @@ linkedRoomService.setIO(io);
 
 server.listen(PORT, () => {
   console.log(`백엔드 서버 실행 중: http://localhost:${PORT}`);
+  require('./services/securitySettingsService').refresh(); // 보안 설정 DB 오버라이드 로드
   scheduleNotifications();
   scheduleRetention();    // 데이터 보유기간 자동 파기
   scheduleAnomalyScan();  // 비정상 접근 탐지

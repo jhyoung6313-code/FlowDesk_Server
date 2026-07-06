@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Drawer } from 'antd';
+import { Drawer, theme } from 'antd';
 
 /**
  * AntD Drawer 래퍼 - 좌우 너비 드래그 리사이즈 지원.
@@ -14,10 +14,21 @@ export default function ResizableDrawer({
   open,
   children,
   zIndex,
+  styles: stylesProp,
   ...rest
 }) {
+  const { token } = theme.useToken();
   const [curWidth, setCurWidth] = useState(width);
   const draggingRef = useRef(false);
+
+  // 드로어 바탕색을 회색 계열로 (라이트/다크 모드 모두 대응)
+  const grayBg = token.colorBgLayout;
+  const mergedStyles = {
+    ...stylesProp,
+    header: { background: grayBg, ...(stylesProp?.header || {}) },
+    body: { background: grayBg, ...(stylesProp?.body || {}) },
+    footer: { background: grayBg, ...(stylesProp?.footer || {}) },
+  };
 
   // 외부에서 초기 width가 바뀌면 반영 (드래그 중이 아닐 때만)
   useEffect(() => {
@@ -58,6 +69,7 @@ export default function ResizableDrawer({
     <>
       <Drawer
         {...rest}
+        styles={mergedStyles}
         open={open}
         placement={placement}
         width={curWidth}

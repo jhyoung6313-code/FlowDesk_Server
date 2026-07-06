@@ -8,7 +8,8 @@ const prisma = require('../lib/prisma');
 const { kickUserSockets } = require('../socket');
 const audit = require('../services/auditService');
 const pwPolicy = require('../utils/passwordPolicy');
-const { AUTH, LOCKOUT, AUDIT_ACTION } = require('../config/security');
+const { AUTH, AUDIT_ACTION } = require('../config/security');
+const settings = require('../services/securitySettingsService');
 
 // 미사용 화면 잠금 시간 허용값(분). 0 = 사용 안 함
 const ALLOWED_IDLE_TIMEOUTS = [0, 10, 30, 60, 120, 240];
@@ -24,7 +25,7 @@ function issueToken(user) {
       sn: user.sessionNonce,
     },
     process.env.JWT_SECRET,
-    { expiresIn: AUTH.JWT_EXPIRES_IN }
+    { expiresIn: settings.auth().JWT_EXPIRES_IN }
   );
 }
 
@@ -71,19 +72,20 @@ const login = async (req, res, next) => {
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
       // 실패 횟수 누적 → 임계치 초과 시 잠금
+      const LOCK = settings.lockout();
       const failed = (user.failedLoginCount || 0) + 1;
-      const lock = failed >= LOCKOUT.MAX_FAILED_ATTEMPTS;
+      const lock = failed >= LOCK.MAX_FAILED_ATTEMPTS;
       await prisma.user.update({
         where: { id: user.id },
         data: {
           failedLoginCount: lock ? 0 : failed,
-          lockedUntil: lock ? new Date(Date.now() + LOCKOUT.LOCK_DURATION_MINUTES * 60000) : user.lockedUntil,
+          lockedUntil: lock ? new Date(Date.now() + LOCK.LOCK_DURATION_MINUTES * 60000) : user.lockedUntil,
         },
       });
       await audit.record({ action: AUDIT_ACTION.LOGIN_FAIL, req, userId: user.id, username, resource: 'auth/login', success: false, detail: `attempt=${failed}` });
       if (lock) {
         await audit.record({ action: AUDIT_ACTION.ACCOUNT_LOCKED, req, userId: user.id, username, resource: 'auth/login', success: false });
-        return res.status(423).json({ error: `로그인 ${LOCKOUT.MAX_FAILED_ATTEMPTS}회 실패로 계정이 잠겼습니다. ${LOCKOUT.LOCK_DURATION_MINUTES}분 후 다시 시도해주세요.` });
+        return res.status(423).json({ error: `로그인 ${LOCK.MAX_FAILED_ATTEMPTS}회 실패로 계정이 잠겼습니다. ${LOCK.LOCK_DURATION_MINUTES}분 후 다시 시도해주세요.` });
       }
       return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
     }
@@ -92,7 +94,7 @@ const login = async (req, res, next) => {
     // [개발용 임시 제외] .env의 DISABLE_OTP=true 이면 OTP 단계를 통째로 건너뛴다.
     // 운영 배포 전 반드시 DISABLE_OTP를 제거(또는 false)할 것.
     const otpDisabled = process.env.DISABLE_OTP === 'true';
-    if (!otpDisabled && (AUTH.ENFORCE_OTP || user.totpEnabled)) {
+    if (!otpDisabled && (settings.auth().ENFORCE_OTP || user.totpEnabled)) {
       if (!user.totpEnabled || !user.totpSecret) {
         // 강제 정책인데 아직 OTP 미등록 → 등록 유도
         const preAuthToken = issueTempToken(user.id, 'pre-auth');
@@ -134,7 +136,7 @@ function buildLoginResponse(user) {
   return {
     token: issueToken(user),
     mustChangePassword: user.mustChangePassword || pwPolicy.isExpired(user.passwordChangedAt),
-    user: { id: user.id, username: user.username, displayName: user.displayName, role: user.role, totpEnabled: user.totpEnabled, avatarColor: user.avatarColor, idleTimeoutMin: user.idleTimeoutMin },
+    user: { id: user.id, username: user.username, displayName: user.displayName, role: user.role, totpEnabled: user.totpEnabled, avatarColor: user.avatarColor, idleTimeoutMin: user.idleTimeoutMin, permissions: user.permissions || [] },
   };
 }
 
@@ -326,7 +328,8 @@ const me = async (req, res, next) => {
       select: {
         id: true, username: true, displayName: true,
         role: true, isActive: true, totpEnabled: true, createdAt: true, avatarColor: true,
-        idleTimeoutMin: true, position: true, jobGrade: true,
+        idleTimeoutMin: true, position: true, jobGrade: true, permissions: true,
+        signImagePath: true, sealImagePath: true,
         departmentId: true, teamId: true,
         department: { select: { id: true, name: true } },
         team: { select: { id: true, name: true } },

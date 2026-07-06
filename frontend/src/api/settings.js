@@ -9,3 +9,7 @@ export const testEmailSettings = (data) => api.post('/settings/email/test', data
 export const getWidgetSettings = () => api.get('/settings/widgets').then((r) => r.data);
 
 export const updateWidgetSettings = (data) => api.put('/settings/widgets', data).then((r) => r.data);
+
+export const getThemePrefs = () => api.get('/settings/theme').then((r) => r.data);
+
+export const updateThemePrefs = (data) => api.put('/settings/theme', data).then((r) => r.data);

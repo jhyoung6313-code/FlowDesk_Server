@@ -5,7 +5,7 @@ import { Card } from 'antd';
 import useAuthStore from '../../store/authStore';
 import {
   AccountInfoSection, ProfileFieldsSection, AvatarColorSection,
-  IdleTimeoutSection, OtpSection, ChangePasswordForm,
+  IdleTimeoutSection, OtpSection, ChangePasswordForm, SignatureSection,
 } from './sections';
 
 /* ── 프로필 페이지 (비밀번호 강제 변경 플로우 등에서 사용) ── */
@@ -25,6 +25,7 @@ export default function ProfilePage() {
       <AccountInfoSection user={user} />
       <ProfileFieldsSection user={user} onChange={patchUser} />
       <AvatarColorSection user={user} onColorChange={(avatarColor) => patchUser({ avatarColor })} />
+      <SignatureSection user={user} onChange={patchUser} />
       <IdleTimeoutSection user={user} onChange={(idleTimeoutMin) => patchUser({ idleTimeoutMin })} />
 
       <div style={{ marginBottom: 24 }}>

@@ -21,6 +21,7 @@ export const NOTIFICATION_LABELS = {
   step_assigned: '스텝 배정',
   step_reminder: '스텝 미처리',
   security_alert: '보안 알림',
+  mention: '멘션',
 };
 
 // 사용자 아바타 배경색 (id 기반 순환)

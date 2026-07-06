@@ -5,7 +5,10 @@ import ResizableDrawer from '../common/ResizableDrawer';
 import Sidebar from './Sidebar';
 import AppHeader from './AppHeader';
 import SubHeader from './SubHeader';
+import ChatFab from './ChatFab';
+import AdminBackBar from './AdminBackBar';
 import NotificationToast from '../Notification/NotificationToast';
+import CommandPalette from '../common/CommandPalette';
 import useNotificationStore from '../../store/notificationStore';
 import useThemeStore from '../../store/themeStore';
 
@@ -27,6 +30,9 @@ function useIsMobile() {
 export default function MainLayout() {
   const location = useLocation();
   const isDashboard = location.pathname === '/';
+  // 관리자 하위 화면(콘솔 자체 제외)에서 콘솔 복귀 바 표시
+  const isAdminSubpage =
+    location.pathname.startsWith('/admin') && location.pathname !== '/admin';
 
   // 컨텍스트 패널 최소화 상태 (새로고침 후에도 유지)
   const [collapsed, setCollapsed] = useState(
@@ -114,10 +120,13 @@ export default function MainLayout() {
             flexDirection: 'column',
           }}
         >
+          {isAdminSubpage && <AdminBackBar />}
           <Outlet />
         </Content>
       </Layout>
       <NotificationToast />
+      <CommandPalette />
+      <ChatFab />
     </Layout>
   );
 }

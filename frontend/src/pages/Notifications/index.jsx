@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   List, Button, Typography, Tag, Space, Empty, Badge, Row,
 } from 'antd';
@@ -17,14 +18,22 @@ const NOTIFICATION_COLORS = {
   step_assigned: 'processing',
   step_reminder: 'purple',
   security_alert: 'error',
+  mention: 'magenta',
 };
 
 export default function NotificationsPage() {
   const { notifications, unreadCount, fetch, markRead, markAllRead } = useNotificationStore();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetch();
   }, []);
+
+  const handleClick = (item) => {
+    if (!item.isRead) markRead(item.id);
+    if (item.link) navigate(item.link);
+    else if (item.task?.id) navigate(`/tasks?taskId=${item.task.id}`);
+  };
 
   return (
     <div>
@@ -60,7 +69,7 @@ export default function NotificationsPage() {
                 cursor: 'pointer',
                 border: item.isRead ? '1px solid var(--fd-border)' : '1px solid #91caff',
               }}
-              onClick={() => !item.isRead && markRead(item.id)}
+              onClick={() => handleClick(item)}
               actions={[
                 !item.isRead && (
                   <Button

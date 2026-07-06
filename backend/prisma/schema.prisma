@@ -28,8 +28,14 @@ model User {
   team             Team?             @relation("UserTeam", fields: [teamId], references: [id])
   position         String?           @map("position") @db.VarChar(100)
   jobGrade         String?           @map("job_grade") @db.VarChar(100)
+  signImagePath    String?           @map("sign_image_path") @db.VarChar(255)
+  sealImagePath    String?           @map("seal_image_path") @db.VarChar(255)
   // ── 미사용 화면 잠금 시간(분). 0 = 사용 안 함 ──────────
   idleTimeoutMin   Int               @default(60) @map("idle_timeout_min")
+  // ── 권한 그룹(조합형) — role(admin/member)과 별개로 추가 부여하는 권한 집합 ──
+  // 예: 일반사용자(member) + 'PII_AUDIT'(감사권한). PERMISSIONS 레지스트리로 확장.
+  // 직무분리(ISMS-P): 시스템 관리자여도 해당 권한이 없으면 그 기능을 쓸 수 없다.
+  permissions      String[]          @default([])
   // ── 금융권 보안 정책 필드 ──────────────────────────────
   failedLoginCount Int               @default(0) @map("failed_login_count")
   lockedUntil      DateTime?         @map("locked_until")
@@ -40,6 +46,7 @@ model User {
   sessionNonce     String?           @map("session_nonce") @db.VarChar(64)
   passwordHistories PasswordHistory[]
   auditLogs        AuditLog[]
+  piiBlockLogs     PiiBlockLog[]
   calendarNotes    CalendarNote[]    @relation("CalendarNoteCreator")
   memos            Memo[]            @relation("MemoCreator")
   milestones       Milestone[]
@@ -100,6 +107,8 @@ model User {
   mailComments         InternalMailComment[]   @relation("MailCommentUser")
   mailLabels           InternalMailLabel[]     @relation("MailLabelOwner")
   dashboardBbsCategories UserDashboardBbsCategory[]
+  scheduleEventsCreated  ScheduleEvent[]         @relation("ScheduleEventCreator")
+  scheduleAssignments    ScheduleEventAssignee[]
 
   @@map("users")
 }
@@ -296,6 +305,72 @@ model Memo {
   @@map("memos")
 }
 
+/// 자원(회의실 · 법인차량) 마스터 — 일정에서 예약 대상으로 연결
+model ScheduleResource {
+  id          Int             @id @default(autoincrement())
+  kind        String          @db.VarChar(20)   // 'room' | 'vehicle'
+  name        String          @db.VarChar(100)
+  description String?         @db.VarChar(200)   // 정원/차종/번호판 등
+  sortOrder   Int             @default(0) @map("sort_order")
+  isActive    Boolean         @default(true) @map("is_active")
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+  events      ScheduleEvent[] @relation("ScheduleEventResource")
+
+  @@index([kind])
+  @@map("schedule_resources")
+}
+
+/// 일자별 일정(휴가/반차/회의/외근/출장/재택/차량 등) — 날짜 단위 표시
+model ScheduleEvent {
+  id         Int                     @id @default(autoincrement())
+  type       String                  @db.VarChar(20)   // vacation/half_day/meeting/field_work/business_trip/remote/vehicle/etc
+  title      String?                 @db.VarChar(200)
+  startDate  DateTime                @map("start_date") @db.Date
+  endDate    DateTime                @map("end_date") @db.Date
+  allDay     Boolean                 @default(true) @map("all_day")
+  startTime  String?                 @map("start_time") @db.VarChar(5)   // 'HH:mm'
+  endTime    String?                 @map("end_time") @db.VarChar(5)
+  location   String?                 @db.VarChar(200)
+  memo       String?                 @db.VarChar(500)
+  resourceId Int?                    @map("resource_id")
+  resource   ScheduleResource?       @relation("ScheduleEventResource", fields: [resourceId], references: [id], onDelete: SetNull)
+  createdBy  Int                     @map("created_by")
+  creator    User                    @relation("ScheduleEventCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  createdAt  DateTime                @default(now()) @map("created_at")
+  updatedAt  DateTime                @updatedAt @map("updated_at")
+  assignees  ScheduleEventAssignee[]
+
+  @@index([startDate, endDate])
+  @@index([type])
+  @@map("schedule_events")
+}
+
+/// 일정 대상자 (타인 다중 지정 가능)
+model ScheduleEventAssignee {
+  eventId Int           @map("event_id")
+  userId  Int           @map("user_id")
+  event   ScheduleEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, userId])
+  @@index([userId])
+  @@map("schedule_event_assignees")
+}
+
+/// 공휴일 — 임시공휴일/대체공휴일 등 관리자가 등록(내장 기본값을 덮어씀)
+model Holiday {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @unique @db.Date
+  name      String   @db.VarChar(100)
+  type      String   @default("temporary") @db.VarChar(20) // temporary(임시) | substitute(대체) | legal(법정) | etc
+  createdBy Int?     @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("holidays")
+}
+
 model WbsProject {
   id          Int                @id @default(autoincrement())
   name        String             @db.VarChar(200)
@@ -484,6 +559,29 @@ model AuditLog {
   @@index([action, createdAt])
   @@index([createdAt])
   @@map("audit_logs")
+}
+
+// ── 개인정보/신용정보 입력 차단 로그 ───────────────────────────
+// 텍스트 입력에서 주민번호·카드번호·계좌번호·연락처(010) 등이 탐지되어
+// 저장이 거부된 시도를 기록한다. 원문은 저장하지 않으며(관리자 포함 열람 불가),
+// 기록 식별용 마스킹본(masked)만 남긴다.
+model PiiBlockLog {
+  id         Int      @id @default(autoincrement())
+  userId     Int?     @map("user_id")            // 미인증 요청 시 null
+  username   String?  @db.VarChar(50)            // 사용자 삭제돼도 추적 가능하도록 스냅샷
+  piiType    String   @map("pii_type") @db.VarChar(30)  // 주민등록번호/신용카드번호/계좌번호/연락처
+  fieldPath  String?  @map("field_path") @db.VarChar(100) // 탐지된 body 필드 경로
+  masked     String?                             // 표시용 마스킹본(부분 비식별) — 원문 미저장
+  endpoint   String?  @db.VarChar(120)           // 차단된 요청 METHOD PATH
+  ipAddress  String?  @map("ip_address") @db.VarChar(45)
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([piiType, createdAt])
+  @@index([createdAt])
+  @@map("pii_block_logs")
 }
 
 // ── 비밀번호 재사용 금지 이력 ──────────────────────────────
@@ -1357,6 +1455,7 @@ enum ApprovalStepStatus {
   pending
   approved
   rejected
+  skipped
 }
 
 model ApprovalFormType {
@@ -1386,6 +1485,7 @@ model ApprovalTemplate {
   description String?          @db.VarChar(500)
   fieldsJson  String           @map("fields_json") @db.Text
   lineJson    String?          @map("line_json") @db.Text
+  code        String           @default("DOC") @db.VarChar(10)
   isActive    Boolean          @default(true) @map("is_active")
   createdBy   Int              @map("created_by")
   createdAt   DateTime         @default(now()) @map("created_at")
@@ -1405,6 +1505,8 @@ model ApprovalDocument {
   status      ApprovalStatus       @default(draft)
   currentStep Int                  @default(0) @map("current_step")
   totalSteps  Int                  @default(0) @map("total_steps")
+  docNo        String?             @map("doc_no") @db.VarChar(30)
+  rejectedStep Int?                @map("rejected_step")
   createdBy   Int                  @map("created_by")
   createdAt   DateTime             @default(now()) @map("created_at")
   updatedAt   DateTime             @updatedAt @map("updated_at")
@@ -1416,7 +1518,17 @@ model ApprovalDocument {
   comments    ApprovalComment[]
 
   @@index([createdBy, delYn])
+  @@index([docNo])
   @@map("approval_documents")
+}
+
+model ApprovalDocSeq {
+  formCode String @map("form_code") @db.VarChar(10)
+  year     Int
+  seq      Int    @default(0)
+
+  @@id([formCode, year])
+  @@map("approval_doc_seq")
 }
 
 model ApprovalStep {
@@ -1424,14 +1536,20 @@ model ApprovalStep {
   documentId Int                @map("document_id")
   stepOrder  Int                @map("step_order")
   approverId Int                @map("approver_id")
+  type       String             @default("approval")
   status     ApprovalStepStatus @default(pending)
   comment    String?            @db.VarChar(500)
   actionAt   DateTime?          @map("action_at")
+  approverNameSnap  String?     @map("approver_name_snap")  @db.VarChar(100)
+  approverTitleSnap String?     @map("approver_title_snap") @db.VarChar(100)
+  signImagePath     String?     @map("sign_image_path")     @db.VarChar(255)
+  signedIp          String?     @map("signed_ip")           @db.VarChar(45)
+  actingType        String?     @map("acting_type")         @db.VarChar(10)
   createdAt  DateTime           @default(now()) @map("created_at")
   document   ApprovalDocument   @relation(fields: [documentId], references: [id], onDelete: Cascade)
   approver   User               @relation("ApprovalStepApprover", fields: [approverId], references: [id])
 
-  @@unique([documentId, stepOrder])
+  @@index([documentId, stepOrder])
   @@map("approval_steps")
 }
 

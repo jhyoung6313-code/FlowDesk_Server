@@ -13,7 +13,7 @@ const authenticate = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, username: true, displayName: true, role: true, isActive: true, passwordChangedAt: true, sessionNonce: true },
+      select: { id: true, username: true, displayName: true, role: true, isActive: true, passwordChangedAt: true, sessionNonce: true, permissions: true },
     });
 
     if (!user || !user.isActive) {
@@ -31,7 +31,7 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ error: '다른 기기에서 로그인되어 현재 세션이 종료되었습니다.', code: 'SESSION_REPLACED' });
     }
 
-    req.user = { id: user.id, username: user.username, displayName: user.displayName, role: user.role, isActive: user.isActive };
+    req.user = { id: user.id, username: user.username, displayName: user.displayName, role: user.role, isActive: user.isActive, permissions: user.permissions || [] };
     next();
   } catch (err) {
     return res.status(401).json({ error: '토큰이 유효하지 않거나 만료되었습니다.' });

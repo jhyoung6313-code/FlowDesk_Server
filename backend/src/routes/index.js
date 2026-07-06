@@ -8,6 +8,8 @@ const teamRoutes = require('./teams');
 const taskRoutes = require('./tasks');
 const notificationRoutes = require('./notifications');
 const calendarNoteRoutes = require('./calendarNotes');
+const scheduleRoutes = require('./schedules');
+const holidayRoutes = require('./holidays');
 const memoRoutes = require('./memos');
 const wbsRoutes = require('./wbs');
 const recurringTaskRoutes = require('./recurringTasks');
@@ -30,6 +32,7 @@ const searchController = require('../controllers/searchController');
 const bbsRoutes = require('./bbs');
 const approvalRoutes = require('./approvals');
 const mailRoutes = require('./mail');
+const piiBlockRoutes = require('./piiBlocks');
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
@@ -38,6 +41,8 @@ router.use('/teams', teamRoutes);
 router.use('/tasks', taskRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/calendar-notes', calendarNoteRoutes);
+router.use('/schedules', scheduleRoutes);
+router.use('/holidays', holidayRoutes);
 router.use('/memos', memoRoutes);
 router.use('/wbs', wbsRoutes);
 router.use('/recurring-tasks', recurringTaskRoutes);
@@ -54,6 +59,7 @@ router.use('/board-categories', boardCategoryRoutes);
 router.use('/boards', boardRoutes);
 router.use('/playbooks', playbookRoutes);
 router.use('/runs', runRoutes);
+router.use('/pii-blocks', piiBlockRoutes);
 
 // BBS 게시판 + 전자결재 (라우트 내부에서 경로 처리)
 router.use('/', bbsRoutes);

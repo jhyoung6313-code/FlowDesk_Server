@@ -1,10 +1,14 @@
 import { useEffect, useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Spin, message } from 'antd';
+import { Spin, message, Popover, Checkbox, Button, Empty as AntEmpty } from 'antd';
+import { SettingOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { getTasks } from '../../api/tasks';
+import { getMailList } from '../../api/mail';
+import { getBbsCategories, getBbsPosts, getDashboardBbsCategories, setPersonalDashboardBbsCategories } from '../../api/bbs';
+import { getApprovals } from '../../api/approval';
 import useTaskStore from '../../store/taskStore';
 import useAuthStore from '../../store/authStore';
 import useThemeStore from '../../store/themeStore';
@@ -13,6 +17,7 @@ import { isOverdue } from '../../utils/dday';
 import { AVATAR_COLOR_PRESETS } from '../../utils/colors';
 import MemoCard from '../../components/Memo/MemoCard';
 import TaskForm from '../../components/Task/TaskForm';
+import ScheduleWidget from '../../components/Schedule/ScheduleWidget';
 
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
@@ -58,6 +63,68 @@ export default function DashboardPage() {
   const pinnedMemos  = useMemo(() => memos.filter((m) => m.pinned), [memos]);
 
   useEffect(() => { fetchMemos(); }, [fetchMemos]);
+
+  /* ── 하단 위젯: 받은메일 · 게시판 · 결재 ── */
+  const [mails,    setMails]    = useState([]);
+  const [bbsAdminCats,    setBbsAdminCats]    = useState([]);  // 관리자 지정 (우선)
+  const [bbsPersonalCats, setBbsPersonalCats] = useState([]);  // 개인 지정
+  const [bbsCatId, setBbsCatId] = useState(() => {
+    const v = localStorage.getItem('dashboard_bbs_cat');
+    return v ? Number(v) : null;
+  });
+  const [bbsPosts, setBbsPosts] = useState([]);
+  const [approvals, setApprovals] = useState([]);
+
+  // 개인 게시판 설정 Popover
+  const [allCats, setAllCats] = useState([]);
+  const [prefOpen, setPrefOpen] = useState(false);
+  const [prefSel, setPrefSel] = useState([]);
+
+  const loadDashboardBbs = useCallback(() => {
+    return getDashboardBbsCategories()
+      .then(({ admin = [], personal = [] }) => {
+        setBbsAdminCats(admin);
+        setBbsPersonalCats(personal);
+        // 선택 카테고리 보정: 현재 선택이 목록에 없으면 admin → personal 첫 항목
+        const ids = [...admin, ...personal].map((c) => c.id);
+        setBbsCatId((prev) => (prev && ids.includes(prev)) ? prev : (ids[0] ?? null));
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    getMailList({ folder: 'inbox', page: 1, limit: 6 })
+      .then((d) => setMails(d.mails || [])).catch(() => {});
+    getApprovals({ tab: 'pending', page: 1, limit: 6 })
+      .then((d) => setApprovals(d.documents || [])).catch(() => {});
+    loadDashboardBbs();
+  }, [loadDashboardBbs]);
+
+  // 개인 설정 Popover 열 때: 전체 활성 카테고리 로드 + 현재 개인 선택 반영
+  const openPref = useCallback(() => {
+    getBbsCategories()
+      .then((cats) => setAllCats((cats || []).filter((c) => c.isActive !== false)))
+      .catch(() => {});
+    setPrefSel(bbsPersonalCats.map((c) => c.id));
+    setPrefOpen(true);
+  }, [bbsPersonalCats]);
+
+  const savePref = useCallback(async () => {
+    try {
+      await setPersonalDashboardBbsCategories(prefSel);
+      setPrefOpen(false);
+      await loadDashboardBbs();
+    } catch {
+      message.error('개인 게시판 설정 저장에 실패했습니다.');
+    }
+  }, [prefSel, loadDashboardBbs]);
+
+  useEffect(() => {
+    if (!bbsCatId) { setBbsPosts([]); return; }
+    localStorage.setItem('dashboard_bbs_cat', String(bbsCatId));
+    getBbsPosts({ categoryId: bbsCatId, page: 1, limit: 6 })
+      .then((d) => setBbsPosts(d.posts || [])).catch(() => {});
+  }, [bbsCatId]);
 
   const loadTasks = useCallback(() => {
     setLoading(true);
@@ -187,6 +254,27 @@ export default function DashboardPage() {
     low:    { label: '낮음', bg: '#F0FDF4', color: '#15803D' },
   };
 
+  /* ── 위젯 공통 스타일 ── */
+  const wHoverBg = isDark ? 'rgba(255,255,255,.04)' : '#F8FAFC';
+  const wCard = {
+    background: D.cardBg, border: `1px solid ${D.cardBor}`, borderRadius: 14,
+    display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%', minHeight: 0,
+  };
+  const wHead = {
+    display: 'flex', alignItems: 'center', gap: 9, padding: '12px 15px',
+    borderBottom: `1px solid ${D.border}`, flexShrink: 0,
+  };
+  const wIco  = { width: 28, height: 28, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 };
+  const wTtl  = { fontSize: 13.5, fontWeight: 700, flex: 1, color: D.text1 };
+  const wBadge= { fontSize: 10.5, fontWeight: 700, padding: '2px 9px', borderRadius: 20 };
+  const wMore = { fontSize: 11.5, color: D.text2, cursor: 'pointer', whiteSpace: 'nowrap' };
+  const wBody = { flex: 1, overflowY: 'auto', padding: '4px 0' };
+  const wEmpty= { padding: '36px 16px', textAlign: 'center', color: D.text2, fontSize: 12.5 };
+  const wRow  = { display: 'flex', gap: 10, padding: '9px 15px', cursor: 'pointer', borderBottom: `1px solid ${D.border}` };
+  const ell   = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+
+  const unreadCount = mails.filter((m) => !m.isRead).length;
+
   return (
     <div style={{
       flex: 1,
@@ -197,51 +285,75 @@ export default function DashboardPage() {
       overflow: 'hidden',
     }}>
 
-      {/* ── 고정(핀)한 메모 띠 ── */}
-      {pinnedMemos.length > 0 && (
-        <div style={{
-          flexShrink: 0,
-          padding: '12px 24px 4px',
-          borderBottom: `1px solid ${D.border}`,
-          background: D.stripBg,
-        }}>
+      {/* ── 고정 메모 + 주간 일정·자원 위젯 (나란히) ── */}
+      <div style={{
+        flexShrink: 0,
+        padding: '12px 24px 8px',
+        borderBottom: `1px solid ${D.border}`,
+        background: D.stripBg,
+        display: 'flex',
+        gap: 16,
+        alignItems: 'stretch',
+      }}>
+        {/* 좌: 고정 메모 */}
+        {pinnedMemos.length > 0 && (
+          <div style={{ flexShrink: 0, maxWidth: 500, display: 'flex', flexDirection: 'column' }}>
+            <div style={{
+              fontSize: 9.5, fontWeight: 700, color: D.text2,
+              letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8,
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}>
+              📌 고정 메모
+              <span
+                onClick={() => navigate('/memos')}
+                style={{ cursor: 'pointer', color: D.text2, fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}
+              >
+                · 전체 보기
+              </span>
+            </div>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', overflowY: 'auto', alignContent: 'flex-start', flex: 1 }}>
+              {pinnedMemos.map((m) => (
+                <div key={m.id} style={{ width: 230, flexShrink: 0 }}>
+                  <MemoCard
+                    memo={m}
+                    mode="compact"
+                    onSave={(id, patch) => updateMemo(id, patch)}
+                    onDelete={(id) => removeMemo(id)}
+                    onTogglePin={(memo) => updateMemo(memo.id, { pinned: !memo.pinned })}
+                    onColor={(memo, color) => { if (memo.color !== color) updateMemo(memo.id, { color }); }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* 우: 주간 일정 · 자원 위젯 */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           <div style={{
             fontSize: 9.5, fontWeight: 700, color: D.text2,
             letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8,
-            display: 'flex', alignItems: 'center', gap: 6,
-          }}>
-            📌 고정 메모
-            <span
-              onClick={() => navigate('/memos')}
-              style={{ cursor: 'pointer', color: D.text2, fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}
-            >
-              · 전체 보기
-            </span>
-          </div>
-          <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 8 }}>
-            {pinnedMemos.map((m) => (
-              <div key={m.id} style={{ width: 230, flexShrink: 0 }}>
-                <MemoCard
-                  memo={m}
-                  mode="compact"
-                  onSave={(id, patch) => updateMemo(id, patch)}
-                  onDelete={(id) => removeMemo(id)}
-                  onTogglePin={(memo) => updateMemo(memo.id, { pinned: !memo.pinned })}
-                  onColor={(memo, color) => { if (memo.color !== color) updateMemo(memo.id, { color }); }}
-                />
-              </div>
-            ))}
-          </div>
+          }}>📅 일정 · 자원 현황</div>
+          <ScheduleWidget isDark={isDark} D={D} />
         </div>
-      )}
+      </div>
 
-      {/* ── 칸반 보드 ── */}
+      {/* ── 업무 칸반 보드 섹션 ── */}
+      <div style={{
+        flex: 1, minHeight: 0,
+        display: 'flex', flexDirection: 'column',
+        padding: '12px 24px 0',
+        boxSizing: 'border-box',
+      }}>
+      <div style={{
+        fontSize: 9.5, fontWeight: 700, color: D.text2,
+        letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8, flexShrink: 0,
+      }}>🗂 업무 보드</div>
       <div style={{
         display: 'flex',
         flexDirection: 'row',
         alignItems: 'flex-start',
         gap: 12,
-        padding: '14px 24px',
         flex: 1,
         minHeight: 0,
         overflow: 'hidden',
@@ -422,6 +534,211 @@ export default function DashboardPage() {
             )}
           </div>
         ))}
+      </div>
+      </div>
+
+      {/* ── 받은 항목 · 게시판 · 결재 위젯 섹션 ── */}
+      <div style={{
+        flex: 1, minHeight: 0,
+        display: 'flex', flexDirection: 'column',
+        padding: '12px 24px 16px',
+        borderTop: `1px solid ${D.border}`,
+        background: D.stripBg,
+        boxSizing: 'border-box',
+      }}>
+        <div style={{
+          fontSize: 9.5, fontWeight: 700, color: D.text2,
+          letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8, flexShrink: 0,
+        }}>📥 받은 항목 · 게시판 · 결재</div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14, flex: 1, minHeight: 0 }}>
+
+          {/* ① 받은 메일 */}
+          <div style={wCard}>
+            <div style={wHead}>
+              <div style={{ ...wIco, background: isDark ? 'rgba(59,130,246,.15)' : '#EFF6FF', color: '#3B82F6' }}>✉️</div>
+              <div style={wTtl}>받은 메일</div>
+              {unreadCount > 0 && <span style={{ ...wBadge, background: isDark ? 'rgba(59,130,246,.15)' : '#EFF6FF', color: '#3B82F6' }}>{unreadCount}</span>}
+              <span style={wMore} onClick={() => navigate('/mail')}>전체보기 →</span>
+            </div>
+            <div style={wBody}>
+              {mails.length === 0 ? (
+                <div style={wEmpty}>받은 메일이 없습니다</div>
+              ) : mails.map((m) => (
+                <div key={m.id} style={wRow}
+                  onClick={() => navigate(`/mail?id=${m.id}`)}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = wHoverBg; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <span style={{
+                    width: 30, height: 30, borderRadius: '50%', flexShrink: 0, color: '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700,
+                    background: nameColor(m.from?.displayName),
+                  }}>{m.from?.displayName?.charAt(0) || '?'}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ ...ell, flex: 1, fontSize: 12.5, fontWeight: m.isRead ? 500 : 800, color: D.text1 }}>
+                        {m.from?.displayName || '-'}
+                      </span>
+                      <span style={{ fontSize: 10.5, color: D.text2, flexShrink: 0 }}>{dayjs(m.createdAt).fromNow()}</span>
+                    </div>
+                    <div style={{ ...ell, fontSize: 12.5, marginTop: 2, fontWeight: m.isRead ? 400 : 700, color: m.isRead ? D.text2 : D.text1 }}>
+                      {m.priority === 'urgent' && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: '#FEE2E2', color: '#DC2626', marginRight: 5 }}>긴급</span>}
+                      {m.subject || '(제목 없음)'}
+                    </div>
+                  </div>
+                  {!m.isRead && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3B82F6', flexShrink: 0, marginTop: 11 }} />}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ② 게시판 (선택 카테고리) */}
+          <div style={wCard}>
+            <div style={wHead}>
+              <div style={{ ...wIco, background: isDark ? 'rgba(5,150,105,.15)' : '#F0FDF4', color: '#059669' }}>📋</div>
+              <div style={wTtl}>게시판</div>
+              <span style={wMore} onClick={() => navigate(bbsCatId ? `/bbs?categoryId=${bbsCatId}` : '/bbs')}>전체보기 →</span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '9px 15px 3px', flexWrap: 'wrap', flexShrink: 0 }}>
+              {bbsAdminCats.map((c) => {
+                const on = c.id === bbsCatId;
+                return (
+                  <span key={`a${c.id}`} onClick={() => setBbsCatId(c.id)} style={{
+                    fontSize: 11, padding: '3px 10px', borderRadius: 20, cursor: 'pointer',
+                    border: `1px solid ${on ? '#3B82F6' : D.border}`,
+                    background: on ? '#3B82F6' : 'transparent',
+                    color: on ? '#fff' : D.text2,
+                  }}>{c.icon ? `${c.icon} ` : ''}{c.name}</span>
+                );
+              })}
+
+              {/* 관리자 지정 / 개인 지정 구분선 */}
+              {bbsPersonalCats.length > 0 && (
+                <span style={{ width: 1, height: 16, background: D.border, margin: '0 2px', flexShrink: 0 }} />
+              )}
+
+              {/* 개인 지정 게시판 — 흐린(secondary) 칩 */}
+              {bbsPersonalCats.map((c) => {
+                const on = c.id === bbsCatId;
+                return (
+                  <span key={`p${c.id}`} onClick={() => setBbsCatId(c.id)} style={{
+                    fontSize: 11, padding: '3px 10px', borderRadius: 20, cursor: 'pointer',
+                    border: `1px dashed ${on ? '#3B82F6' : D.border}`,
+                    background: on ? (isDark ? 'rgba(59,130,246,.25)' : '#EFF6FF') : 'transparent',
+                    color: on ? '#3B82F6' : D.text2,
+                    opacity: on ? 1 : 0.7,
+                  }}>{c.icon ? `${c.icon} ` : ''}{c.name}</span>
+                );
+              })}
+
+              {/* 개인 설정 버튼 */}
+              <Popover
+                open={prefOpen}
+                onOpenChange={(v) => (v ? openPref() : setPrefOpen(false))}
+                trigger="click"
+                placement="bottomRight"
+                content={(
+                  <div style={{ width: 220 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8 }}>내 대시보드 게시판</div>
+                    {allCats.length === 0 ? (
+                      <AntEmpty image={AntEmpty.PRESENTED_IMAGE_SIMPLE} description="게시판 없음" />
+                    ) : (
+                      <div style={{ maxHeight: 240, overflowY: 'auto' }}>
+                        <Checkbox.Group
+                          value={prefSel}
+                          onChange={setPrefSel}
+                          style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
+                        >
+                          {allCats.map((c) => {
+                            const isAdminPinned = bbsAdminCats.some((a) => a.id === c.id);
+                            return (
+                              <Checkbox key={c.id} value={c.id} disabled={isAdminPinned}>
+                                {c.icon ? `${c.icon} ` : ''}{c.name}
+                                {isAdminPinned && <span style={{ fontSize: 10, color: D.text2, marginLeft: 4 }}>(관리자 지정)</span>}
+                              </Checkbox>
+                            );
+                          })}
+                        </Checkbox.Group>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 6, marginTop: 10 }}>
+                      <Button size="small" onClick={() => setPrefOpen(false)}>취소</Button>
+                      <Button size="small" type="primary" onClick={savePref}>저장</Button>
+                    </div>
+                  </div>
+                )}
+              >
+                <span style={{
+                  fontSize: 11, padding: '3px 8px', borderRadius: 20, cursor: 'pointer',
+                  color: D.text2, display: 'inline-flex', alignItems: 'center', gap: 3,
+                }}>
+                  <SettingOutlined style={{ fontSize: 11 }} /> 설정
+                </span>
+              </Popover>
+            </div>
+            <div style={wBody}>
+              {bbsPosts.length === 0 ? (
+                <div style={wEmpty}>{bbsCatId ? '게시글이 없습니다' : '카테고리를 선택하세요'}</div>
+              ) : bbsPosts.map((p) => (
+                <div key={p.id} style={wRow}
+                  onClick={() => navigate(`/bbs?categoryId=${bbsCatId}&postId=${p.id}`)}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = wHoverBg; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ ...ell, fontSize: 12.5, fontWeight: p.isPinned ? 700 : 600, color: D.text1 }}>
+                      {p.isPinned && <span style={{ marginRight: 4 }}>📌</span>}{p.title}
+                    </div>
+                    <div style={{ fontSize: 10.5, color: D.text2, marginTop: 4, display: 'flex', gap: 9 }}>
+                      <span>{p.creator?.displayName || '-'}</span>
+                      <span>{dayjs(p.createdAt).format('MM/DD')}</span>
+                      <span>👁 {p.viewCount ?? 0}</span>
+                      {p._count?.comments > 0 && <span>💬 {p._count.comments}</span>}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ③ 내가 결재할 전자결재 */}
+          <div style={wCard}>
+            <div style={wHead}>
+              <div style={{ ...wIco, background: isDark ? 'rgba(217,119,6,.15)' : '#FFFBEB', color: '#D97706' }}>🖋️</div>
+              <div style={wTtl}>결재 대기 문서</div>
+              {approvals.length > 0 && <span style={{ ...wBadge, background: isDark ? 'rgba(217,119,6,.15)' : '#FFFBEB', color: '#D97706' }}>{approvals.length}</span>}
+              <span style={wMore} onClick={() => navigate('/approvals')}>전체보기 →</span>
+            </div>
+            <div style={wBody}>
+              {approvals.length === 0 ? (
+                <div style={wEmpty}>결재할 문서가 없습니다</div>
+              ) : approvals.map((d) => (
+                <div key={d.id} style={wRow}
+                  onClick={() => navigate(`/approvals/${d.id}`)}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = wHoverBg; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {d.template?.formType?.name && (
+                        <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 7px', borderRadius: 5, background: isDark ? 'rgba(217,119,6,.15)' : '#FFFBEB', color: '#D97706', border: `1px solid ${isDark ? 'rgba(217,119,6,.3)' : '#FDE68A'}` }}>
+                          {d.template.formType.name}
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ ...ell, fontSize: 12.5, fontWeight: 600, color: D.text1, marginTop: 6 }}>{d.title}</div>
+                    <div style={{ fontSize: 10.5, color: D.text2, marginTop: 4 }}>
+                      기안: {d.creator?.displayName || '-'} · {dayjs(d.createdAt).fromNow()}
+                      {d.totalSteps ? ` · ${d.currentStep}/${d.totalSteps} 단계` : ''}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </div>
       </div>
 
       {/* ── 업무 등록 폼 ── */}

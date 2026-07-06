@@ -4,6 +4,7 @@ import { Layout, Space, Typography, Badge, Tooltip, Popover, List, Button, Empty
 import {
   BellOutlined,
   BgColorsOutlined,
+  SearchOutlined,
   CheckOutlined,
   UnorderedListOutlined,
   MessageOutlined,
@@ -13,17 +14,22 @@ import {
   SnippetsOutlined,
   BulbOutlined,
   BulbFilled,
+  ReadOutlined,
+  FileDoneOutlined,
+  MailOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
+import { getApprovalPendingCount } from '../../api/approval';
+import { getUnreadCount as getMailUnreadCount } from '../../api/mail';
+import useAuthStore from '../../store/authStore';
 import dayjs from 'dayjs';
 import useNotificationStore from '../../store/notificationStore';
 import useThemeStore from '../../store/themeStore';
 import useChatStore from '../../store/chatStore';
 import useUnreadStore from '../../store/unreadStore';
 import { THEME_LIST } from '../../utils/themes';
-import { openChatPopup as openChatPopupWindow } from '../../utils/chatPopup';
 import { NOTIFICATION_LABELS } from '../../utils/colors';
 import { calcDday, getDdayColor } from '../../utils/dday';
-import MemoWidget from '../Memo/MemoWidget';
 
 const { Header } = Layout;
 
@@ -38,24 +44,45 @@ function FlowdeskIcon({ size = 20, color }) {
   );
 }
 
-function ChatBubbleIcon({ size = 17, color = '#22c55e' }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ display: 'block' }}>
-      <path
-        d="M20 2H4C2.9 2 2 2.9 2 4v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"
-        fill={color}
-      />
-      <circle cx="8"  cy="12" r="1.4" fill="white" />
-      <circle cx="12" cy="12" r="1.4" fill="white" />
-      <circle cx="16" cy="12" r="1.4" fill="white" />
-    </svg>
-  );
-}
-
 /* ── 테마 피커 팝오버 내용 ── */
-function ThemePicker({ themeKey, setTheme, onClose }) {
+function ThemePicker({ themeKey, setTheme, isDark, toggleDark, customAccent, setCustomAccent, density, setDensity, onClose }) {
   return (
     <div style={{ width: 280, padding: '4px 0' }}>
+      {/* ── 라이트/다크 모드 토글 ── */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: 6,
+        padding: 4,
+        background: '#f1f5f9',
+        borderRadius: 12,
+        marginBottom: 16,
+      }}>
+        {[
+          { key: 'light', label: '라이트', icon: <BulbOutlined />, active: !isDark },
+          { key: 'dark',  label: '다크',   icon: <BulbFilled />,   active: isDark },
+        ].map((m) => (
+          <div
+            key={m.key}
+            onClick={() => { if (!m.active) toggleDark(); }}
+            style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              padding: '7px 0',
+              borderRadius: 9,
+              fontSize: 13,
+              fontWeight: m.active ? 700 : 500,
+              cursor: 'pointer',
+              background: m.active ? '#ffffff' : 'transparent',
+              color: m.active ? '#1e293b' : '#64748b',
+              boxShadow: m.active ? '0 1px 4px rgba(15,23,42,0.10)' : 'none',
+              transition: 'all 0.14s',
+            }}
+          >
+            {m.icon}{m.label}
+          </div>
+        ))}
+      </div>
+
       <div style={{
         fontSize: 12,
         fontWeight: 700,
@@ -73,7 +100,7 @@ function ThemePicker({ themeKey, setTheme, onClose }) {
         gap: 8,
       }}>
         {THEME_LIST.map((t) => {
-          const active = themeKey === t.key;
+          const active = themeKey === t.key && !customAccent;
           return (
             <div
               key={t.key}
@@ -149,6 +176,74 @@ function ThemePicker({ themeKey, setTheme, onClose }) {
           );
         })}
       </div>
+
+      {/* ── 커스텀 강조색 ── */}
+      <div style={{
+        fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.6px',
+        textTransform: 'uppercase', margin: '18px 0 10px', padding: '0 2px',
+      }}>
+        커스텀 강조색
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 2px' }}>
+        <label style={{
+          position: 'relative', width: 34, height: 34, borderRadius: 9, cursor: 'pointer',
+          border: `2px solid ${customAccent ? customAccent : '#e2e8f0'}`,
+          background: customAccent || '#ffffff', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          {!customAccent && <BgColorsOutlined style={{ color: '#94a3b8', fontSize: 15 }} />}
+          <input
+            type="color"
+            value={customAccent || '#3b82f6'}
+            onChange={(e) => setCustomAccent(e.target.value)}
+            style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
+          />
+        </label>
+        <span style={{ fontSize: 12, color: '#64748b', flex: 1 }}>
+          {customAccent ? `직접 지정 · ${customAccent}` : '색을 눌러 직접 지정'}
+        </span>
+        {customAccent && (
+          <Button size="small" type="text" onClick={() => setCustomAccent(null)} style={{ fontSize: 12 }}>
+            프리셋으로
+          </Button>
+        )}
+      </div>
+
+      {/* ── 화면 밀도 ── */}
+      <div style={{
+        fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.6px',
+        textTransform: 'uppercase', margin: '18px 0 10px', padding: '0 2px',
+      }}>
+        화면 밀도
+      </div>
+      <div style={{
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6,
+        padding: 4, background: '#f1f5f9', borderRadius: 12,
+      }}>
+        {[
+          { key: 'default', label: '넉넉하게' },
+          { key: 'compact', label: '조밀하게' },
+        ].map((d) => {
+          const on = density === d.key;
+          return (
+            <div
+              key={d.key}
+              onClick={() => setDensity(d.key)}
+              style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                padding: '7px 0', borderRadius: 9, fontSize: 13,
+                fontWeight: on ? 700 : 500, cursor: 'pointer',
+                background: on ? '#ffffff' : 'transparent',
+                color: on ? '#1e293b' : '#64748b',
+                boxShadow: on ? '0 1px 4px rgba(15,23,42,0.10)' : 'none',
+                transition: 'all 0.14s',
+              }}
+            >
+              {d.label}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -162,12 +257,21 @@ const NOTIFICATION_COLORS = {
   step_assigned: 'processing',
   step_reminder: 'purple',
   security_alert: 'error',
+  mention: 'magenta',
 };
 
 function NotificationPopup({ onClose }) {
   const { notifications, unreadCount, fetch, markRead, markAllRead } = useNotificationStore();
+  const navigate = useNavigate();
 
   useEffect(() => { fetch(); }, []);
+
+  const handleClick = (item) => {
+    markRead(item.id);
+    if (item.link) navigate(item.link);
+    else if (item.task?.id) navigate(`/tasks?taskId=${item.task.id}`);
+    onClose();
+  };
 
   return (
     <div style={{ width: 360 }}>
@@ -217,13 +321,14 @@ function NotificationPopup({ onClose }) {
                   cursor: 'pointer',
                   border: '1px solid #91caff',
                 }}
-                onClick={() => markRead(item.id)}
+                onClick={() => handleClick(item)}
               >
                 <List.Item.Meta
                   avatar={
                     <BellOutlined style={{
                       fontSize: 18,
-                      color: item.type === 'overdue' || item.type === 'due_today' ? '#ff4d4f' : '#1677ff',
+                      color: item.type === 'overdue' || item.type === 'due_today' ? '#ff4d4f'
+                        : item.type === 'mention' ? '#eb2f96' : '#1677ff',
                       marginTop: 2,
                     }} />
                   }
@@ -266,21 +371,37 @@ export default function AppHeader({ collapsed, onCollapse }) {
   const { themeKey, theme, setTheme } = useThemeStore();
   const isDark = useThemeStore((s) => s.isDark);
   const toggleDark = useThemeStore((s) => s.toggleDark);
+  const customAccent = useThemeStore((s) => s.customAccent);
+  const setCustomAccent = useThemeStore((s) => s.setCustomAccent);
+  const density = useThemeStore((s) => s.density);
+  const setDensity = useThemeStore((s) => s.setDensity);
   const [themeOpen, setThemeOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [approvalPending, setApprovalPending] = useState(0);
+  const [mailUnread, setMailUnread] = useState(0);
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'admin';
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchApproval = () => getApprovalPendingCount().then(r => setApprovalPending(r.count || 0)).catch(() => {});
+    const fetchMail = () => getMailUnreadCount().then(r => setMailUnread(r.count || 0)).catch(() => {});
+    fetchApproval();
+    fetchMail();
+    const timer = setInterval(() => { fetchApproval(); fetchMail(); }, 60000);
+    return () => clearInterval(timer);
+  }, [user]);
 
   const navigate = useNavigate();
   const { pathname } = useLocation();
-
-  const openChatPopup = () => openChatPopupWindow();
 
   const c = theme.colors;
 
   // ── 라이트/다크 표면 팔레트 (셸 전용) ──
   const surf = {
-    headerBg:     isDark ? '#141414' : '#ffffff',
-    headerBorder: isDark ? '#303030' : '#f1f5f9',
-    track:        isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9',
+    headerBg:     isDark ? '#141414' : c.sidebarBg,
+    headerBorder: isDark ? '#303030' : c.sidebarDivider,
+    track:        isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
     linkText:     isDark ? 'rgba(255,255,255,0.72)' : '#64748b',
     linkHover:    isDark ? 'rgba(255,255,255,0.95)' : '#334155',
     linkHoverBg:  isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.65)',
@@ -303,6 +424,12 @@ export default function AppHeader({ collapsed, onCollapse }) {
     { key: 'boards',    icon: <AppstoreOutlined />,  label: '보드',     path: '/boards',    active: pathname.startsWith('/boards'),   badge: boardUnread },
     { key: 'playbooks', icon: <BookOutlined />,      label: '플레이북', path: '/playbooks', active: pathname.startsWith('/playbooks') || pathname.startsWith('/runs'), badge: playbookUnread },
     { key: 'wbs',       icon: <ApartmentOutlined />, label: '프로젝트', path: '/wbs',       active: pathname.startsWith('/wbs'),      badge: 0 },
+  ];
+
+  const bizLinks = [
+    { key: 'mail',      icon: <MailOutlined />,       label: '메일',     path: '/mail',      active: pathname.startsWith('/mail'),     badge: mailUnread },
+    { key: 'bbs',       icon: <ReadOutlined />,       label: '게시판',   path: '/bbs',       active: pathname.startsWith('/bbs'),      badge: 0 },
+    { key: 'approvals', icon: <FileDoneOutlined />,   label: '전자결재', path: '/approvals', active: pathname.startsWith('/approvals'), badge: approvalPending },
   ];
 
   // 세그먼트 항목 스타일 (활성 = 흰 카드 + 그림자)
@@ -395,10 +522,26 @@ export default function AppHeader({ collapsed, onCollapse }) {
           style={{ cursor: 'pointer', marginRight: 8 }}
           onClick={() => navigate('/')}
         >
-          <FlowdeskIcon size={18} color={c.accentMid} />
-          <Typography.Text strong style={{ fontSize: 14, color: c.accentMid, letterSpacing: 0.3 }}>
+          <FlowdeskIcon size={18} color={c.logoIcon} />
+          <span
+            style={{
+              fontSize: 14,
+              fontWeight: 700,
+              letterSpacing: 0.3,
+              lineHeight: 1,
+              display: 'inline-block',
+              // 폴백: 클립 미지원 시 투명 박스 대신 테마색 글자로 보이도록
+              color: c.logoColorA,
+              // background(단축) 대신 backgroundImage(longhand) 사용 — 테마 변경 시
+              // background-clip:text 가 border-box 로 리셋되어 박스가 생기는 문제 방지
+              backgroundImage: `linear-gradient(90deg, ${c.logoColorA}, ${c.logoColorB})`,
+              WebkitBackgroundClip: 'text',
+              backgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
             Flowdesk
-          </Typography.Text>
+          </span>
         </Space>
 
         {/* ── 상단 그룹 메뉴 (세그먼트 트랙) ── */}
@@ -413,54 +556,36 @@ export default function AppHeader({ collapsed, onCollapse }) {
           <GroupColumn>
             {collabLinks.map(renderLink)}
           </GroupColumn>
+
+          {/* 게시판 · 전자결재 */}
+          <GroupColumn>
+            {bizLinks.map(renderLink)}
+          </GroupColumn>
         </div>
       </Space>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        {/* 메모지 플로팅 위젯 (어느 화면에서든 빠른 메모) */}
-        <MemoWidget />
-
-        {/* 라이트/다크 모드 토글 */}
-        <Tooltip title={isDark ? '라이트 모드' : '다크 모드'} placement="bottom">
+        {/* 전역 통합 검색 (Ctrl+F) */}
+        <Tooltip title="통합 검색 (Ctrl+F)" placement="bottom">
           <div
-            style={iconBtnStyle}
-            onClick={toggleDark}
+            onClick={() => window.dispatchEvent(new CustomEvent('flowdesk:open-search'))}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 8,
+              height: 36, padding: '0 12px', borderRadius: 10, cursor: 'pointer',
+              background: surf.iconBg, border: `1px solid ${surf.iconBorder}`,
+              color: surf.iconColor, fontSize: 13,
+            }}
             onMouseEnter={(e) => { e.currentTarget.style.background = surf.linkHoverBg; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = surf.iconBg; }}
           >
-            {isDark ? <BulbFilled style={{ color: '#fadb14' }} /> : <BulbOutlined />}
+            <SearchOutlined />
+            <span style={{ fontSize: 12 }}>검색</span>
+            <kbd style={{
+              fontSize: 10, padding: '1px 5px', borderRadius: 4,
+              border: `1px solid ${surf.iconBorder}`, background: surf.track, color: surf.iconColor,
+            }}>Ctrl F</kbd>
           </div>
         </Tooltip>
-
-        {/* 테마 피커 */}
-        <Popover
-          open={themeOpen}
-          onOpenChange={setThemeOpen}
-          trigger="click"
-          placement="bottomRight"
-          arrow={false}
-          overlayStyle={{ zIndex: 1050 }}
-          styles={{ body: {
-            background: surf.popBg,
-            border: `1px solid ${surf.popBorder}`,
-            borderRadius: 16,
-            boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
-            padding: '16px',
-          }}}
-          content={
-            <ThemePicker
-              themeKey={themeKey}
-              setTheme={setTheme}
-              onClose={() => setThemeOpen(false)}
-            />
-          }
-        >
-          <Tooltip title="테마 변경" placement="bottom">
-            <div style={iconBtnStyle}>
-              <BgColorsOutlined />
-            </div>
-          </Tooltip>
-        </Popover>
 
         {/* 알림 팝업 */}
         <Popover
@@ -492,30 +617,65 @@ export default function AppHeader({ collapsed, onCollapse }) {
           </Tooltip>
         </Popover>
 
-        {/* 채팅 */}
-        <Tooltip title="채팅" placement="bottom">
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <Badge count={totalUnread} size="small" offset={[-2, 2]}>
-              <div
-                onClick={openChatPopup}
-                style={{
-                  ...iconBtnStyle,
-                  background: 'rgba(34,197,94,0.1)',
-                  border: '1px solid rgba(34,197,94,0.25)',
-                  color: '#22c55e',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = 'rgba(34,197,94,0.18)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'rgba(34,197,94,0.1)';
-                }}
-              >
-                <ChatBubbleIcon size={17} color="#22c55e" />
-              </div>
-            </Badge>
-          </div>
-        </Tooltip>
+        {/* 테마 · 모드 피커 (라이트/다크 토글 통합) */}
+        <Popover
+          open={themeOpen}
+          onOpenChange={setThemeOpen}
+          trigger="click"
+          placement="bottomRight"
+          arrow={false}
+          overlayStyle={{ zIndex: 1050 }}
+          styles={{ body: {
+            background: surf.popBg,
+            border: `1px solid ${surf.popBorder}`,
+            borderRadius: 16,
+            boxShadow: '0 16px 48px rgba(0,0,0,0.2)',
+            padding: '16px',
+          }}}
+          content={
+            <ThemePicker
+              themeKey={themeKey}
+              setTheme={setTheme}
+              isDark={isDark}
+              toggleDark={toggleDark}
+              customAccent={customAccent}
+              setCustomAccent={setCustomAccent}
+              density={density}
+              setDensity={setDensity}
+              onClose={() => setThemeOpen(false)}
+            />
+          }
+        >
+          <Tooltip title="테마 · 화면 모드" placement="bottom">
+            <div style={iconBtnStyle}>
+              <BgColorsOutlined />
+            </div>
+          </Tooltip>
+        </Popover>
+
+        {/* 관리자 콘솔 (관리자 전용) */}
+        {isAdmin && (
+          <Tooltip title="관리자 콘솔" placement="bottom">
+            <div
+              onClick={() => navigate('/admin')}
+              style={{
+                ...iconBtnStyle,
+                width: 'auto',
+                padding: '0 12px',
+                gap: 6,
+                color: pathname.startsWith('/admin') ? c.accentMid : surf.iconColor,
+                fontSize: 13,
+                fontWeight: 600,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = surf.linkHoverBg; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = surf.iconBg; }}
+            >
+              <SettingOutlined style={{ fontSize: 16 }} />
+              <span>관리자</span>
+            </div>
+          </Tooltip>
+        )}
+
       </div>
     </Header>
   );

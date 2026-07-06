@@ -9,6 +9,7 @@ import useChatSocket from './hooks/useChatSocket';
 import { requestNotificationPermission } from './utils/desktopNotification';
 import { ChatSocketContext } from './contexts/ChatSocketContext';
 import useThemeStore from './store/themeStore';
+import { getThemePrefs } from './api/settings';
 
 // 즉시 필요한 셸/진입/에러 화면은 eager 로드 (PrivateRoute에서 동기 렌더되는 에러 포함)
 import MainLayout from './components/Layout/MainLayout';
@@ -22,6 +23,8 @@ const TasksPage = lazy(() => import('./pages/Tasks'));
 const CalendarPage = lazy(() => import('./pages/Calendar'));
 const MemosPage = lazy(() => import('./pages/Memos'));
 const GanttPage = lazy(() => import('./pages/Gantt'));
+const AdminConsolePage = lazy(() => import('./pages/Admin/AdminConsole'));
+const SystemSettingsPage = lazy(() => import('./pages/Admin/SystemSettings'));
 const UsersAdminPage = lazy(() => import('./pages/Admin/Users'));
 const DepartmentsAdminPage = lazy(() => import('./pages/Admin/Departments'));
 const RecurringTasksAdminPage = lazy(() => import('./pages/Admin/RecurringTasks'));
@@ -32,6 +35,7 @@ const TemplatesAdminPage = lazy(() => import('./pages/Admin/Templates'));
 const BackupPage = lazy(() => import('./pages/Admin/Backup'));
 const ActivityLogPage = lazy(() => import('./pages/Admin/ActivityLog'));
 const AuditLogPage = lazy(() => import('./pages/Admin/AuditLog'));
+const PiiBlockLogPage = lazy(() => import('./pages/Admin/PiiBlockLog'));
 const NotificationsPage = lazy(() => import('./pages/Notifications'));
 const WorkloadPage = lazy(() => import('./pages/Workload'));
 const ProfilePage = lazy(() => import('./pages/Profile'));
@@ -51,7 +55,7 @@ const ApprovalDocumentDetail = lazy(() => import('./pages/Approval/DocumentDetai
 const ApprovalAdminPage = lazy(() => import('./pages/Admin/ApprovalAdmin'));
 const MailPage = lazy(() => import('./pages/Mail'));
 
-const PrivateRoute = ({ children, adminOnly = false }) => {
+const PrivateRoute = ({ children, adminOnly = false, permission = null }) => {
   const { user, loading } = useAuthStore();
 
   if (loading) {
@@ -64,6 +68,8 @@ const PrivateRoute = ({ children, adminOnly = false }) => {
 
   if (!user) return <Navigate to="/login" replace />;
   if (adminOnly && user.role !== 'admin') return <Forbidden />;
+  // 권한 그룹 기반 게이팅 — role 과 무관하게 해당 권한 보유자만 통과 (직무분리)
+  if (permission && !(user.permissions || []).includes(permission)) return <Forbidden />;
   return children;
 };
 
@@ -72,6 +78,8 @@ export default function App() {
   const { locked, lock, unlock } = useLockStore();
   const currentTheme = useThemeStore((s) => s.theme);
   const isDark = useThemeStore((s) => s.isDark);
+  const density = useThemeStore((s) => s.density);
+  const hydrateTheme = useThemeStore((s) => s.hydrateFromServer);
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const socketRef = useChatSocket(user ? token : null);
@@ -98,6 +106,12 @@ export default function App() {
     if (user) requestNotificationPermission();
   }, [user]);
 
+  // 로그인 시 서버에 저장된 개인 테마·화면 설정으로 동기화 (기기·재설치 무관 유지)
+  useEffect(() => {
+    if (!user) return;
+    getThemePrefs().then(hydrateTheme).catch(() => {});
+  }, [user, hydrateTheme]);
+
   // 로그인 상태가 아니면(토큰 만료 등) 잠금 잔재를 정리한다.
   useEffect(() => {
     if (!user && locked) unlock();
@@ -116,7 +130,10 @@ export default function App() {
   return (
     <ConfigProvider
       theme={{
-        algorithm: isDark ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
+        algorithm: [
+          isDark ? antTheme.darkAlgorithm : antTheme.defaultAlgorithm,
+          ...(density === 'compact' ? [antTheme.compactAlgorithm] : []),
+        ],
         token: {
           colorPrimary:       c.accentMid,
           colorLink:          c.accentMid,
@@ -212,6 +229,22 @@ export default function App() {
           <Route path="approvals/:id/edit" element={<ApprovalDocumentForm />} />
           <Route path="mail" element={<MailPage />} />
           <Route
+            path="admin"
+            element={
+              <PrivateRoute adminOnly>
+                <AdminConsolePage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="admin/system"
+            element={
+              <PrivateRoute adminOnly>
+                <SystemSettingsPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
             path="admin/users"
             element={
               <PrivateRoute adminOnly>
@@ -288,6 +321,14 @@ export default function App() {
             element={
               <PrivateRoute adminOnly>
                 <AuditLogPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="pii-audit"
+            element={
+              <PrivateRoute permission="PII_AUDIT">
+                <PiiBlockLogPage />
               </PrivateRoute>
             }
           />

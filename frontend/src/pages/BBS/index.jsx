@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Layout, Tree, Table, Button, Space, Typography, Tag, Input, message,
   Form, Select, Tooltip, Popconfirm, Badge, theme as antTheme, Empty, Switch,
+  DatePicker,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, PushpinOutlined,
@@ -12,6 +13,7 @@ import {
 } from '@ant-design/icons';
 import {
   getBbsCategories, createBbsCategory, updateBbsCategory, deleteBbsCategory,
+  reorderBbsCategories,
   getBbsPosts, pinBbsPost, deleteBbsPost,
 } from '../../api/bbs';
 import ResizableDrawer from '../../components/common/ResizableDrawer';
@@ -23,9 +25,11 @@ import dayjs from 'dayjs';
 const { Sider, Content } = Layout;
 const { Title, Text } = Typography;
 const { Search } = Input;
+const { RangePicker } = DatePicker;
 const { useToken } = antTheme;
 
 const WRITE_ROLE_LABELS = { all: '모든 사용자', admin: '관리자만' };
+const SEARCH_FIELD_LABELS = { title: '제목', senderOrg: '발신처', recipientDepts: '수신부서', content: '내용', all: '전체' };
 const ICON_OPTIONS = ['📋', '📁', '📌', '🗂️', '📢', '💡', '❓', '📝', '🔔', '⭐', '📑', '🏷️'];
 
 function buildTree(items) {
@@ -64,7 +68,12 @@ export default function BbsPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState('');      // 실제 적용된 검색어
+  const [searchInput, setSearchInput] = useState(''); // 입력창 표시값
+  const [searchField, setSearchField] = useState('title'); // 검색 항목(게시글 입력 기준)
+  const [dateField, setDateField] = useState('createdAt');  // 기간 기준(작성일/처리기한)
+  const [dateRange, setDateRange] = useState(null);          // [dayjs, dayjs] | null
+  const searchTimer = useRef(null);
 
   const [selectedPostId, setSelectedPostId] = useState(null);
 
@@ -100,7 +109,12 @@ export default function BbsPage() {
     if (!selectedCatId) return;
     setLoading(true);
     try {
-      const data = await getBbsPosts({ categoryId: selectedCatId, page, limit: 20, search });
+      const data = await getBbsPosts({
+        categoryId: selectedCatId, page, limit: 20, search, searchField,
+        dateField,
+        dateFrom: dateRange?.[0] ? dateRange[0].format('YYYY-MM-DD') : undefined,
+        dateTo: dateRange?.[1] ? dateRange[1].format('YYYY-MM-DD') : undefined,
+      });
       setPosts(data.posts || []);
       setTotal(data.total || 0);
     } catch {
@@ -108,9 +122,12 @@ export default function BbsPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedCatId, page, search]);
+  }, [selectedCatId, page, search, searchField, dateField, dateRange]);
 
   useEffect(() => { loadPosts(); }, [loadPosts]);
+
+  // 디바운스 타이머 정리
+  useEffect(() => () => { if (searchTimer.current) clearTimeout(searchTimer.current); }, []);
 
   // 선택된 카테고리 객체 동기화 (URL 딥링크 포함)
   useEffect(() => {
@@ -124,7 +141,107 @@ export default function BbsPage() {
     setSelectedPostId(null);
     setPage(1);
     setSearch('');
+    setSearchInput('');
+    setDateRange(null);
     setSearchParams({ categoryId: id });
+  };
+
+  // 입력 즉시(디바운스 300ms) 검색 적용
+  const handleSearchChange = (value) => {
+    setSearchInput(value);
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => {
+      setSearch(value.trim());
+      setPage(1);
+    }, 300);
+  };
+
+  // 즉시 검색 (Enter/돋보기) — 디바운스 대기 없이 바로 적용
+  const handleSearchNow = (value) => {
+    if (searchTimer.current) clearTimeout(searchTimer.current);
+    setSearch(value.trim());
+    setPage(1);
+  };
+
+  // 트리에서 평탄화하여 [{ id, order, parentId }] 페이로드 생성
+  const flattenForReorder = (nodes, parentId = null) => {
+    let out = [];
+    nodes.forEach((node, idx) => {
+      out.push({ id: Number(node.key), order: idx, parentId });
+      if (node.children?.length) {
+        out = out.concat(flattenForReorder(node.children, Number(node.key)));
+      }
+    });
+    return out;
+  };
+
+  // 특정 노드의 부모 key 반환 (최상위면 null)
+  const findParentKey = (nodes, key, parentKey = null) => {
+    for (const node of nodes) {
+      if (node.key === key) return parentKey;
+      if (node.children?.length) {
+        const found = findParentKey(node.children, key, node.key);
+        if (found !== undefined) return found;
+      }
+    }
+    return undefined;
+  };
+
+  const handleDrop = async (info) => {
+    const dropKey = info.node.key;
+    const dragKey = info.dragNode.key;
+    const dropPos = info.node.pos.split('-');
+    const dropPosition = info.dropPosition - Number(dropPos[dropPos.length - 1]);
+
+    // 소속(부모)이 바뀌는 이동은 차단 — 같은 게시판 그룹 내에서만 순서 변경 허용
+    const dragParentKey = findParentKey(treeData, dragKey) ?? null;
+    const targetParentKey = !info.dropToGap
+      ? dropKey // 노드 안쪽으로 드롭 → 자식 편입 시도
+      : (findParentKey(treeData, dropKey) ?? null);
+    if (dragParentKey !== targetParentKey) {
+      message.warning('같은 게시판 안에서만 순서를 변경할 수 있습니다.');
+      return;
+    }
+
+    const data = JSON.parse(JSON.stringify(treeData));
+
+    const loop = (arr, key, cb) => {
+      for (let i = 0; i < arr.length; i += 1) {
+        if (arr[i].key === key) return cb(arr[i], i, arr);
+        if (arr[i].children) loop(arr[i].children, key, cb);
+      }
+    };
+
+    // 드래그 대상 분리
+    let dragObj;
+    loop(data, dragKey, (item, index, arr) => {
+      arr.splice(index, 1);
+      dragObj = item;
+    });
+    if (!dragObj) return;
+
+    if (!info.dropToGap) {
+      // 노드 안쪽에 드롭 → 자식으로 편입
+      loop(data, dropKey, (item) => {
+        item.children = item.children || [];
+        item.children.unshift(dragObj);
+      });
+    } else {
+      let ar = [];
+      let i = 0;
+      loop(data, dropKey, (item, index, arr) => { ar = arr; i = index; });
+      if (dropPosition === -1) ar.splice(i, 0, dragObj);
+      else ar.splice(i + 1, 0, dragObj);
+    }
+
+    setTreeData(data); // 즉시 반영
+    try {
+      await reorderBbsCategories(flattenForReorder(data));
+      loadCategories();
+    } catch {
+      message.error('순서 저장에 실패했습니다.');
+      loadCategories(); // 원복
+    }
   };
 
   const handleSelectPost = (postId) => {
@@ -175,13 +292,31 @@ export default function BbsPage() {
   const canWrite = selectedCat ? (selectedCat.writeRole === 'all' || isAdmin) : false;
 
   // 트리 노드 타이틀 렌더러
-  const renderTreeTitle = (nodeData) => {
+  const renderTreeTitle = (nodeData, isTop = false, isFirstTop = false) => {
     const cat = nodeData.rawData;
+    const isSelected = cat.id === selectedCatId;
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingRight: 4 }}>
+      <div
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          width: '100%', paddingRight: 4,
+          // 최상위 게시판 강조: 배경 틴트(선택 시 제외) + 그룹 구분선
+          ...(isTop ? {
+            background: isSelected ? 'transparent' : token.colorFillTertiary,
+            borderTop: isFirstTop ? 'none' : `1px solid ${token.colorBorderSecondary}`,
+            marginTop: isFirstTop ? 0 : 4,
+            paddingTop: 3, paddingBottom: 3, paddingLeft: 4,
+          } : {}),
+        }}
+      >
         <Space size={5} style={{ flex: 1, overflow: 'hidden' }}>
-          {cat.icon && <span>{cat.icon}</span>}
-          <span style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{cat.name}</span>
+          {cat.icon && <span style={{ fontSize: isTop ? 15 : 14 }}>{cat.icon}</span>}
+          <span style={{
+            fontSize: isTop ? 14 : 13,
+            fontWeight: isTop ? 700 : 400,
+            color: isTop ? token.colorTextHeading : undefined,
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>{cat.name}</span>
           {cat.writeRole === 'admin' && <LockOutlined style={{ fontSize: 10, color: token.colorWarning, flexShrink: 0 }} />}
         </Space>
         {isAdmin && (
@@ -196,10 +331,10 @@ export default function BbsPage() {
     );
   };
 
-  const treeDataWithRender = (nodes) => nodes.map(node => ({
+  const treeDataWithRender = (nodes, isRootLevel = true) => nodes.map((node, idx) => ({
     ...node,
-    title: renderTreeTitle(node),
-    children: node.children ? treeDataWithRender(node.children) : [],
+    title: renderTreeTitle(node, isRootLevel, isRootLevel && idx === 0),
+    children: node.children ? treeDataWithRender(node.children, false) : [],
   }));
 
   const compact = !!selectedPostId;
@@ -208,15 +343,19 @@ export default function BbsPage() {
     title: '제목',
     dataIndex: 'title',
     ellipsis: true,
-    render: (title, row) => (
+    render: (title, row) => {
+      const deptPrefix = row.recipientDepts?.length ? `[${row.recipientDepts.join(', ')}]` : '';
+      const displayTitle = `${deptPrefix}[${title}]`;
+      return (
       <div style={{ minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
           {row.isPinned && <PushpinOutlined style={{ color: token.colorWarning, fontSize: 12, flexShrink: 0 }} />}
           <Text
-            ellipsis={{ tooltip: title }}
+            ellipsis={{ tooltip: displayTitle }}
             style={{ fontWeight: row.isPinned ? 600 : 400, color: token.colorText, fontSize: 13, flex: 1, minWidth: 0 }}
           >
-            {title}
+            {deptPrefix && <span style={{ color: token.colorPrimary, fontWeight: 600 }}>{deptPrefix}</span>}
+            {`[${title}]`}
           </Text>
           {row._count?.attachments > 0 && (
             <span style={{ fontSize: 11, color: token.colorTextTertiary, flexShrink: 0 }}>
@@ -237,11 +376,45 @@ export default function BbsPage() {
           </div>
         )}
       </div>
-    ),
+      );
+    },
   };
 
   const columns = compact ? [titleColumn] : [
     titleColumn,
+    {
+      title: '발신처',
+      dataIndex: 'senderOrg',
+      width: 120,
+      ellipsis: true,
+      render: (v) => v
+        ? <Text style={{ fontSize: 12 }} ellipsis={{ tooltip: v }}>{v}</Text>
+        : <Text type="secondary" style={{ fontSize: 12 }}>-</Text>,
+    },
+    {
+      title: '수신부서',
+      dataIndex: 'recipientDepts',
+      width: 140,
+      ellipsis: true,
+      render: (v) => (v?.length)
+        ? <Text style={{ fontSize: 12 }} ellipsis={{ tooltip: v.join(', ') }}>{v.join(', ')}</Text>
+        : <Text type="secondary" style={{ fontSize: 12 }}>-</Text>,
+    },
+    {
+      title: '처리기한',
+      dataIndex: 'officialDueDate',
+      width: 100,
+      align: 'center',
+      render: (v) => {
+        if (!v) return <Text type="secondary" style={{ fontSize: 12 }}>-</Text>;
+        const overdue = dayjs(v).isBefore(dayjs(), 'day');
+        return (
+          <Text style={{ fontSize: 12, color: overdue ? token.colorError : token.colorText, fontWeight: overdue ? 600 : 400 }}>
+            {dayjs(v).format('YYYY.MM.DD')}
+          </Text>
+        );
+      },
+    },
     {
       title: '작성자',
       dataIndex: ['creator', 'displayName'],
@@ -283,7 +456,12 @@ export default function BbsPage() {
 
   return (
     <Layout style={{ height: '100%', background: 'transparent' }}>
-      <style>{`.cat-actions { opacity: 0; transition: opacity 0.15s; } .ant-tree-node-content-wrapper:hover .cat-actions { opacity: 1; }`}</style>
+      <style>{`
+        .cat-actions { opacity: 0; transition: opacity 0.15s; }
+        .ant-tree-node-content-wrapper:hover .cat-actions { opacity: 1; }
+        .bbs-search .ant-input-affix-wrapper,
+        .bbs-search .ant-input-search-button { height: 32px; }
+      `}</style>
 
       {/* 카테고리 사이드바 */}
       <Sider
@@ -307,7 +485,13 @@ export default function BbsPage() {
           <Text strong style={{ fontSize: 13, color: token.colorTextHeading }}>게시판</Text>
           {isAdmin && (
             <Tooltip title="게시판 추가">
-              <Button size="small" type="primary" ghost icon={<PlusOutlined />} onClick={openCatCreate} style={{ height: 24, fontSize: 11 }} />
+              <Button
+                size="small"
+                type="primary"
+                icon={<PlusOutlined style={{ fontSize: 13 }} />}
+                onClick={openCatCreate}
+                style={{ width: 26, height: 24, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}
+              />
             </Tooltip>
           )}
         </div>
@@ -321,6 +505,8 @@ export default function BbsPage() {
             treeData={treeDataWithRender(treeData)}
             selectedKeys={selectedCatId ? [String(selectedCatId)] : []}
             onSelect={handleSelectCategory}
+            draggable={isAdmin ? { icon: false } : false}
+            onDrop={handleDrop}
             blockNode
             defaultExpandAll
             style={{ background: 'transparent', padding: '4px 6px' }}
@@ -364,20 +550,55 @@ export default function BbsPage() {
                     <Tag icon={<LockOutlined />} color="warning" style={{ fontSize: 11 }}>관리자 전용</Tag>
                   )}
                 </Space>
-                <Space size={8}>
+                <Space size={8} align="center" wrap>
+                  {!compact && (
+                    <Space size={4} align="center">
+                      <Select
+                        value={dateField}
+                        onChange={setDateField}
+                        style={{ width: 96 }}
+                        options={[
+                          { value: 'createdAt', label: '작성일' },
+                          { value: 'officialDueDate', label: '처리기한' },
+                        ]}
+                      />
+                      <RangePicker
+                        value={dateRange}
+                        onChange={(v) => { setDateRange(v); setPage(1); }}
+                        format="YYYY-MM-DD"
+                        allowEmpty={[true, true]}
+                        style={{ width: 240 }}
+                      />
+                    </Space>
+                  )}
+                  <Select
+                    value={searchField}
+                    onChange={setSearchField}
+                    size="middle"
+                    style={{ width: 96 }}
+                    options={[
+                      { value: 'title', label: '제목' },
+                      { value: 'senderOrg', label: '발신처' },
+                      { value: 'recipientDepts', label: '수신부서' },
+                      { value: 'content', label: '내용' },
+                      { value: 'all', label: '전체' },
+                    ]}
+                  />
                   <Search
-                    placeholder="제목 검색"
+                    placeholder={`${SEARCH_FIELD_LABELS[searchField]} 검색`}
                     allowClear
-                    onSearch={(v) => { setSearch(v); setPage(1); }}
-                    style={{ width: compact ? 130 : 180 }}
-                    size="small"
+                    value={searchInput}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    onSearch={handleSearchNow}
+                    style={{ width: compact ? 130 : 180, height: 32 }}
+                    className="bbs-search"
                   />
                   {canWrite && (
                     <Button
                       type="primary"
-                      size="small"
                       icon={<PlusOutlined />}
                       onClick={() => { setEditingPostId(null); setPostDrawerOpen(true); }}
+                      style={{ height: 32 }}
                     >
                       글쓰기
                     </Button>
