@@ -5,7 +5,7 @@ Set oShell = CreateObject("WScript.Shell")
 Set oFSO   = CreateObject("Scripting.FileSystemObject")
 
 Dim projectPath, batScript
-projectPath = "C:\Users\jhyou\task-manager"
+projectPath = "C:\Users\DCHINAE\Desktop\FlowDesk_Repo"
 batScript   = projectPath & "\restart.bat"
 
 ' ── 포트 확인 (netstat 기반) ─────────────────────────────────

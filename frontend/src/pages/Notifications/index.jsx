@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   List, Button, Typography, Tag, Space, Empty, Badge, Row,
 } from 'antd';
@@ -12,14 +13,28 @@ const NOTIFICATION_COLORS = {
   due_soon: 'warning',
   due_today: 'error',
   overdue: 'error',
+  sla_warning: 'warning',
+  sla_breach: 'error',
+  step_assigned: 'processing',
+  step_reminder: 'purple',
+  security_alert: 'error',
+  mention: 'magenta',
+  schedule_shared: 'cyan',
 };
 
 export default function NotificationsPage() {
   const { notifications, unreadCount, fetch, markRead, markAllRead } = useNotificationStore();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetch();
   }, []);
+
+  const handleClick = (item) => {
+    if (!item.isRead) markRead(item.id);
+    if (item.link) navigate(item.link);
+    else if (item.task?.id) navigate(`/tasks?taskId=${item.task.id}`);
+  };
 
   return (
     <div>
@@ -53,9 +68,9 @@ export default function NotificationsPage() {
                 marginBottom: 6,
                 padding: '12px 16px',
                 cursor: 'pointer',
-                border: item.isRead ? '1px solid #f0f0f0' : '1px solid #91caff',
+                border: item.isRead ? '1px solid var(--fd-border)' : '1px solid #91caff',
               }}
-              onClick={() => !item.isRead && markRead(item.id)}
+              onClick={() => handleClick(item)}
               actions={[
                 !item.isRead && (
                   <Button
@@ -84,7 +99,7 @@ export default function NotificationsPage() {
                 title={
                   <Space>
                     <span style={{ fontWeight: item.isRead ? 400 : 600 }}>
-                      {item.task?.title}
+                      {item.task?.title || item.message || NOTIFICATION_LABELS[item.type] || item.type}
                     </span>
                     <Tag color={NOTIFICATION_COLORS[item.type]}>
                       {NOTIFICATION_LABELS[item.type]}
@@ -104,10 +119,9 @@ export default function NotificationsPage() {
                 }
                 description={
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    마감일: {item.task?.dueDate
-                      ? dayjs(item.task.dueDate).format('YYYY년 MM월 DD일')
-                      : '-'}
-                    {' · '}
+                    {item.task?.dueDate
+                      ? `마감일: ${dayjs(item.task.dueDate).format('YYYY년 MM월 DD일')} · `
+                      : ''}
                     {dayjs(item.createdAt).format('MM/DD HH:mm')}
                   </Typography.Text>
                 }

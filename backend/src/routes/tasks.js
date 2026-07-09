@@ -66,6 +66,7 @@ router.get('/:id/comments', commentController.list);
 router.post('/:id/comments', commentController.create);
 router.put('/comments/:commentId', commentController.update);
 router.delete('/comments/:commentId', commentController.remove);
+router.post('/:id/comments/:commentId/attachment', upload.single('file'), commentController.uploadAttachment);
 
 // 첨부파일
 router.get('/:id/attachments', attachmentController.list);

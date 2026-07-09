@@ -1,12 +1,15 @@
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const jwt = require('jsonwebtoken');
 const { authenticator } = require('otplib');
 const QRCode = require('qrcode');
 
 const prisma = require('../lib/prisma');
+const { kickUserSockets } = require('../socket');
 const audit = require('../services/auditService');
 const pwPolicy = require('../utils/passwordPolicy');
-const { AUTH, LOCKOUT, AUDIT_ACTION } = require('../config/security');
+const { AUTH, AUDIT_ACTION } = require('../config/security');
+const settings = require('../services/securitySettingsService');
 
 // 미사용 화면 잠금 시간 허용값(분). 0 = 사용 안 함
 const ALLOWED_IDLE_TIMEOUTS = [0, 10, 30, 60, 120, 240];
@@ -19,9 +22,10 @@ function issueToken(user) {
       userId: user.id,
       role: user.role,
       pwAt: user.passwordChangedAt ? new Date(user.passwordChangedAt).getTime() : 0,
+      sn: user.sessionNonce,
     },
     process.env.JWT_SECRET,
-    { expiresIn: AUTH.JWT_EXPIRES_IN }
+    { expiresIn: settings.auth().JWT_EXPIRES_IN }
   );
 }
 
@@ -68,19 +72,20 @@ const login = async (req, res, next) => {
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
       // 실패 횟수 누적 → 임계치 초과 시 잠금
+      const LOCK = settings.lockout();
       const failed = (user.failedLoginCount || 0) + 1;
-      const lock = failed >= LOCKOUT.MAX_FAILED_ATTEMPTS;
+      const lock = failed >= LOCK.MAX_FAILED_ATTEMPTS;
       await prisma.user.update({
         where: { id: user.id },
         data: {
           failedLoginCount: lock ? 0 : failed,
-          lockedUntil: lock ? new Date(Date.now() + LOCKOUT.LOCK_DURATION_MINUTES * 60000) : user.lockedUntil,
+          lockedUntil: lock ? new Date(Date.now() + LOCK.LOCK_DURATION_MINUTES * 60000) : user.lockedUntil,
         },
       });
       await audit.record({ action: AUDIT_ACTION.LOGIN_FAIL, req, userId: user.id, username, resource: 'auth/login', success: false, detail: `attempt=${failed}` });
       if (lock) {
         await audit.record({ action: AUDIT_ACTION.ACCOUNT_LOCKED, req, userId: user.id, username, resource: 'auth/login', success: false });
-        return res.status(423).json({ error: `로그인 ${LOCKOUT.MAX_FAILED_ATTEMPTS}회 실패로 계정이 잠겼습니다. ${LOCKOUT.LOCK_DURATION_MINUTES}분 후 다시 시도해주세요.` });
+        return res.status(423).json({ error: `로그인 ${LOCK.MAX_FAILED_ATTEMPTS}회 실패로 계정이 잠겼습니다. ${LOCK.LOCK_DURATION_MINUTES}분 후 다시 시도해주세요.` });
       }
       return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
     }
@@ -89,7 +94,7 @@ const login = async (req, res, next) => {
     // [개발용 임시 제외] .env의 DISABLE_OTP=true 이면 OTP 단계를 통째로 건너뛴다.
     // 운영 배포 전 반드시 DISABLE_OTP를 제거(또는 false)할 것.
     const otpDisabled = process.env.DISABLE_OTP === 'true';
-    if (!otpDisabled && (AUTH.ENFORCE_OTP || user.totpEnabled)) {
+    if (!otpDisabled && (settings.auth().ENFORCE_OTP || user.totpEnabled)) {
       if (!user.totpEnabled || !user.totpSecret) {
         // 강제 정책인데 아직 OTP 미등록 → 등록 유도
         const preAuthToken = issueTempToken(user.id, 'pre-auth');
@@ -99,25 +104,31 @@ const login = async (req, res, next) => {
       return res.json({ requireTotp: true, preAuthToken });
     }
 
-    await finalizeLogin(user, req);
-    res.json(buildLoginResponse(user));
+    const finalUser = await finalizeLogin(user, req);
+    res.json(buildLoginResponse(finalUser));
   } catch (err) {
     next(err);
   }
 };
 
-// 로그인 성공 후처리: 실패카운트 초기화 + 최종 로그인 기록 + 감사로그
+// 로그인 성공 후처리: 실패카운트 초기화 + 세션 nonce 갱신 + 최종 로그인 기록 + 감사로그
+// 반환값: sessionNonce가 반영된 최신 user 객체 (issueToken에 전달해야 함)
 async function finalizeLogin(user, req) {
-  await prisma.user.update({
+  // 기존 소켓 연결 강제 종료 (중복 로그인 차단)
+  kickUserSockets(user.id);
+  const sessionNonce = crypto.randomUUID();
+  const updated = await prisma.user.update({
     where: { id: user.id },
     data: {
       failedLoginCount: 0,
       lockedUntil: null,
       lastLoginAt: new Date(),
       lastLoginIp: audit.getClientIp(req),
+      sessionNonce,
     },
   });
   await audit.record({ action: AUDIT_ACTION.LOGIN_SUCCESS, req, userId: user.id, username: user.username, resource: 'auth/login' });
+  return updated;
 }
 
 // 로그인 응답 본문 (비밀번호 변경 필요 여부 포함)
@@ -125,7 +136,7 @@ function buildLoginResponse(user) {
   return {
     token: issueToken(user),
     mustChangePassword: user.mustChangePassword || pwPolicy.isExpired(user.passwordChangedAt),
-    user: { id: user.id, username: user.username, displayName: user.displayName, role: user.role, totpEnabled: user.totpEnabled, avatarColor: user.avatarColor, idleTimeoutMin: user.idleTimeoutMin },
+    user: { id: user.id, username: user.username, displayName: user.displayName, role: user.role, totpEnabled: user.totpEnabled, avatarColor: user.avatarColor, idleTimeoutMin: user.idleTimeoutMin, permissions: user.permissions || [] },
   };
 }
 
@@ -153,8 +164,8 @@ const verifyLoginTotp = async (req, res, next) => {
       return res.status(401).json({ error: 'OTP 코드가 올바르지 않습니다.' });
     }
 
-    await finalizeLogin(user, req);
-    res.json(buildLoginResponse(user));
+    const finalUser = await finalizeLogin(user, req);
+    res.json(buildLoginResponse(finalUser));
   } catch (err) {
     next(err);
   }
@@ -205,8 +216,8 @@ const verifyLoginTotpSetup = async (req, res, next) => {
     }
     await prisma.user.update({ where: { id: user.id }, data: { totpEnabled: true } });
     const enabled = { ...user, totpEnabled: true };
-    await finalizeLogin(enabled, req);
-    res.json(buildLoginResponse(enabled));
+    const finalUser = await finalizeLogin(enabled, req);
+    res.json(buildLoginResponse(finalUser));
   } catch (err) {
     next(err);
   }
@@ -276,7 +287,7 @@ const verifyRegisterTotp = async (req, res, next) => {
     // 계정 활성화
     const activated = await prisma.user.update({
       where: { id: user.id },
-      data: { isActive: true, totpEnabled: true },
+      data: { isActive: true, totpEnabled: true, sessionNonce: crypto.randomUUID() },
     });
 
     const token = issueToken(activated);
@@ -296,8 +307,17 @@ const verifyRegisterTotp = async (req, res, next) => {
 };
 
 // ── 로그아웃 ──────────────────────────────────────────────
-const logout = (_req, res) => {
-  res.json({ message: '로그아웃 되었습니다.' });
+const logout = async (req, res, next) => {
+  try {
+    await prisma.user.update({
+      where: { id: req.user.id },
+      data: { sessionNonce: null },
+    });
+    await audit.record({ action: AUDIT_ACTION.LOGOUT, req, userId: req.user.id, username: req.user.username, resource: 'auth/logout' });
+    res.json({ message: '로그아웃 되었습니다.' });
+  } catch (err) {
+    next(err);
+  }
 };
 
 // ── 내 정보 조회 ──────────────────────────────────────────
@@ -308,7 +328,11 @@ const me = async (req, res, next) => {
       select: {
         id: true, username: true, displayName: true,
         role: true, isActive: true, totpEnabled: true, createdAt: true, avatarColor: true,
-        idleTimeoutMin: true, department: true, position: true, jobGrade: true,
+        idleTimeoutMin: true, position: true, jobGrade: true, permissions: true,
+        signImagePath: true, sealImagePath: true,
+        departmentId: true, teamId: true,
+        department: { select: { id: true, name: true } },
+        team: { select: { id: true, name: true } },
       },
     });
     res.json({ ...user, clientIp: audit.getClientIp(req) });
@@ -339,7 +363,8 @@ const PROFILE_FIELD_MAX_LEN = 100;
 
 const updateProfile = async (req, res, next) => {
   try {
-    const { department, position, jobGrade } = req.body;
+    // 부서·팀은 관리자가 지정하므로, 본인이 편집하는 항목은 직책·직급만 허용한다.
+    const { position, jobGrade } = req.body;
     // 빈 문자열은 null로 정규화하고, 길이 제한을 검증한다
     const normalize = (v) => {
       if (v === undefined || v === null) return null;
@@ -347,7 +372,6 @@ const updateProfile = async (req, res, next) => {
       return trimmed === '' ? null : trimmed;
     };
     const data = {
-      department: normalize(department),
       position: normalize(position),
       jobGrade: normalize(jobGrade),
     };
@@ -359,7 +383,7 @@ const updateProfile = async (req, res, next) => {
     const updated = await prisma.user.update({
       where: { id: req.user.id },
       data,
-      select: { department: true, position: true, jobGrade: true },
+      select: { position: true, jobGrade: true },
     });
     res.json(updated);
   } catch (err) {

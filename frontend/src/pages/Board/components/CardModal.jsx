@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import {
-  Drawer, Form, Input, Select, DatePicker, Checkbox, Button, Tag, Space,
+  Form, Input, Select, DatePicker, Checkbox, Button, Tag, Space,
   Typography, Divider, message, Upload, Avatar, Tooltip, Progress,
   Slider, Popconfirm, Tabs,
 } from 'antd';
+import ResizableDrawer from '../../../components/common/ResizableDrawer';
 import {
   PlusOutlined, DeleteOutlined, PaperClipOutlined, LinkOutlined,
   CheckSquareOutlined, CommentOutlined, UserOutlined, DownloadOutlined,
@@ -294,7 +295,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
       onSave(saved);
       onClose();
     } catch (err) {
-      message.error(err?.response?.data?.message || '저장에 실패했습니다.');
+      message.error(err?.response?.data?.error || '저장에 실패했습니다.');
     } finally {
       setSaving(false);
     }
@@ -453,7 +454,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
       setDepSearch('');
       message.success('의존성이 추가되었습니다.');
     } catch (err) {
-      message.error(err?.response?.data?.message || '추가에 실패했습니다.');
+      message.error(err?.response?.data?.error || '추가에 실패했습니다.');
     }
   };
 
@@ -505,7 +506,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
   const hasCover = coverColor || coverImageUrl;
 
   return (
-    <Drawer
+    <ResizableDrawer
       title={null}
       open={open}
       onClose={onClose}
@@ -973,7 +974,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
                                       <img
                                         src={fileUrl}
                                         alt={att.originalName}
-                                        style={{ maxWidth: 220, maxHeight: 160, borderRadius: 6, display: 'block', objectFit: 'cover', border: '1px solid #e0e0e0' }}
+                                        style={{ maxWidth: 220, maxHeight: 160, borderRadius: 6, display: 'block', objectFit: 'cover', border: '1px solid var(--fd-border)' }}
                                       />
                                     </a>
                                     {att.createdAt && (
@@ -987,7 +988,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
                                       download={att.originalName}
                                       target="_blank"
                                       rel="noreferrer"
-                                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 9px', background: 'var(--fd-chart-grid)', borderRadius: 6, border: '1px solid #e8e8e8', textDecoration: 'none', color: '#333', fontSize: 13 }}
+                                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 9px', background: 'var(--fd-chart-grid)', borderRadius: 6, border: '1px solid var(--fd-border)', textDecoration: 'none', color: 'var(--fd-text-primary)', fontSize: 13 }}
                                     >
                                       <PaperClipOutlined style={{ color: '#8c8c8c' }} />
                                       <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{att.originalName}</span>
@@ -1022,7 +1023,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
                   />
                   {/* 첨부파일 미리보기 */}
                   {commentFile && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, padding: '4px 8px', background: '#f8f9fa', borderRadius: 4, border: '1px solid #e8e8e8' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, padding: '4px 8px', background: 'var(--fd-surface-sunken)', borderRadius: 4, border: '1px solid var(--fd-border)' }}>
                       <PaperClipOutlined style={{ color: '#8c8c8c', fontSize: 13 }} />
                       <span style={{ flex: 1, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {commentFile.name}
@@ -1078,6 +1079,6 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
           </>
         )}
       </div>
-    </Drawer>
+    </ResizableDrawer>
   );
 }

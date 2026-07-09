@@ -188,7 +188,7 @@ export default function LedgerPage() {
       message.success('삭제되었습니다.');
       loadAll();
     } catch (err) {
-      message.error(err?.response?.data?.message || '삭제 실패');
+      message.error(err?.response?.data?.error || '삭제 실패');
     }
   };
 

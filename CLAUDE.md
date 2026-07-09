@@ -1,7 +1,7 @@
-# task-manager 프로젝트
+# FlowDesk 프로젝트
 
 풀스택 업무관리 시스템 (소규모 팀 2~10명, 로컬 전용)
-- 버전: v1.9 (기능 F-01~F-46 구현 완료 + Playbook 9대 개선 — SLA알림·PDF·분기·체크리스트·실시간·버전이력·통계·병렬·웹훅)
+- 버전: v2.1.0 (기능 F-01~F-57 구현 완료 — 전자결재·게시판·사내메일·일정/공휴일·개인정보보호(PII)·보안강화 추가. 다크모드 제거, 조직구조 부서·팀 개편)
 - 기능정의서: `FEATURES.md`
 
 ## 접속 정보
@@ -9,7 +9,7 @@
 |------|-----|
 | Frontend | http://localhost:3000 |
 | Backend API | http://localhost:4000 |
-| DB | PostgreSQL 17, localhost:5432, DB명: task_manager, 계정: postgres / postgres1234 |
+| DB | PostgreSQL 17, localhost:5432, DB명: flowdesk_server, 계정: postgres / postgres1234 |
 | Admin 계정 | admin / admin1234 |
 | Member 계정 | member1~2 / member1234 |
 
@@ -27,7 +27,7 @@
 
 ## 디렉토리 구조
 ```
-task-manager/
+FlowDesk_Repo/
 ├── backend/
 │   ├── prisma/schema.prisma      # DB 스키마
 │   ├── src/
@@ -59,9 +59,10 @@ task-manager/
 - 롤백: `git reset --hard <태그명>`
 
 ## 코드 컨벤션
-- 에러 처리: 모든 컨트롤러는 `next(err)` 패턴 사용, 4xx 에러는 `{ error: '...' }` 필드
-- PrismaClient: 각 컨트롤러 파일 최상단에서 개별 인스턴스 생성 (싱글턴 아님)
-- 업무 소프트 삭제: `del_yn = '1'` (Char(1))
+- 에러 처리: 모든 컨트롤러는 `next(err)` 패턴 사용, 4xx/5xx 에러 응답은 `{ error: '...' }` 필드로 통일 (성공 메시지는 `{ message }` 허용)
+- PrismaClient: 싱글턴 사용 — 각 컨트롤러는 `require('../lib/prisma')`로 공유 인스턴스를 가져온다 (개별 `new PrismaClient()` 금지, 커넥션 풀 고갈 방지)
+- 업무 소프트 삭제: `del_yn = '1'` (Char(1)) — Prisma 모델에서는 `delYn` 필드
+- 비밀번호 정책: `backend/src/config/security.js`의 `PASSWORD` + `utils/passwordPolicy.js`가 **단일 기준**. 기본값 최소 8자·문자종류 4종 중 3종 이상(`.env`로 조정). 신규/변경/재설정·관리자 계정생성 모두 `passwordPolicy.validateFormat`를 사용한다 (별도 정규식 중복 정의 금지)
 
 ## 토큰 · 메모리 운영 규칙
 작업 효율과 비용 절감을 위해 아래를 지킵니다.
@@ -76,7 +77,7 @@ task-manager/
 ### 기능 도메인
 | 명령어 | 기능(F-번호) | 내용 |
 |--------|-------------|------|
-| `/tm-auth` | F-01, F-11, F-15, F-22 | 로그인, OTP 2단계 인증, 비밀번호 변경, 사용자 관리 |
+| `/tm-auth` | F-01, F-11, F-15, F-22, F-48 | 로그인, OTP 2단계 인증, 비밀번호 변경, 사용자 관리, 접속기록(감사로그) |
 | `/tm-core` | F-02~F-07 | 업무 CRUD, 담당자, 기한, 우선순위, 상태 관리, 일괄 처리 |
 | `/tm-views` | F-08·09·12·16·20·21·26~28·33 | 캘린더, 간트, 칸반, 대시보드, 다크모드, 마일스톤, 캘린더 메모 |
 | `/tm-collab` | F-17, F-23, F-31, F-46 | 댓글, 첨부파일, 업무 히스토리, 타임트래킹 |
@@ -87,7 +88,12 @@ task-manager/
 | `/tm-playbook` | F-36, F-37 | 플레이북(SOP) 엔진 — 정의/실행, 분기·병렬·SLA·버전·웹훅·통계 |
 | `/tm-chat` | F-38, F-39 | 채팅 시스템 — DM/그룹/방, 스레드·리액션·핀·전달 |
 | `/tm-ledger` | F-45 | 가계부 — 수입/지출/예산/반복거래 |
-| `/tm-system` | F-40~F-43 | 시스템 관리 — 파트, 업무 템플릿, 활동 로그, 앱 설정 |
+| `/tm-system` | F-40~F-43 | 시스템 관리 — 부서·팀(조직), 업무 템플릿, 활동 로그, 앱 설정 |
+| `/tm-approval` | F-52 | 전자결재 — 결재양식종류·양식·결재선·상신/승인/반려/회수/재상신 |
+| `/tm-bbs` | F-53 | 게시판(BBS) — 카테고리·공지/공문·핀·댓글·첨부·대시보드 노출 |
+| `/tm-mail` | F-54 | 사내 메일 — 라벨·발송/회신/전달·별표·읽음·첨부·스레드 |
+| `/tm-schedule` | F-55 | 일정·공휴일 — 자원(회의실/차량) 예약, 일정, 공휴일 |
+| `/tm-security` | F-56, F-57 | 개인정보 보호(PII 입력차단·검출로그·직무분리) + 보안강화(단일세션·비번이력·이상탐지·보관정책) |
 
 ### 참조 문서
 | 명령어 | 내용 |

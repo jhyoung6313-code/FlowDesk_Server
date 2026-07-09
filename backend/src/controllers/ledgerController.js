@@ -38,7 +38,7 @@ const listCategories = async (req, res, next) => {
 const createCategory = async (req, res, next) => {
   try {
     const { name, type, color } = req.body;
-    if (!name || !type) return res.status(400).json({ message: '이름과 유형은 필수입니다.' });
+    if (!name || !type) return res.status(400).json({ error: '이름과 유형은 필수입니다.' });
     const cat = await prisma.ledgerCategory.create({ data: { name, type, color: color || '#1677ff' } });
     res.status(201).json(cat);
   } catch (err) { next(err); }
@@ -57,7 +57,7 @@ const deleteCategory = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const entryCount = await prisma.ledgerEntry.count({ where: { categoryId: id } });
-    if (entryCount > 0) return res.status(400).json({ message: '해당 카테고리에 거래 내역이 있어 삭제할 수 없습니다.' });
+    if (entryCount > 0) return res.status(400).json({ error: '해당 카테고리에 거래 내역이 있어 삭제할 수 없습니다.' });
     await prisma.ledgerCategory.delete({ where: { id } });
     res.json({ message: '삭제되었습니다.' });
   } catch (err) { next(err); }
@@ -96,7 +96,7 @@ const createEntry = async (req, res, next) => {
   try {
     const { type, amount, categoryId, date, memo } = req.body;
     if (!type || !amount || !categoryId || !date)
-      return res.status(400).json({ message: '유형, 금액, 카테고리, 날짜는 필수입니다.' });
+      return res.status(400).json({ error: '유형, 금액, 카테고리, 날짜는 필수입니다.' });
     const entry = await prisma.ledgerEntry.create({
       data: {
         type,
@@ -221,7 +221,7 @@ const summary = async (req, res, next) => {
 const listBudgets = async (req, res, next) => {
   try {
     const { year, month } = req.query;
-    if (!year || !month) return res.status(400).json({ message: 'year, month 필수입니다.' });
+    if (!year || !month) return res.status(400).json({ error: 'year, month 필수입니다.' });
     const budgets = await prisma.ledgerBudget.findMany({
       where: { year: Number(year), month: Number(month) },
       include: { category: true },
@@ -234,7 +234,7 @@ const upsertBudget = async (req, res, next) => {
   try {
     const { categoryId, year, month, amount } = req.body;
     if (!categoryId || !year || !month || amount == null)
-      return res.status(400).json({ message: 'categoryId, year, month, amount 필수입니다.' });
+      return res.status(400).json({ error: 'categoryId, year, month, amount 필수입니다.' });
     const budget = await prisma.ledgerBudget.upsert({
       where: { categoryId_year_month: { categoryId: Number(categoryId), year: Number(year), month: Number(month) } },
       create: { categoryId: Number(categoryId), year: Number(year), month: Number(month), amount: Number(amount) },
@@ -267,7 +267,7 @@ const createRecurring = async (req, res, next) => {
   try {
     const { type, amount, categoryId, dayOfMonth, memo } = req.body;
     if (!type || !amount || !categoryId)
-      return res.status(400).json({ message: '유형, 금액, 카테고리는 필수입니다.' });
+      return res.status(400).json({ error: '유형, 금액, 카테고리는 필수입니다.' });
     const rec = await prisma.ledgerRecurring.create({
       data: {
         type,

@@ -115,7 +115,7 @@ export default function MilestonesPage() {
       render: (v) => (
         <span style={{
           display: 'inline-block', width: 20, height: 20,
-          borderRadius: 4, backgroundColor: v, border: '1px solid #d9d9d9',
+          borderRadius: 4, backgroundColor: v, border: '1px solid var(--fd-border)',
         }} />
       ),
     },

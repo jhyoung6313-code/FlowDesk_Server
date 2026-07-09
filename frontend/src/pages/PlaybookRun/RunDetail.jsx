@@ -922,7 +922,7 @@ export default function RunDetailPage() {
                       size="small"
                       icon={<PlusOutlinedIcon />}
                       onClick={() => setAddingStep({ phaseId: ph.id, title: '' })}
-                      style={{ width: '100%', marginTop: 4, color: '#aaa', borderColor: '#eee' }}
+                      style={{ width: '100%', marginTop: 4, color: '#aaa', borderColor: 'var(--fd-border)' }}
                     >
                       할 일 추가
                     </Button>

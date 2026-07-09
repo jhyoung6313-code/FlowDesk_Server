@@ -155,7 +155,7 @@ export default function WbsSummaryCards({ tasks, issues = [], refDate }) {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
             <WarningOutlined style={{ color: delayedTasks.length > 0 ? '#ff4d4f' : '#bbb', fontSize: 18 }} />
-            <span style={{ fontSize: 13, color: '#555' }}>지연 항목</span>
+            <span style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }}>지연 항목</span>
           </div>
           <div style={{ fontSize: 28, fontWeight: 800, color: delayedTasks.length > 0 ? '#ff4d4f' : '#999', lineHeight: 1 }}>
             {delayedTasks.length}
@@ -180,7 +180,7 @@ export default function WbsSummaryCards({ tasks, issues = [], refDate }) {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
             <CalendarOutlined style={{ color: dueSoonTasks.length > 0 ? '#fa8c16' : '#bbb', fontSize: 18 }} />
-            <span style={{ fontSize: 13, color: '#555' }}>마감 임박</span>
+            <span style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }}>마감 임박</span>
           </div>
           <div style={{ fontSize: 28, fontWeight: 800, color: dueSoonTasks.length > 0 ? '#fa8c16' : '#999', lineHeight: 1 }}>
             {dueSoonTasks.length}
@@ -205,7 +205,7 @@ export default function WbsSummaryCards({ tasks, issues = [], refDate }) {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
             <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 18 }} />
-            <span style={{ fontSize: 13, color: '#555' }}>완료 현황</span>
+            <span style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }}>완료 현황</span>
           </div>
           <div style={{ fontSize: 28, fontWeight: 800, color: '#52c41a', lineHeight: 1 }}>
             {completedCount}
@@ -226,7 +226,7 @@ export default function WbsSummaryCards({ tasks, issues = [], refDate }) {
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
             <ExclamationCircleOutlined style={{ color: openIssues > 0 ? '#1890ff' : '#bbb', fontSize: 18 }} />
-            <span style={{ fontSize: 13, color: '#555' }}>오픈 이슈</span>
+            <span style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }}>오픈 이슈</span>
           </div>
           <div style={{ fontSize: 28, fontWeight: 800, color: openIssues > 0 ? '#1890ff' : '#999', lineHeight: 1 }}>
             {openIssues}

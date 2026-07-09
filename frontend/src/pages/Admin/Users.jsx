@@ -5,9 +5,11 @@ import {
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, StopOutlined, CheckCircleOutlined,
-  KeyOutlined, CrownOutlined, UserOutlined,
+  KeyOutlined, CrownOutlined, UserOutlined, LockOutlined, UnlockOutlined, SafetyOutlined,
 } from '@ant-design/icons';
 import { getUsers, createUser, updateUser, deactivateUser, activateUser, resetUserPassword } from '../../api/users';
+import { unlockUser, getPermissions } from '../../api/admin';
+import { getDepartments } from '../../api/org';
 
 const { Option } = Select;
 
@@ -18,6 +20,11 @@ export default function UsersAdminPage() {
   const [editTarget, setEditTarget] = useState(null);
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+  const [departments, setDepartments] = useState([]);
+  const [permissionOptions, setPermissionOptions] = useState([]); // 부여 가능한 권한 그룹
+  const selectedDeptId = Form.useWatch('departmentId', form);
+  const teamOptions = (departments.find((d) => d.id === selectedDeptId)?.teams || [])
+    .map((t) => ({ label: t.name, value: t.id }));
 
   /* 비밀번호 초기화 결과 모달 */
   const [resetResult, setResetResult] = useState(null); // { username, tempPassword }
@@ -29,7 +36,11 @@ export default function UsersAdminPage() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    getDepartments().then(setDepartments).catch(() => {});
+    getPermissions().then(setPermissionOptions).catch(() => {});
+  }, []);
 
   const handleOpen = (user = null) => {
     setEditTarget(user);
@@ -39,10 +50,15 @@ export default function UsersAdminPage() {
         displayName: user.displayName,
         role: user.role,
         password: '',
+        departmentId: user.departmentId ?? undefined,
+        teamId: user.teamId ?? undefined,
+        position: user.position ?? undefined,
+        jobGrade: user.jobGrade ?? undefined,
+        permissions: user.permissions ?? [],
       });
     } else {
       form.resetFields();
-      form.setFieldsValue({ role: 'member' });
+      form.setFieldsValue({ role: 'member', permissions: [] });
     }
     setModalOpen(true);
   };
@@ -53,7 +69,15 @@ export default function UsersAdminPage() {
       setSaving(true);
 
       if (editTarget) {
-        const data = { displayName: values.displayName, role: values.role };
+        const data = {
+          displayName: values.displayName,
+          role: values.role,
+          departmentId: values.departmentId ?? null,
+          teamId: values.teamId ?? null,
+          position: values.position ?? null,
+          jobGrade: values.jobGrade ?? null,
+          permissions: values.permissions ?? [],
+        };
         if (values.password) data.password = values.password;
         await updateUser(editTarget.id, data);
         message.success('사용자가 수정되었습니다.');
@@ -92,6 +116,16 @@ export default function UsersAdminPage() {
     }
   };
 
+  const handleUnlock = async (record) => {
+    try {
+      await unlockUser(record.id);
+      message.success(`"${record.displayName}" 계정 잠금이 해제되었습니다.`);
+      load();
+    } catch (err) {
+      message.error(err?.response?.data?.error || '잠금 해제에 실패했습니다.');
+    }
+  };
+
   const handleResetPassword = async (record) => {
     try {
       const { tempPassword } = await resetUserPassword(record.id);
@@ -105,6 +139,22 @@ export default function UsersAdminPage() {
     { title: '아이디', dataIndex: 'username', key: 'username', width: 130 },
     { title: '이름', dataIndex: 'displayName', key: 'displayName' },
     {
+      title: '부서 / 팀',
+      key: 'org',
+      width: 200,
+      render: (_, r) => {
+        const dept = r.department?.name;
+        const team = r.team?.name;
+        if (!dept && !team) return <Typography.Text type="secondary">-</Typography.Text>;
+        return (
+          <Space size={4} wrap>
+            {dept && <Tag color="blue">{dept}</Tag>}
+            {team && <Tag color="green">{team}</Tag>}
+          </Space>
+        );
+      },
+    },
+    {
       title: '권한',
       dataIndex: 'role',
       key: 'role',
@@ -116,11 +166,48 @@ export default function UsersAdminPage() {
       ),
     },
     {
+      title: '추가 권한',
+      dataIndex: 'permissions',
+      key: 'permissions',
+      width: 140,
+      render: (perms) => {
+        if (!perms || perms.length === 0) return <Typography.Text type="secondary">-</Typography.Text>;
+        return (
+          <Space size={4} wrap>
+            {perms.map((k) => {
+              const p = permissionOptions.find((x) => x.key === k);
+              return <Tag color="purple" key={k}>{p?.label || k}</Tag>;
+            })}
+          </Space>
+        );
+      },
+    },
+    {
       title: '상태',
-      dataIndex: 'isActive',
-      key: 'isActive',
-      width: 80,
-      render: (a) => <Tag color={a ? 'green' : 'default'}>{a ? '활성' : '비활성'}</Tag>,
+      key: 'status',
+      width: 130,
+      render: (_, r) => {
+        const isLocked = r.lockedUntil && new Date(r.lockedUntil) > new Date();
+        return (
+          <Space size={4} wrap>
+            <Tag color={r.isActive ? 'green' : 'default'}>{r.isActive ? '활성' : '비활성'}</Tag>
+            {isLocked && <Tag color="red" icon={<LockOutlined />}>잠김</Tag>}
+            {r.totpEnabled && <Tag color="geekblue" icon={<SafetyOutlined />}>OTP</Tag>}
+          </Space>
+        );
+      },
+    },
+    {
+      title: '최근 로그인',
+      dataIndex: 'lastLoginAt',
+      key: 'lastLoginAt',
+      width: 150,
+      render: (d) =>
+        d ? (
+          new Date(d).toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'short' })
+        ) : (
+          <Typography.Text type="secondary">-</Typography.Text>
+        ),
     },
     {
       title: '가입일',
@@ -132,9 +219,23 @@ export default function UsersAdminPage() {
     {
       title: '',
       key: 'actions',
-      width: 140,
-      render: (_, record) => (
+      width: 170,
+      render: (_, record) => {
+        const isLocked = record.lockedUntil && new Date(record.lockedUntil) > new Date();
+        return (
         <Space>
+          {/* 계정 잠금 해제 (잠긴 경우만) */}
+          {isLocked && (
+            <Popconfirm
+              title={`"${record.displayName}" 계정의 잠금을 해제하시겠습니까?`}
+              description="로그인 실패 횟수가 초기화됩니다."
+              onConfirm={() => handleUnlock(record)}
+              okText="잠금 해제"
+              cancelText="취소"
+            >
+              <Button type="text" size="small" icon={<UnlockOutlined />} title="잠금 해제" style={{ color: '#fa8c16' }} />
+            </Popconfirm>
+          )}
           {/* 수정 */}
           <Button
             type="text"
@@ -180,7 +281,8 @@ export default function UsersAdminPage() {
             </Popconfirm>
           )}
         </Space>
-      ),
+        );
+      },
     },
   ];
 
@@ -218,7 +320,15 @@ export default function UsersAdminPage() {
         cancelText="취소"
         confirmLoading={saving}
       >
-        <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
+        <Form
+          form={form}
+          layout="vertical"
+          style={{ marginTop: 16 }}
+          onValuesChange={(changed) => {
+            // 부서를 바꾸면 기존 팀 선택을 해제한다
+            if ('departmentId' in changed) form.setFieldValue('teamId', undefined);
+          }}
+        >
           <Form.Item
             name="username"
             label="아이디"
@@ -267,11 +377,62 @@ export default function UsersAdminPage() {
               </Option>
             </Select>
           </Form.Item>
+          <Form.Item
+            name="permissions"
+            label="추가 권한 (감사권한 등)"
+            tooltip="role(관리자/일반)과 별개로 부여하는 권한입니다. 예: 일반사용자 + 개인정보 감사권한"
+          >
+            <Select
+              mode="multiple"
+              allowClear
+              placeholder="부여할 권한 그룹 선택 (선택)"
+              options={permissionOptions.map((p) => ({ label: p.label, value: p.key }))}
+              optionRender={(opt) => {
+                const p = permissionOptions.find((x) => x.key === opt.value);
+                return (
+                  <Space direction="vertical" size={0}>
+                    <span>{p?.label}</span>
+                    {p?.desc && <Typography.Text type="secondary" style={{ fontSize: 12 }}>{p.desc}</Typography.Text>}
+                  </Space>
+                );
+              }}
+            />
+          </Form.Item>
+          <Form.Item name="departmentId" label="부서">
+            <Select
+              placeholder="부서 선택 (선택)"
+              allowClear
+              options={departments.map((d) => ({ label: d.name, value: d.id }))}
+            />
+          </Form.Item>
+          <Form.Item name="teamId" label="팀">
+            <Select
+              placeholder={selectedDeptId ? '팀 선택 (선택)' : '먼저 부서를 선택하세요'}
+              allowClear
+              disabled={!selectedDeptId}
+              options={teamOptions}
+            />
+          </Form.Item>
+          <Form.Item
+            name="position"
+            label="직책"
+            tooltip="전자결재 결재선 프리셋(직급 규칙)에 사용됩니다. 예) 팀장, 매니저"
+            rules={[{ max: 100, message: '100자 이하로 입력하세요.' }]}
+          >
+            <Input placeholder="예) 팀장 / 매니저 (선택)" allowClear />
+          </Form.Item>
+          <Form.Item
+            name="jobGrade"
+            label="직급"
+            rules={[{ max: 100, message: '100자 이하로 입력하세요.' }]}
+          >
+            <Input placeholder="예) 차장 / 대리 (선택)" allowClear />
+          </Form.Item>
           {form.getFieldValue('role') === 'admin' && (
             <Alert
               type="warning"
               showIcon
-              message="관리자 권한 부여 시 사용자 관리, 파트 관리, 비밀번호 초기화 등 모든 관리 기능이 활성화됩니다."
+              message="관리자 권한 부여 시 사용자 관리, 부서·팀 관리, 비밀번호 초기화 등 모든 관리 기능이 활성화됩니다."
               style={{ marginBottom: 0 }}
             />
           )}

@@ -346,7 +346,7 @@ export default function CalendarView({ isActive }) {
         </Tooltip>
       </div>
 
-      <div style={{ background: '#fff', borderRadius: 8, padding: 16 }}>
+      <div style={{ background: 'var(--fd-surface)', borderRadius: 8, padding: 16 }}>
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
@@ -425,7 +425,7 @@ export default function CalendarView({ isActive }) {
                 )}
               </Space>
             </Descriptions.Item>
-            <Descriptions.Item label="담당파트">
+            <Descriptions.Item label="담당팀">
               {selected.part?.name || '-'}
             </Descriptions.Item>
             <Descriptions.Item label="담당자">

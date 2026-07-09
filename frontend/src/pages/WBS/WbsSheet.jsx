@@ -1,13 +1,15 @@
 import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   Table, Button, Input, DatePicker, InputNumber, Popconfirm,
-  Space, message, Tooltip, Modal, Drawer, Select, Tag, Badge, Divider, Progress, Upload,
+  Space, message, Tooltip, Modal, Select, Tag, Badge, Divider, Progress, Upload, Dropdown,
 } from 'antd';
+import ResizableDrawer from '../../components/common/ResizableDrawer';
 import {
   PlusOutlined, DeleteOutlined, PlusCircleOutlined,
   FileTextOutlined, ExpandAltOutlined, SearchOutlined,
   ExclamationCircleOutlined, BugOutlined, CloseOutlined,
   PaperClipOutlined, DownloadOutlined, FolderOpenOutlined,
+  DownOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import * as wbsApi from '../../api/wbs';
@@ -136,7 +138,7 @@ function DualProgressBar({ planned, actual }) {
   const a = Number(actual) || 0;
   const barColor = a >= p ? '#52c41a' : a >= p * 0.8 ? '#faad14' : '#ff7875';
   return (
-    <div style={{ position: 'relative', height: 14, borderRadius: 7, background: '#f0f0f0', overflow: 'hidden' }}>
+    <div style={{ position: 'relative', height: 14, borderRadius: 7, background: 'var(--fd-surface-muted)', overflow: 'hidden' }}>
       {/* 계획 바 (연한 회색 테두리 효과) */}
       <div style={{
         position: 'absolute', left: 0, top: 0, bottom: 0,
@@ -200,7 +202,7 @@ function MemoCell({ value, onChange }) {
         <>
           <Tooltip title={value} placement="topLeft">
             <span
-              style={{ flex: 1, fontSize: 12, color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              style={{ flex: 1, fontSize: 12, color: 'var(--fd-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
               onClick={() => { setVal(value); setEditing(true); }}
             >
               <FileTextOutlined style={{ color: '#faad14', marginRight: 4 }} />
@@ -395,7 +397,7 @@ const DEFAULT_COL_WIDTHS = {
   _num: 72, name: 200, deliverable: 160, duration: 60,
   startDate: 90, endDate: 90,
   plannedProgress: 140, actualProgress: 140,
-  compliance: 80, delay: 70, memo: 210, action: 88,
+  compliance: 80, delay: 70, memo: 210,
 };
 
 const ISSUE_STATUS_OPTIONS = [
@@ -409,6 +411,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
   const [loading, setLoading] = useState(false);
   const [colWidths, setColWidths] = useState(DEFAULT_COL_WIDTHS);
   const [searchText, setSearchText] = useState('');
+  const [expandedRowKeys, setExpandedRowKeys] = useState([]);
 
   // 이슈 드로어 상태
   const [issueDrawer, setIssueDrawer] = useState({ open: false, taskName: '', taskNum: '' });
@@ -509,7 +512,17 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
 
   const handleAddChild = async (parentId) => {
     try {
-      await wbsApi.createTask(projectId, { name: '하위 작업', parentId });
+      await wbsApi.createTask(projectId, { name: '새 작업', parentId });
+      setExpandedRowKeys((prev) => prev.includes(parentId) ? prev : [...prev, parentId]);
+      onRefresh();
+    } catch {
+      message.error('항목 추가 실패');
+    }
+  };
+
+  const handleAddSibling = async (record) => {
+    try {
+      await wbsApi.createTask(projectId, { name: '새 작업', parentId: record.parentId ?? null });
       onRefresh();
     } catch {
       message.error('항목 추가 실패');
@@ -562,37 +575,59 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
         const taskIssues = issuesByTask[val] || [];
         const activeIssues = taskIssues.filter((i) => i.status !== 'closed');
         const hasIssue = activeIssues.length > 0;
+        const childLevelNames = ['중분류', '소분류', '상세 Task', 'Sub-Task'];
+        const childLabel = childLevelNames[record.level];
 
         return (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: record.level * 20 }}>
-            {cfg.label ? (
-              <span style={{ flexShrink: 0, background: cfg.labelBg, color: '#fff', fontSize: 10, fontWeight: 700, lineHeight: 1, padding: '2px 4px', borderRadius: 3, letterSpacing: 0.5 }}>
-                {cfg.label}
-              </span>
-            ) : (
-              <span style={{ flexShrink: 0, width: 6, height: 6, borderRadius: '50%', background: cfg.dotColor, display: 'inline-block' }} />
-            )}
-            <EditCell
-              value={val}
-              onChange={(v) => handleUpdate(record.id, 'name', v)}
-              style={{ color: cfg.textColor, fontWeight: cfg.fontWeight, fontSize: cfg.fontSize }}
-            />
-            {hasIssue && (
-              <Tooltip title={`클릭하여 이슈 ${activeIssues.length}건 보기`} placement="right">
-                <span
-                  onClick={() => openIssueDrawer(val, record._num)}
-                  style={{
-                    flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 2,
-                    background: '#ff4d4f', color: '#fff',
-                    fontSize: 10, fontWeight: 700, lineHeight: 1,
-                    padding: '2px 5px', borderRadius: 8,
-                    cursor: 'pointer', whiteSpace: 'nowrap',
-                  }}
-                >
-                  <ExclamationCircleOutlined style={{ fontSize: 9 }} />
-                  이슈 {activeIssues.length}
+          <div style={{ paddingLeft: record.level * 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {cfg.label ? (
+                <span style={{ flexShrink: 0, background: cfg.labelBg, color: '#fff', fontSize: 10, fontWeight: 700, lineHeight: 1, padding: '2px 4px', borderRadius: 3, letterSpacing: 0.5 }}>
+                  {cfg.label}
                 </span>
-              </Tooltip>
+              ) : (
+                <span style={{ flexShrink: 0, width: 6, height: 6, borderRadius: '50%', background: cfg.dotColor, display: 'inline-block' }} />
+              )}
+              <EditCell
+                value={val}
+                onChange={(v) => handleUpdate(record.id, 'name', v)}
+                style={{ color: cfg.textColor, fontWeight: cfg.fontWeight, fontSize: cfg.fontSize }}
+              />
+              {hasIssue && (
+                <Tooltip title={`클릭하여 이슈 ${activeIssues.length}건 보기`} placement="right">
+                  <span
+                    onClick={() => openIssueDrawer(val, record._num)}
+                    style={{
+                      flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 2,
+                      background: '#ff4d4f', color: '#fff',
+                      fontSize: 10, fontWeight: 700, lineHeight: 1,
+                      padding: '2px 5px', borderRadius: 8,
+                      cursor: 'pointer', whiteSpace: 'nowrap',
+                    }}
+                  >
+                    <ExclamationCircleOutlined style={{ fontSize: 9 }} />
+                    이슈 {activeIssues.length}
+                  </span>
+                </Tooltip>
+              )}
+            </div>
+            {childLabel && (
+              <div
+                className="wbs-add-child-btn"
+                onClick={() => handleAddChild(record.id)}
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 3,
+                  marginTop: 3, marginLeft: 2,
+                  color: cfg.borderColor, fontSize: 11, cursor: 'pointer',
+                  opacity: 0.55, transition: 'opacity 0.15s',
+                  userSelect: 'none',
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
+                onMouseLeave={(e) => e.currentTarget.style.opacity = 0.55}
+              >
+                <PlusOutlined style={{ fontSize: 9 }} />
+                {childLabel} 추가
+              </div>
             )}
           </div>
         );
@@ -620,7 +655,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
       title: '기간',
       key: 'duration',
       render: (_, record) => (
-        <span style={{ color: '#666', fontSize: 12 }}>{calcDuration(record.startDate, record.endDate)}</span>
+        <span style={{ color: 'var(--fd-text-secondary)', fontSize: 12 }}>{calcDuration(record.startDate, record.endDate)}</span>
       ),
     }),
     withResize('startDate', {
@@ -725,11 +760,33 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
         <MemoCell value={val} onChange={(v) => handleUpdate(record.id, 'memo', v)} />
       ),
     }),
-    withResize('action', {
+    {
       title: '',
       key: 'action',
+      fixed: 'right',
+      width: 110,
       render: (_, record) => {
         const taskIssueCount = (issuesByTask[record.name] || []).filter((i) => i.status !== 'closed').length;
+        const levelNames = ['대분류', '중분류', '소분류', '상세 Task', 'Sub-Task'];
+        const childLevelName = levelNames[Math.min(record.level + 1, levelNames.length - 1)];
+        const siblingLevelName = levelNames[Math.min(record.level, levelNames.length - 1)];
+        const canAddChild = record.level < 4;
+
+        const addMenuItems = [
+          ...(canAddChild ? [{
+            key: 'child',
+            label: `하위 추가 (${childLevelName})`,
+            icon: <PlusCircleOutlined style={{ color: '#52c41a' }} />,
+            onClick: () => handleAddChild(record.id),
+          }] : []),
+          {
+            key: 'sibling',
+            label: `같은 레벨 추가 (${siblingLevelName})`,
+            icon: <PlusOutlined style={{ color: '#1890ff' }} />,
+            onClick: () => handleAddSibling(record),
+          },
+        ];
+
         return (
           <Space size={2}>
             <Tooltip title="이슈 등록/조회">
@@ -741,20 +798,22 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
                 />
               </Badge>
             </Tooltip>
-            <Tooltip title="하위 항목 추가">
+            <Dropdown menu={{ items: addMenuItems }} trigger={['click']} placement="bottomRight">
               <Button
-                type="text" icon={<PlusCircleOutlined />} size="small"
-                onClick={() => handleAddChild(record.id)}
-                style={{ color: '#52c41a' }}
-              />
-            </Tooltip>
+                type="text" size="small"
+                style={{ color: '#52c41a', padding: '0 4px' }}
+              >
+                <PlusCircleOutlined />
+                <DownOutlined style={{ fontSize: 9, marginLeft: 2 }} />
+              </Button>
+            </Dropdown>
             <Popconfirm title="이 항목과 하위 항목이 모두 삭제됩니다." onConfirm={() => handleDelete(record.id)}>
               <Button type="text" danger icon={<DeleteOutlined />} size="small" />
             </Popconfirm>
           </Space>
         );
       },
-    }),
+    },
   ];
 
   const finalColumns = columns.map((col) =>
@@ -763,7 +822,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
       : col
   );
 
-  const totalWidth = Object.values(colWidths).reduce((s, w) => s + w, 0);
+  const totalWidth = Object.values(colWidths).reduce((s, w) => s + w, 0) + 110;
 
   return (
     <div>
@@ -807,7 +866,10 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
         pagination={false}
         bordered
         scroll={{ x: totalWidth }}
-        expandable={{ defaultExpandAllRows: true }}
+        expandable={{
+          expandedRowKeys,
+          onExpandedRowsChange: setExpandedRowKeys,
+        }}
         components={{ header: { cell: ResizableHeaderCell } }}
         onRow={(record) => {
           const cfg = LEVEL_CONFIG[Math.min(record.level, LEVEL_CONFIG.length - 1)];
@@ -819,7 +881,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
       </Button>
 
       {/* 이슈 드로어 */}
-      <Drawer
+      <ResizableDrawer
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <BugOutlined style={{ color: '#ff4d4f' }} />
@@ -850,7 +912,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
               const statusOpt = ISSUE_STATUS_OPTIONS.find((o) => o.value === iss.status);
               return (
                 <div key={iss.id} style={{
-                  border: '1px solid #f0f0f0', borderRadius: 8, padding: '10px 12px',
+                  border: '1px solid var(--fd-border)', borderRadius: 8, padding: '10px 12px',
                   marginBottom: 8, background: iss.status === 'closed' ? '#fafafa' : '#fff',
                   opacity: iss.status === 'closed' ? 0.6 : 1,
                 }}>
@@ -935,7 +997,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
             이슈 등록
           </Button>
         </div>
-      </Drawer>
+      </ResizableDrawer>
     </div>
   );
 }

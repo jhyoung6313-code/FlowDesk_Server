@@ -5,10 +5,12 @@ import {
 } from 'antd';
 import {
   LockOutlined, UserOutlined, SafetyOutlined, QrcodeOutlined, CheckCircleOutlined,
-  BgColorsOutlined, FieldTimeOutlined, IdcardOutlined,
+  BgColorsOutlined, FieldTimeOutlined, IdcardOutlined, HighlightOutlined, DeleteOutlined,
 } from '@ant-design/icons';
+import { Upload, Popconfirm } from 'antd';
 import { changePassword, setupOtp, verifySetupOtp, disableOtp, updateIdleTimeout, updateMyProfile } from '../../api/auth';
-import { updateMyAvatarColor } from '../../api/users';
+import { updateMyAvatarColor, uploadMySignature, deleteMySignature } from '../../api/users';
+import SignaturePad from '../../components/SignaturePad';
 import { getAvatarColor, AVATAR_COLOR_PRESETS } from '../../utils/colors';
 
 // 미사용 화면 잠금 시간 프리셋(분). 백엔드 ALLOWED_IDLE_TIMEOUTS와 일치해야 함
@@ -48,8 +50,8 @@ export function ProfileFieldsSection({ user, onChange }) {
   const handleSave = async (values) => {
     setSaving(true);
     try {
+      // 부서·팀은 관리자가 지정하므로 본인은 직책·직급만 수정한다.
       const saved = await updateMyProfile({
-        department: values.department,
         position: values.position,
         jobGrade: values.jobGrade,
       });
@@ -72,16 +74,21 @@ export function ProfileFieldsSection({ user, onChange }) {
         layout="vertical"
         onFinish={handleSave}
         initialValues={{
-          department: user?.department || '',
           position: user?.position || '',
           jobGrade: user?.jobGrade || '',
         }}
       >
-        <Form.Item name="department" label="관리부서" rules={[{ max: PROFILE_FIELD_MAX_LEN, message: `${PROFILE_FIELD_MAX_LEN}자 이하로 입력하세요.` }]}>
-          <Input placeholder="예) 경영지원팀" allowClear />
+        <Form.Item label="부서 / 팀">
+          <Space size={6} wrap>
+            {user?.department?.name ? <Tag color="blue">{user.department.name}</Tag> : null}
+            {user?.team?.name ? <Tag color="green">{user.team.name}</Tag> : null}
+            {!user?.department?.name && !user?.team?.name && (
+              <Typography.Text type="secondary">관리자가 지정합니다.</Typography.Text>
+            )}
+          </Space>
         </Form.Item>
         <Form.Item name="position" label="직책" rules={[{ max: PROFILE_FIELD_MAX_LEN, message: `${PROFILE_FIELD_MAX_LEN}자 이하로 입력하세요.` }]}>
-          <Input placeholder="예) 팀장 / 파트장" allowClear />
+          <Input placeholder="예) 팀장 / 매니저" allowClear />
         </Form.Item>
         <Form.Item name="jobGrade" label="직급" rules={[{ max: PROFILE_FIELD_MAX_LEN, message: `${PROFILE_FIELD_MAX_LEN}자 이하로 입력하세요.` }]}>
           <Input placeholder="예) 차장 / 대리" allowClear />
@@ -239,7 +246,7 @@ export function OtpSection({ totpEnabled: initialEnabled }) {
           <img
             src={qrDataUrl}
             alt="OTP QR Code"
-            style={{ width: 180, height: 180, border: '1px solid #f0f0f0', borderRadius: 8, marginBottom: 16 }}
+            style={{ width: 180, height: 180, border: '1px solid var(--fd-border)', borderRadius: 8, marginBottom: 16 }}
           />
           <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12 }}>
             스캔 후 앱에 표시된 6자리 코드를 입력하세요.
@@ -335,6 +342,107 @@ export function AvatarColorSection({ user, onColorChange }) {
           </Tooltip>
         ))}
       </Space>
+    </Card>
+  );
+}
+
+/* ── 서명·인감 등록 (그리기 + 업로드) ─────────────────── */
+function SignSlot({ kind, label, hint, path, saving, onUpload, onDelete, onDraw }) {
+  return (
+    <div style={{ flex: 1, minWidth: 220 }}>
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>{label}</div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{
+          width: 120, height: 60, border: '1px dashed var(--fd-border, #d9d9d9)', borderRadius: 6,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: '#fff', flexShrink: 0,
+        }}>
+          {path
+            ? <img src={path} alt={label} style={{ maxHeight: 56, maxWidth: 116, objectFit: 'contain' }} />
+            : <Typography.Text type="secondary" style={{ fontSize: 12 }}>미등록</Typography.Text>}
+        </div>
+        <Space direction="vertical" size={6}>
+          <Space size={6}>
+            <Button size="small" icon={<HighlightOutlined />} onClick={onDraw} loading={saving}>그리기</Button>
+            <Upload accept="image/png,image/jpeg,image/webp" showUploadList={false} beforeUpload={onUpload}>
+              <Button size="small">업로드</Button>
+            </Upload>
+          </Space>
+          {path && (
+            <Popconfirm title={`${label}을(를) 삭제하시겠습니까?`} onConfirm={onDelete} okText="삭제" cancelText="취소">
+              <Button size="small" danger icon={<DeleteOutlined />} loading={saving}>삭제</Button>
+            </Popconfirm>
+          )}
+        </Space>
+      </div>
+      <Typography.Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 6 }}>{hint}</Typography.Text>
+    </div>
+  );
+}
+
+export function SignatureSection({ user, onChange }) {
+  const [saving, setSaving] = useState(false);
+  const [drawKind, setDrawKind] = useState(null); // 'sign' | 'seal' | null
+
+  const doUpload = async (kind, file) => {
+    setSaving(true);
+    try {
+      const saved = await uploadMySignature(file, kind);
+      message.success(`${kind === 'seal' ? '인감' : '서명'}이 등록되었습니다.`);
+      onChange?.({ signImagePath: saved.signImagePath, sealImagePath: saved.sealImagePath });
+    } catch (err) {
+      message.error(err?.response?.data?.error || '등록에 실패했습니다.');
+    } finally { setSaving(false); }
+    return false; // antd Upload 자동 업로드 방지
+  };
+
+  const doDelete = async (kind) => {
+    setSaving(true);
+    try {
+      await deleteMySignature(kind);
+      onChange?.(kind === 'seal' ? { sealImagePath: null } : { signImagePath: null });
+      message.success('삭제되었습니다.');
+    } catch (err) {
+      message.error(err?.response?.data?.error || '삭제에 실패했습니다.');
+    } finally { setSaving(false); }
+  };
+
+  const handleDrawSave = async (file) => {
+    const kind = drawKind;
+    setDrawKind(null);
+    await doUpload(kind, file);
+  };
+
+  return (
+    <Card
+      title={<span><HighlightOutlined style={{ marginRight: 8 }} />서명 / 인감</span>}
+      style={{ borderRadius: 8, marginBottom: 24 }}
+    >
+      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 14, fontSize: 13 }}>
+        전자결재 승인 시 결재란에 표시됩니다. <b>인감</b>이 있으면 인감을, 없으면 서명을, 둘 다 없으면 이름 도장으로 표시됩니다.
+        <br />직접 그리거나 이미지(PNG 권장, 2MB 이하)로 업로드하세요.
+      </Typography.Text>
+      <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+        <SignSlot
+          kind="sign" label="서명" hint="사인(자필 서명) 형태"
+          path={user?.signImagePath} saving={saving}
+          onDraw={() => setDrawKind('sign')}
+          onUpload={(f) => doUpload('sign', f)}
+          onDelete={() => doDelete('sign')}
+        />
+        <SignSlot
+          kind="seal" label="인감(도장)" hint="결재란에 우선 표시됨"
+          path={user?.sealImagePath} saving={saving}
+          onDraw={() => setDrawKind('seal')}
+          onUpload={(f) => doUpload('seal', f)}
+          onDelete={() => doDelete('seal')}
+        />
+      </div>
+      <SignaturePad
+        open={!!drawKind}
+        title={drawKind === 'seal' ? '인감 그리기' : '서명 그리기'}
+        onCancel={() => setDrawKind(null)}
+        onSave={handleDrawSave}
+      />
     </Card>
   );
 }

@@ -14,6 +14,7 @@ const audit = require('./auditService');
 const { RETENTION, AUDIT_ACTION } = require('../config/security');
 
 const UPLOAD_DIR = path.join(__dirname, '../../uploads');
+const CHAT_UPLOAD_DIR = path.join(__dirname, '../../uploads/chat');
 const DAY = 24 * 60 * 60 * 1000;
 const daysAgo = (n) => new Date(Date.now() - n * DAY);
 
@@ -62,7 +63,30 @@ async function purgeReadNotifications() {
   await logPurge('notifications(read)', count, `older_than=${RETENTION.READ_NOTIFICATION_DAYS}d`);
 }
 
-// 4) Orphan 첨부파일: DB에 없는 업로드 파일 정리
+// 4) 채팅 첨부파일: 메시지 작성일 경과분의 실제 파일만 파기 (메시지 텍스트는 유지)
+async function purgeChatAttachments() {
+  const cutoff = daysAgo(RETENTION.CHAT_ATTACHMENT_DAYS);
+  const msgs = await prisma.chatMessage.findMany({
+    where: { fileUrl: { not: null }, createdAt: { lt: cutoff } },
+    select: { id: true, fileUrl: true },
+  });
+  if (!msgs.length) return;
+
+  // 실제 파일 삭제 (fileUrl: '/uploads/chat/{filename}')
+  for (const m of msgs) {
+    const filename = path.basename(m.fileUrl);
+    const filePath = path.join(CHAT_UPLOAD_DIR, filename);
+    try { if (fs.existsSync(filePath)) fs.unlinkSync(filePath); } catch (e) { console.error('[retention] 채팅 파일 삭제 실패:', e.message); }
+  }
+  // 첨부 메타데이터만 비움 (메시지 본문/대화 흐름은 보존)
+  const { count } = await prisma.chatMessage.updateMany({
+    where: { id: { in: msgs.map((m) => m.id) } },
+    data: { fileUrl: null, fileName: null, fileType: null, fileSize: null },
+  });
+  await logPurge('chat_attachments', count, `older_than=${RETENTION.CHAT_ATTACHMENT_DAYS}d`);
+}
+
+// 5) Orphan 첨부파일: DB에 없는 업로드 파일 정리
 async function purgeOrphanFiles() {
   if (!fs.existsSync(UPLOAD_DIR)) return;
   const dbNames = new Set((await prisma.taskAttachment.findMany({ select: { storedName: true } })).map((a) => a.storedName));
@@ -85,6 +109,7 @@ async function runPurge() {
     await purgeAuditLogs();
     await purgeSoftDeletedTasks();
     await purgeReadNotifications();
+    await purgeChatAttachments();
     await purgeOrphanFiles();
   } catch (err) {
     console.error('[retention] 파기 오류:', err.message);

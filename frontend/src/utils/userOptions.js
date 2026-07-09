@@ -8,7 +8,8 @@ const NO_DEPT_LABEL = '부서 미지정';
  * @returns {string}
  */
 export function getMyDepartment() {
-  return useAuthStore.getState().user?.department || '';
+  // 부서는 관계 객체({ id, name }) 형태로 내려온다.
+  return useAuthStore.getState().user?.department?.name || '';
 }
 
 /**
@@ -30,7 +31,7 @@ export function buildUserOptions(users, myDept, opts = {}) {
     value: valuePrefix ? `${valuePrefix}${u[valueKey]}` : u[valueKey],
     label: u.displayName,
     // 이름·부서·직책을 모두 검색 대상에 포함
-    keywords: `${u.displayName || ''} ${u.department || ''} ${u.position || ''}`.toLowerCase(),
+    keywords: `${u.displayName || ''} ${u.department?.name || ''} ${u.position || ''}`.toLowerCase(),
   });
 
   const myDeptNorm = (myDept || '').trim();
@@ -38,7 +39,7 @@ export function buildUserOptions(users, myDept, opts = {}) {
   const others = new Map(); // 부서명 -> 사용자[]
 
   (users || []).forEach((u) => {
-    const dept = (u.department || '').trim();
+    const dept = (u.department?.name || '').trim();
     if (myDeptNorm && dept === myDeptNorm) {
       sameDept.push(u);
     } else {

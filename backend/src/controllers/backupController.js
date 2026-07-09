@@ -30,14 +30,15 @@ function decryptBackup(buf) {
 const backup = async (req, res, next) => {
   try {
     const [
-      users, parts, tasks, taskAssignees, taskExtraAssignees, taskDependencies,
+      users, departments, teams, tasks, taskAssignees, taskExtraAssignees, taskDependencies,
       taskComments, taskAttachments, taskHistories, taskTags,
       tags, milestones, notifications, recurringTasks, taskTemplates,
       calendarNotes, wbsProjects, wbsProjectMembers, wbsTasks, wbsIssues,
       timeEntries, appSettings,
     ] = await Promise.all([
-      prisma.user.findMany({ select: { id: true, username: true, displayName: true, role: true, isActive: true, createdAt: true, totpEnabled: true } }),
-      prisma.part.findMany(),
+      prisma.user.findMany({ select: { id: true, username: true, displayName: true, role: true, isActive: true, createdAt: true, totpEnabled: true, departmentId: true, teamId: true } }),
+      prisma.department.findMany(),
+      prisma.team.findMany(),
       prisma.task.findMany(),
       prisma.taskAssignee.findMany(),
       prisma.taskExtraAssignee.findMany(),
@@ -64,7 +65,7 @@ const backup = async (req, res, next) => {
       version: '1.8',
       exportedAt: new Date().toISOString(),
       data: {
-        users, parts, tasks, taskAssignees, taskExtraAssignees, taskDependencies,
+        users, departments, teams, tasks, taskAssignees, taskExtraAssignees, taskDependencies,
         taskComments, taskAttachments, taskHistories, taskTags,
         tags, milestones, notifications, recurringTasks, taskTemplates,
         calendarNotes, wbsProjects, wbsProjectMembers, wbsTasks, wbsIssues,
@@ -99,12 +100,21 @@ const restore = async (req, res, next) => {
 
     // 트랜잭션으로 복원 (기존 데이터 유지하고 누락된 데이터만 추가)
     await prisma.$transaction(async (tx) => {
-      // parts
-      for (const part of (data.parts || [])) {
-        await tx.part.upsert({
-          where: { id: part.id },
-          update: { name: part.name, description: part.description },
-          create: part,
+      // departments (팀보다 먼저 복원)
+      for (const dept of (data.departments || [])) {
+        await tx.department.upsert({
+          where: { id: dept.id },
+          update: { name: dept.name, description: dept.description, order: dept.order ?? 0 },
+          create: dept,
+        });
+      }
+
+      // teams
+      for (const team of (data.teams || [])) {
+        await tx.team.upsert({
+          where: { id: team.id },
+          update: { name: team.name, departmentId: team.departmentId, description: team.description, order: team.order ?? 0 },
+          create: team,
         });
       }
 

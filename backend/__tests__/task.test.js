@@ -23,6 +23,10 @@ jest.mock('@prisma/client', () => {
       deleteMany: jest.fn(),
       createMany: jest.fn(),
     },
+    // 업무 이력 기록(logHistory)용 — create/삭제/상태변경 시 호출됨
+    taskHistory: {
+      create: jest.fn().mockResolvedValue({}),
+    },
   };
   return { PrismaClient: jest.fn(() => mockPrismaClient) };
 });

@@ -2,8 +2,11 @@
 setlocal enabledelayedexpansion
 chcp 65001 >nul 2>&1
 
+:: Node.js / npm / PostgreSQL 경로를 PATH에 추가
+set "PATH=C:\Program Files\nodejs;C:\Program Files\PostgreSQL\17\bin;%PATH%"
+
 echo ============================================================
-echo   Task Manager - 서버 재시작 스크립트
+echo   FlowDesk - 서버 재시작 스크립트
 echo   백엔드: http://localhost:4000
 echo   프론트엔드: http://localhost:3000
 echo ============================================================
@@ -76,9 +79,9 @@ echo.
 :: ─────────────────────────────────────────────
 echo [3/5] 백엔드 의존성 확인 중...
 
-if not exist "c:\Users\jhyou\task-manager\backend\node_modules" (
+if not exist "%~dp0backend\node_modules" (
     echo   node_modules 없음 - npm install 실행 중...
-    pushd c:\Users\jhyou\task-manager\backend
+    pushd "%~dp0backend"
     call npm install
     if %errorlevel% neq 0 (
         echo   [오류] npm install 실패
@@ -93,18 +96,28 @@ if not exist "c:\Users\jhyou\task-manager\backend\node_modules" (
 echo.
 
 :: ─────────────────────────────────────────────
+:: 3-b. Prisma Client 재생성 (스키마 변경 반영)
+:: ─────────────────────────────────────────────
+echo [3b/5] Prisma Client 재생성 중...
+pushd "%~dp0backend"
+node node_modules\prisma\build\index.js generate >nul 2>&1
+echo   Prisma Client 준비 완료.
+popd
+echo.
+
+:: ─────────────────────────────────────────────
 :: 4. 백엔드 시작
 :: ─────────────────────────────────────────────
 echo [4/5] 백엔드 서버 시작 중...
 
-start "Task Manager Backend" /min cmd /c "cd /d c:\Users\jhyou\task-manager\backend && npm run dev 2>&1 | tee backend.log"
+start "Task Manager Backend" /min cmd /c "cd /d "%~dp0backend" && npm run dev > backend.log 2>&1"
 
 :: 백엔드 기동 대기 (최대 15초)
 set /a retries=0
 :wait_backend
 timeout /t 2 /nobreak >nul
 set /a retries+=1
-curl -s http://localhost:4000/api/health >nul 2>&1
+curl -s http://localhost:4000/health >nul 2>&1
 if %errorlevel% equ 0 (
     echo   백엔드 서버 준비 완료 - http://localhost:4000
     goto :backend_ok
@@ -123,9 +136,9 @@ echo.
 :: ─────────────────────────────────────────────
 echo [5/5] 프론트엔드 서버 시작 중...
 
-if not exist "c:\Users\jhyou\task-manager\frontend\node_modules" (
+if not exist "%~dp0frontend\node_modules" (
     echo   node_modules 없음 - npm install 실행 중...
-    pushd c:\Users\jhyou\task-manager\frontend
+    pushd "%~dp0frontend"
     call npm install
     if %errorlevel% neq 0 (
         echo   [오류] npm install 실패
@@ -135,7 +148,7 @@ if not exist "c:\Users\jhyou\task-manager\frontend\node_modules" (
     popd
 )
 
-start "Task Manager Frontend" /min cmd /c "cd /d c:\Users\jhyou\task-manager\frontend && npm run dev 2>&1 | tee frontend.log"
+start "Task Manager Frontend" /min cmd /c "cd /d "%~dp0frontend" && npm run dev > frontend.log 2>&1"
 
 timeout /t 4 /nobreak >nul
 echo   프론트엔드 서버 시작됨 - http://localhost:3000

@@ -10,6 +10,7 @@ const { scheduleNotifications } = require('./services/notificationService');
 const { scheduleRetention } = require('./services/retentionService');
 const { scheduleAnomalyScan } = require('./services/anomalyService');
 const { auditForbidden } = require('./middlewares/auditLogger');
+const { piiGuard } = require('./middlewares/piiGuard');
 const { setupSocketIO } = require('./socket');
 
 const app = express();
@@ -64,7 +65,18 @@ const apiLimiter = rateLimit({
   skip: () => isDev,
 });
 
+// Rate Limiting: 미인증 웹훅 트리거 전용 — 외부 노출 엔드포인트라 더 엄격(1분에 30회)
+const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: '웹훅 호출이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
+  skip: () => isDev,
+});
+
 app.use('/api/auth/login', loginLimiter);
+app.use('/api/webhooks/trigger', webhookLimiter);
 app.use('/api', apiLimiter);
 
 // 업로드 파일 정적 서빙
@@ -73,11 +85,31 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 // 권한거부(403) 자동 감사로깅 — 권한 탐색 시도 탐지용
 app.use('/api', auditForbidden);
 
+// 개인정보/신용정보 입력 차단 (주민번호·카드번호·계좌번호·연락처) — 쓰기 요청 본문 스캔
+app.use('/api', piiGuard);
+
 // API 라우터
 app.use('/api', routes);
 
+// DB 연결 실패 판별 (PostgreSQL 다운/네트워크 단절 등)
+// Prisma: P1001=서버 도달 불가, P1002=연결 타임아웃, PrismaClientInitializationError=초기화 실패
+function isDbUnreachable(err) {
+  return (
+    err?.code === 'P1001' ||
+    err?.code === 'P1002' ||
+    err?.constructor?.name === 'PrismaClientInitializationError' ||
+    /Can't reach database server/i.test(err?.message || '')
+  );
+}
+
 // 글로벌 에러 핸들러
 app.use((err, req, res, next) => {
+  // DB 연결 실패는 503으로 분리해 사용자에게 명확한 안내를 준다 (코드 버그와 구분)
+  if (isDbUnreachable(err)) {
+    console.error(`[${new Date().toISOString()}] 503 ${req.method} ${req.path} — DB 연결 실패: ${err.message}`);
+    return res.status(503).json({ error: '데이터베이스에 연결할 수 없습니다. 잠시 후 다시 시도하거나 관리자에게 문의해주세요.' });
+  }
+
   const status = err.status || 500;
 
   // 개발 환경: 상세 에러 출력 / 운영 환경: 내부 정보 숨김
@@ -112,6 +144,7 @@ linkedRoomService.setIO(io);
 
 server.listen(PORT, () => {
   console.log(`백엔드 서버 실행 중: http://localhost:${PORT}`);
+  require('./services/securitySettingsService').refresh(); // 보안 설정 DB 오버라이드 로드
   scheduleNotifications();
   scheduleRetention();    // 데이터 보유기간 자동 파기
   scheduleAnomalyScan();  // 비정상 접근 탐지

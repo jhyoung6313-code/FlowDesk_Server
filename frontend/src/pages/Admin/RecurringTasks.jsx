@@ -145,7 +145,7 @@ export default function RecurringTasksPage() {
         return <Tag color="blue">{label}</Tag>;
       },
     },
-    { title: '파트', dataIndex: ['part', 'name'], key: 'part', render: (v) => v ? <Tag>{v}</Tag> : '-' },
+    { title: '팀', dataIndex: ['part', 'name'], key: 'part', render: (v) => v ? <Tag>{v}</Tag> : '-' },
     {
       title: '우선순위',
       dataIndex: 'priority',
@@ -218,8 +218,8 @@ export default function RecurringTasksPage() {
             <Input.TextArea rows={2} />
           </Form.Item>
 
-          <Form.Item name="partId" label="담당파트">
-            <Select placeholder="파트 선택" allowClear>
+          <Form.Item name="partId" label="담당팀">
+            <Select placeholder="팀 선택" allowClear>
               {parts.map((p) => <Option key={p.id} value={p.id}>{p.name}</Option>)}
             </Select>
           </Form.Item>

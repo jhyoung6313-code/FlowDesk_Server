@@ -103,4 +103,37 @@ const updateWidgetSettings = async (req, res, next) => {
   }
 };
 
-module.exports = { getEmailSettings, updateEmailSettings, testEmail, getWidgetSettings, updateWidgetSettings };
+/** GET /api/settings/theme — 개인 테마·화면 설정 조회 (본인) */
+const getThemePrefs = async (req, res, next) => {
+  try {
+    const key = `theme_prefs_${req.user.id}`;
+    const row = await prisma.appSetting.findUnique({ where: { key } });
+    if (!row) return res.json({});
+    try {
+      res.json(JSON.parse(row.value));
+    } catch {
+      res.json({});
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** PUT /api/settings/theme — 개인 테마·화면 설정 저장 (본인) */
+const updateThemePrefs = async (req, res, next) => {
+  try {
+    const key = `theme_prefs_${req.user.id}`;
+    const { themeKey, isDark, customAccent, density } = req.body;
+    const value = JSON.stringify({ themeKey, isDark, customAccent, density });
+    await prisma.appSetting.upsert({
+      where: { key },
+      create: { key, value },
+      update: { value },
+    });
+    res.json({ message: '테마 설정이 저장되었습니다.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = { getEmailSettings, updateEmailSettings, testEmail, getWidgetSettings, updateWidgetSettings, getThemePrefs, updateThemePrefs };

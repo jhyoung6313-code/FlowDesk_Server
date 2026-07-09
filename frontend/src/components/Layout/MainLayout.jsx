@@ -1,9 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Outlet } from 'react-router-dom';
-import { Layout, Drawer } from 'antd';
+import { Outlet, useLocation } from 'react-router-dom';
+import { Layout } from 'antd';
+import ResizableDrawer from '../common/ResizableDrawer';
 import Sidebar from './Sidebar';
 import AppHeader from './AppHeader';
+import SubHeader from './SubHeader';
+import ChatFab from './ChatFab';
+import AdminBackBar from './AdminBackBar';
 import NotificationToast from '../Notification/NotificationToast';
+import CommandPalette from '../common/CommandPalette';
 import useNotificationStore from '../../store/notificationStore';
 import useThemeStore from '../../store/themeStore';
 
@@ -23,6 +28,12 @@ function useIsMobile() {
 }
 
 export default function MainLayout() {
+  const location = useLocation();
+  const isDashboard = location.pathname === '/';
+  // 관리자 하위 화면(콘솔 자체 제외)에서 콘솔 복귀 바 표시
+  const isAdminSubpage =
+    location.pathname.startsWith('/admin') && location.pathname !== '/admin';
+
   // 컨텍스트 패널 최소화 상태 (새로고침 후에도 유지)
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem(CTX_MIN_KEY) === '1',
@@ -36,7 +47,6 @@ export default function MainLayout() {
   const isMobile = useIsMobile();
   const fetchNotifications = useNotificationStore((s) => s.fetch);
   const addSSENotification = useNotificationStore((s) => s.addSSENotification);
-  const isDark = useThemeStore((s) => s.isDark);
   const esRef = useRef(null);
   const reconnectTimer = useRef(null);
 
@@ -74,7 +84,7 @@ export default function MainLayout() {
   return (
     <Layout hasSider style={{ height: '100vh', overflow: 'hidden' }}>
       {isMobile ? (
-        <Drawer
+        <ResizableDrawer
           open={mobileOpen}
           onClose={() => setMobileOpen(false)}
           placement="left"
@@ -87,7 +97,7 @@ export default function MainLayout() {
             onCollapse={() => setMobileOpen(false)}
             onNavigate={() => setMobileOpen(false)}
           />
-        </Drawer>
+        </ResizableDrawer>
       ) : (
         <Sidebar collapsed={collapsed} onCollapse={handleCollapse} />
       )}
@@ -96,23 +106,27 @@ export default function MainLayout() {
           collapsed={collapsed}
           onCollapse={isMobile ? () => setMobileOpen(true) : handleCollapse}
         />
+        <SubHeader />
         <Content
           style={{
             flex: 1,
             minHeight: 0,
-            margin: isMobile ? '0' : '0',
-            padding: isMobile ? '16px' : '24px 28px',
-            background: isDark
-              ? 'var(--fd-content-bg-dark, #111018)'
-              : 'var(--fd-content-bg-light, #f8fafc)',
+            margin: 0,
+            padding: isDashboard ? 0 : '24px 28px',
+            background: 'var(--fd-content-bg-light, #f8fafc)',
             borderRadius: 0,
-            overflow: 'auto',
+            overflow: isDashboard ? 'hidden' : 'auto',
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
+          {isAdminSubpage && <AdminBackBar />}
           <Outlet />
         </Content>
       </Layout>
       <NotificationToast />
+      <CommandPalette />
+      <ChatFab />
     </Layout>
   );
 }

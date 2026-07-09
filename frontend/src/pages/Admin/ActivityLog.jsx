@@ -20,7 +20,7 @@ const ACTION_LABELS = {
 
 const FIELD_LABELS = {
   title: '제목', description: '설명', status: '상태', priority: '우선순위',
-  startDate: '시작일', dueDate: '마감일', partId: '파트', assignees: '담당자',
+  startDate: '시작일', dueDate: '마감일', partId: '팀', assignees: '담당자',
   predecessors: '선행업무', tags: '태그',
 };
 
@@ -103,7 +103,7 @@ export default function ActivityLogPage() {
       title: '필드',
       dataIndex: 'field',
       width: 90,
-      render: (v) => v ? <span style={{ fontSize: 12, color: '#595959' }}>{FIELD_LABELS[v] || v}</span> : '-',
+      render: (v) => v ? <span style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }}>{FIELD_LABELS[v] || v}</span> : '-',
     },
     {
       title: '변경 내용',

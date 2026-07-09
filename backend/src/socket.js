@@ -6,6 +6,24 @@ const prisma = require('./lib/prisma');
 // 접속 중인 userId → Set<socketId>
 const onlineUsers = new Map();
 
+// io 인스턴스 (setupSocketIO 호출 후 설정)
+let _io = null;
+const getIO = () => _io;
+
+// 특정 유저의 모든 소켓에 session-replaced 이벤트 발송 후 연결 해제
+function kickUserSockets(userId) {
+  if (!_io) return;
+  const socketIds = onlineUsers.get(userId);
+  if (!socketIds) return;
+  for (const sid of socketIds) {
+    const s = _io.sockets.sockets.get(sid);
+    if (s) {
+      s.emit('session-replaced');
+      s.disconnect(true);
+    }
+  }
+}
+
 // @username 멘션 파싱 → userId 배열 반환
 async function parseMentions(content, roomId) {
   const mentions = [];
@@ -67,9 +85,13 @@ function setupSocketIO(server) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       const user = await prisma.user.findUnique({
         where: { id: decoded.userId },
-        select: { id: true, username: true, displayName: true, role: true, isActive: true, avatarColor: true },
+        select: { id: true, username: true, displayName: true, role: true, isActive: true, avatarColor: true, sessionNonce: true },
       });
       if (!user || !user.isActive) return next(new Error('유효하지 않은 계정입니다.'));
+      // 중복 로그인 차단: 소켓 연결 시점에도 nonce 검증
+      if (user.sessionNonce && decoded.sn !== user.sessionNonce) {
+        return next(new Error('SESSION_REPLACED'));
+      }
       socket.user = user;
       next();
     } catch {
@@ -329,7 +351,8 @@ function setupSocketIO(server) {
     })();
   });
 
+  _io = io;
   return io;
 }
 
-module.exports = { setupSocketIO };
+module.exports = { setupSocketIO, getIO, kickUserSockets };

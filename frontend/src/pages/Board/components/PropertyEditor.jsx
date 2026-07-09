@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import {
-  Drawer, Button, Input, Select, Tag, Space, Typography, Popconfirm, message, Divider, Checkbox, Row, Col,
+  Button, Input, Select, Tag, Space, Typography, Popconfirm, message, Divider, Checkbox, Row, Col,
 } from 'antd';
+import ResizableDrawer from '../../../components/common/ResizableDrawer';
 import {
   PlusOutlined, DeleteOutlined, EditOutlined, CheckOutlined, CloseOutlined, HolderOutlined,
 } from '@ant-design/icons';
@@ -148,7 +149,7 @@ function PropertyRow({ prop, boardId, onUpdated, onDeleted }) {
   const typeLabel = PROPERTY_TYPES.find(t => t.value === prop.type)?.label ?? prop.type;
 
   return (
-    <div style={{ padding: '10px 0', borderBottom: '1px solid #f0f0f0' }}>
+    <div style={{ padding: '10px 0', borderBottom: '1px solid var(--fd-border)' }}>
       {editing ? (
         <div>
           <Space.Compact style={{ width: '100%', marginBottom: hasOptions ? 8 : 0 }}>
@@ -237,7 +238,7 @@ export default function PropertyEditor({ open, onClose, boardId, properties, onP
   };
 
   return (
-    <Drawer
+    <ResizableDrawer
       title="속성 관리"
       open={open}
       onClose={onClose}
@@ -309,6 +310,6 @@ export default function PropertyEditor({ open, onClose, boardId, properties, onP
           새 속성 추가
         </Button>
       )}
-    </Drawer>
+    </ResizableDrawer>
   );
 }

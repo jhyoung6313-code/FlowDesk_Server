@@ -120,7 +120,7 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
           borderRadius: 12,
           overflow: 'hidden',
           cursor: 'pointer',
-          background: '#fff',
+          background: 'var(--fd-surface)',
           border: `1px solid ${hover ? '#d0d0d0' : '#ebebeb'}`,
           boxShadow: hover ? '0 6px 18px rgba(0,0,0,0.1)' : '0 1px 4px rgba(0,0,0,0.05)',
           transform: hover ? 'translateY(-2px)' : 'none',
@@ -149,7 +149,7 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
                 onClick={(e) => { e.stopPropagation(); onEdit(); }}
                 style={{ background: 'rgba(255,255,255,0.92)', border: 'none', borderRadius: 6, cursor: 'pointer', padding: '4px 7px', display: 'flex', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}
               >
-                <EditOutlined style={{ fontSize: 12, color: '#555' }} />
+                <EditOutlined style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }} />
               </button>
               {onDelete && (
                 <button
@@ -193,7 +193,7 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
               const pv = card.properties?.find(p => p.propertyId === prop.id);
               if (!pv?.value) return null;
               return (
-                <span key={prop.id} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 10, background: '#f5f5f5', color: '#666', border: '1px solid #e8e8e8', display: 'inline-block' }}>
+                <span key={prop.id} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 10, background: 'var(--fd-surface-sunken)', color: 'var(--fd-text-secondary)', border: '1px solid var(--fd-border)', display: 'inline-block' }}>
                   <PropertyValue property={prop} value={pv.value} />
                 </span>
               );
@@ -215,7 +215,7 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
                 </span>
               )}
             </div>
-            <Avatar.Group maxCount={3} size={20}>
+            <Avatar.Group max={{ count: 3 }} size={20}>
               {assignees.map(a => (
                 <Tooltip key={a.id} title={a.user?.displayName}>
                   <Avatar size={20} style={{ backgroundColor: getAvatarColor(a.userId ?? a.user?.id), fontSize: 10 }}>

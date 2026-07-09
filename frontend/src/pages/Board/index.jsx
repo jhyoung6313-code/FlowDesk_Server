@@ -4,6 +4,7 @@ import {
   Button, Col, Form, Input, Modal, Row, Select, Spin, Typography,
   Avatar, Tooltip, Popconfirm, message, Steps, Radio, Empty, Dropdown,
 } from 'antd';
+import ResizableDrawer from '../../components/common/ResizableDrawer';
 import {
   PlusOutlined, AppstoreOutlined, DeleteOutlined, EditOutlined,
   SearchOutlined, CheckOutlined, StarOutlined, StarFilled,
@@ -511,7 +512,7 @@ export default function BoardWorkspace() {
           display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
           padding: '6px 8px', paddingLeft: indentPx, borderRadius: 6, fontSize: 15,
           background: isSelected ? '#e6f4ff' : 'transparent',
-          color: isSelected ? '#1677ff' : '#262626',
+          color: isSelected ? '#1677ff' : 'var(--fd-text-primary)',
           fontWeight: isSelected ? 600 : 400,
           borderTop: isDrop ? '2px solid #1677ff' : '2px solid transparent',
         }}
@@ -627,9 +628,9 @@ export default function BoardWorkspace() {
   };
 
   return (
-    <div style={{ display: 'flex', height: '100%', background: '#fff', borderRadius: 12, overflow: 'hidden', border: '1px solid #e8e8e8' }}>
+    <div style={{ display: 'flex', height: '100%', background: 'var(--fd-surface)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--fd-border)' }}>
       {/* ─── 좌측 트리 사이드바 ─── */}
-      <div style={{ width: 280, flexShrink: 0, borderRight: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div style={{ width: 280, flexShrink: 0, borderRight: '1px solid var(--fd-border)', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={{ padding: '14px 14px 10px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 15, fontWeight: 700 }}>
@@ -701,13 +702,18 @@ export default function BoardWorkspace() {
       </div>
 
       {/* ─── 카테고리 생성/수정 모달 ─── */}
-      <Modal
+      <ResizableDrawer
         title={catMode === 'create' ? '카테고리 생성' : '카테고리 수정'}
         open={catModalOpen}
-        onOk={handleCatOk}
-        onCancel={() => setCatModalOpen(false)}
-        okText="저장" cancelText="취소"
+        onClose={() => setCatModalOpen(false)}
+        placement="right"
         width={440}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setCatModalOpen(false)}>취소</Button>
+            <Button type="primary" onClick={handleCatOk}>저장</Button>
+          </div>
+        }
       >
         <Form form={catForm} layout="vertical">
           <div style={{ display: 'flex', gap: 12 }}>
@@ -745,13 +751,14 @@ export default function BoardWorkspace() {
             </Form.Item>
           )}
         </Form>
-      </Modal>
+      </ResizableDrawer>
 
       {/* ─── 새 보드 생성 모달 ─── */}
-      <Modal
+      <ResizableDrawer
         title={step === 0 ? '템플릿 선택' : '보드 정보 입력'}
         open={boardModalOpen}
-        onCancel={() => setBoardModalOpen(false)}
+        onClose={() => setBoardModalOpen(false)}
+        placement="right"
         footer={
           step === 0 ? (
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
@@ -780,7 +787,7 @@ export default function BoardWorkspace() {
                   onClick={() => setSelectedTemplate(tpl.id)}
                   style={{
                     padding: '14px 16px', borderRadius: 8, cursor: 'pointer',
-                    border: selectedTemplate === tpl.id ? '2px solid #1677ff' : '2px solid #e8e8e8',
+                    border: selectedTemplate === tpl.id ? '2px solid #1677ff' : '2px solid var(--fd-border)',
                     background: selectedTemplate === tpl.id ? '#e6f4ff' : '#fff',
                     position: 'relative', transition: 'all 0.15s',
                   }}
@@ -839,15 +846,21 @@ export default function BoardWorkspace() {
             </Form.Item>
           </Form>
         )}
-      </Modal>
+      </ResizableDrawer>
 
       {/* ─── 보드 수정 모달 ─── */}
-      <Modal
+      <ResizableDrawer
         title="보드 수정"
         open={editModalOpen}
-        onOk={handleEditBoard}
-        onCancel={() => setEditModalOpen(false)}
-        okText="수정" cancelText="취소"
+        onClose={() => setEditModalOpen(false)}
+        placement="right"
+        width={480}
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+            <Button onClick={() => setEditModalOpen(false)}>취소</Button>
+            <Button type="primary" onClick={handleEditBoard}>수정</Button>
+          </div>
+        }
       >
         <Form form={editForm} layout="vertical">
           <div style={{ display: 'flex', gap: 12 }}>
@@ -882,7 +895,8 @@ export default function BoardWorkspace() {
             <Input.TextArea rows={2} placeholder="보드 설명 (선택)" />
           </Form.Item>
         </Form>
-      </Modal>
+      </ResizableDrawer>
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-# FlowDesk 기능정의서 v1.9
+# FlowDesk 기능정의서 v2.1
 
 > 소규모 팀(2~10명)을 위한 로컬 전용 풀스택 업무관리 시스템
 
@@ -17,6 +17,18 @@
 10. [채팅 시스템](#10-채팅-시스템) — F-38, F-39
 11. [가계부](#11-가계부) — F-45
 12. [시스템 관리](#12-시스템-관리) — F-40~F-43
+13. [메모지](#13-메모지) — F-47
+14. [전역 통합 검색](#14-전역-통합-검색) — F-49
+15. [통합 알림 인박스 및 @멘션](#15-통합-알림-인박스-및-멘션) — F-50
+16. [워크로드 밸런싱](#16-워크로드-밸런싱) — F-51
+17. [전자결재](#17-전자결재) — F-52
+18. [게시판(BBS)](#18-게시판bbs) — F-53
+19. [사내 메일](#19-사내-메일) — F-54
+20. [일정 · 공휴일](#20-일정--공휴일) — F-55
+21. [개인정보 보호(PII)](#21-개인정보-보호pii) — F-56
+22. [보안 강화](#22-보안-강화) — F-57
+
+> **[v2.1 변경 요약]** 전자결재·게시판·사내메일·일정·공휴일·개인정보보호·보안강화 도메인 추가(F-52~F-57). 다크모드(구 F-20)는 제거되고 CSS 변수 기반 테마로 대체됨. 조직구조는 파트→부서·팀 2단계로 개편(F-40). 플레이북 예약실행·채팅 예약메시지 확장.
 
 ---
 
@@ -26,6 +38,7 @@
 - **화면**: S-01 로그인
 - **설명**: username/password 기반 로그인, JWT 토큰 발급 (유효기간 8시간)
 - **보안**: 로그인 Rate Limit (5분/10회), bcrypt 비밀번호 해싱
+- **비밀번호 입력 경고**: 한글 입력 또는 대문자(Caps Lock) 감지 시 amber 색상 경고 배너 표시 (실시간)
 - **API**: `POST /api/auth/login`
 
 ### F-11. OTP 2단계 인증 (TOTP)
@@ -100,9 +113,10 @@
 - **설명**: Recharts 기반 통계 위젯 (상태별/파트별/우선순위별 도넛·바 차트, D-Day 현황, 최근 활동)
 - **API**: `GET /api/tasks` (필터 조합)
 
-### F-20. 다크모드
-- **설명**: Ant Design 다크 알고리즘 + 커스텀 CSS 변수. Zustand themeStore에 토글 저장
-- 12가지 컬러 테마 선택 가능
+### F-20. 컬러 테마 ~~(다크모드)~~
+- **[변경]** 다크모드는 제거됨(커밋 `a186692 style: 다크모드 제거`). 현재는 **CSS 변수 기반 라이트 컬러 테마** 방식만 제공
+- **설명**: Zustand `themeStore`에 선택 테마 저장, CSS 변수(`--section-card` 등)로 섹션 카드 색상 연동
+- **주의**: 문서·코드에 남아있는 "다크모드" 표현은 레거시. Ant Design 다크 알고리즘은 미사용
 
 ### F-21. 마일스톤
 - **화면**: S-15 마일스톤
@@ -136,9 +150,11 @@
   - 컬럼: 작업명, 산출물명, 시작일, 종료일, 계획진척률(%), 실적진척률(%), 메모
   - 산출물 파일 첨부 (업로드/다운로드/삭제)
   - Excel 내보내기 / Excel 가져오기 (표준 포맷 + 실무 WBS 포맷 자동 감지)
+  - 업로드용 샘플 양식 다운로드 (표준 포맷 헤더 + 예시 행 + 작성안내 시트)
   - 간트 차트 뷰 연동
 - **API**: `GET/POST /api/wbs/projects`, `PUT/DELETE /api/wbs/projects/:id`
 - **API**: `GET/POST /api/wbs/projects/:id/tasks`, `PUT/DELETE /api/wbs/tasks/:taskId`
+- **API**: `GET /api/wbs/tasks/template` (업로드용 샘플 양식)
 
 ### F-14. WBS 이슈사항
 - **화면**: S-11 WBS > 이슈 탭
@@ -146,17 +162,19 @@
   - 프로젝트별 이슈 등록·수정·삭제 (구분, 이슈내용, 발생일, 목표해결일, 진척률, 완료예정일, 상태, 비고)
   - 이슈 상태: 오픈/진행중/완료/보류
   - 등록자(User) 참조 및 표시
-  - Excel 내보내기 / Excel 가져오기
+  - Excel 내보내기 / Excel 가져오기 / 업로드용 샘플 양식 다운로드
 - **API**: `GET/POST /api/wbs/projects/:id/issues`, `PUT/DELETE /api/wbs/issues/:issueId`
+- **API**: `GET /api/wbs/issues/template` (업로드용 샘플 양식)
 
 ---
 
 ## 5. 협업 기능
 
-### F-17. 댓글
-- **화면**: S-04 업무 드로어 > 댓글 탭
-- **설명**: 업무별 댓글 CRUD. 작성자 표시, 수정 이력 없음
-- **API**: `GET/POST /api/tasks/:id/comments`, `PUT/DELETE /api/comments/:id`
+### F-17. 댓글 (진행사항)
+- **화면**: S-04 업무 **수정 폼**(TaskForm) 하단 — 취소/저장 버튼 위. 기존 업무 수정 시에만 노출
+- **설명**: 업무별 진행사항/댓글 CRUD. 작성자 표시, 수정 이력 없음. 댓글 작성 시 **파일 첨부 가능**(보드 카드 댓글과 동일 패턴, 최대 20MB). 댓글 첨부는 별도 첨부 목록과 분리(`commentId` 기준)
+- **API**: `GET/POST /api/tasks/:id/comments`, `PUT/DELETE /api/tasks/comments/:commentId`, `POST /api/tasks/:id/comments/:commentId/attachment`
+- **참고**: 상세보기(👁) 드로어에서는 댓글/첨부/캘린더이동 탭을 제거함. 모든 드로어는 좌우 너비 드래그 리사이즈 지원(`components/common/ResizableDrawer`)
 
 ### F-23. 업무 히스토리 (변경 이력)
 - **화면**: S-04 업무 드로어 > 히스토리 탭
@@ -217,6 +235,8 @@
 ### F-19. Excel 가져오기
 - **설명**: Excel 파일 업로드로 WBS 시트/이슈사항 일괄 등록 (기존 데이터 대체)
 - **API**: `POST /api/wbs/projects/:id/tasks/import`, `POST /api/wbs/projects/:id/issues/import`
+- **샘플 양식**: 표준 포맷 헤더 + 예시 행 + 작성안내 시트가 채워진 빈 양식 다운로드
+  - **API**: `GET /api/wbs/tasks/template`, `GET /api/wbs/issues/template`
 
 ### F-30. PDF 출력
 - **설명**: 업무 목록 / 상세를 PDF로 출력 (jsPDF 기반)
@@ -296,6 +316,7 @@
   - **[개선]** 통계 대시보드: 상태별·심각도별 런 수, 평균 완료 시간, 병목 단계 Top 5
   - **[개선]** 사이드바 안읽음 배지: 새 Run·Run 업데이트 수 집계 (`PlaybookReadState.lastReadAt` 기준, 본인 작성 제외). Run 목록 진입/이탈 시 읽음 처리. 실시간 누적은 전역 `playbook-activity` 소켓 broadcast 사용
   - **[개선]** 런 전용 채팅방 자동 연동: 런 시작/완료/일시정지/재개·스텝 완료·업데이트(노트) 시 **런 이름의 그룹 채팅방**(`playbook_runs.linked_room_id`, 멤버=참여자)에 알림 발송 ([tm-chat] linkedRoomService)
+  - **[확장] 예약 실행(PlaybookSchedule)**: 플레이북을 반복 유형(daily/weekly/monthly)·시간·참여자로 예약 자동 실행. `playbook_schedules` 테이블, `controllers/playbookScheduleController.js`
 - **API**: `GET/POST /api/runs`, `PUT/PATCH /api/runs/:id`
   - `GET/POST/PATCH/DELETE /api/runs/:id/steps/:stepId/checklists(/:checkId)`
   - `GET /api/runs/stats`
@@ -340,10 +361,12 @@
 
 ## 12. 시스템 관리
 
-### F-40. 파트 관리
-- **화면**: S-08 관리자 > 파트
-- **설명**: 업무·반복업무·템플릿에서 사용하는 파트(부서/팀) CRUD
-- **API**: `GET/POST /api/parts`, `PUT/DELETE /api/parts/:id`
+### F-40. 부서 · 팀 관리
+- **화면**: S-08 관리자 > 부서·팀 (`frontend/src/pages/Admin/Departments.jsx`)
+- **설명**: 조직을 **부서(Department) → 팀(Team)** 2단계 구조로 관리. 부서/팀 각각 CRUD하며, 팀은 소속 부서에 종속(부서 삭제 시 소속 팀 cascade 삭제). 업무·반복업무·템플릿의 분류와 사용자 소속, 게시판 수신부서가 이 구조를 사용한다. (기존 "파트"를 대체)
+  - 업무/반복업무/템플릿은 **팀** 단위로 분류 (내부 컬럼은 `part_id`를 유지하되 팀을 참조)
+  - 사용자는 **부서 + 팀**을 관리자가 지정 (사용자 등록/수정 모달)
+- **API**: `GET/POST /api/departments`, `PUT/DELETE /api/departments/:id` · `GET/POST /api/teams`, `PUT/DELETE /api/teams/:id`
 
 ### F-41. 업무 템플릿
 - **화면**: S-17 관리자 > 템플릿
@@ -355,9 +378,30 @@
 - **설명**: 전체 업무 히스토리 조회 (관리자 전용)
 - **API**: `GET /api/admin/activity-log`
 
+### F-48. 접속기록 (보안 감사로그)
+- **화면**: 관리자 > 접속기록 (`frontend/src/pages/Admin/AuditLog.jsx`)
+- **설명**: 로그인/로그아웃을 포함한 보안 이벤트 이력 조회 (관리자 전용). 위·변조 방지를 위해 append-only로만 적재하며, 신용정보법상 접속기록 3년 보관 요건을 충족. 액션·사용자별 필터, "로그인만 보기" 빠른 필터 제공
+- **적재 액션**(`AUDIT_ACTION`, `backend/src/config/security.js`): `LOGIN_SUCCESS`, `LOGIN_FAIL`, `LOGOUT`, `ACCOUNT_LOCKED`, `PASSWORD_CHANGE`, `PASSWORD_RESET`, `PII_READ`, `DATA_EXPORT`, `PERMISSION_DENIED`, `DATA_PURGE`, `ANOMALY_DETECTED`
+- **기록 항목**: 사용자(삭제돼도 username 스냅샷 유지)·IP·User-Agent·결과(성공/실패)·대상 리소스·상세·일시
+- **구현**: `AuditLog` 모델 + `services/auditService.js`(`record`), `authController.finalizeLogin`(로그인)·`logout`(로그아웃)에서 적재. 조회 API는 `routes/admin.js`(`router.use(authenticate, adminOnly)`로 관리자 전용)
+- **API**: `GET /api/admin/audit-log` (query: `action`, `userId`, `limit`, `offset`)
+
 ### F-43. 앱 설정
 - **설명**: 이메일 SMTP 설정, 테마 등 앱 전역 설정을 AppSetting 테이블에 key-value로 관리
 - **API**: `GET/PUT /api/settings`
+
+---
+
+## 13. 메모지
+
+### F-47. 개인 메모지
+- **화면**: S-18 메모지 (상단 헤더·좌측 레일 진입)
+- **설명**: 작성자 본인만 보는 개인 전용 메모. 두 가지 뷰를 사용자가 전환 가능
+  - **포스트잇 보드형**: 색깔 카드를 보드 위에 자유 배치(드래그 이동), 위치 저장
+  - **심플 사이드 메모형**: 카드 세로 목록
+- **부가 기능**: 색상 분류(7색), 상단 고정(핀), 제목(선택)·내용
+- **권한**: 본인 메모만 조회·수정·삭제 (createdBy 기준)
+- **API**: `GET/POST /api/memos`, `PUT/DELETE /api/memos/:id`
 
 ---
 
@@ -365,8 +409,9 @@
 
 | 테이블 | 설명 |
 |--------|------|
-| users | 사용자 계정 (role: admin/member) |
-| parts | 파트(부서/팀) |
+| users | 사용자 계정 (role: admin/member, 부서·팀 FK: department_id·team_id) |
+| departments | 부서 |
+| teams | 팀 (부서 종속, department_id) — 업무/반복업무/템플릿 분류에 사용 (구 parts) |
 | tasks | 업무 (소프트 삭제: del_yn) |
 | task_assignees | 업무 담당자 (users 참조, PK: taskId+userId) |
 | task_extra_assignees | 외부 담당자 (자유 텍스트, users 참조 없음) |
@@ -379,6 +424,7 @@
 | notifications | 알림 (due_soon/due_today/overdue) |
 | time_entries | 타임 트래킹 |
 | calendar_notes | 캘린더 날짜 메모 |
+| memos | 개인 메모지 (포스트잇/사이드, 색상·핀·위치) |
 | milestones | 마일스톤 |
 | recurring_tasks | 반복 업무 정의 (담당자: JSON 컬럼) |
 | task_templates | 업무 템플릿 (담당자: JSON 컬럼) |
@@ -417,6 +463,174 @@
 | run_participants | 런 참여자 |
 | run_updates | 런 업데이트(노트/알림) |
 | run_timeline | 런 타임라인 이벤트 |
+| playbook_schedules | 플레이북 예약 실행 정의 (반복 유형·시간·참여자) |
+| scheduled_chat_messages | 채팅 예약 메시지 |
+| schedule_resources | 일정 자원 (회의실/차량) |
+| schedule_events | 일정 (휴가/회의/외근/차량 등, 날짜 단위) |
+| schedule_event_assignees | 일정 대상자 N:M |
+| holidays | 공휴일 (임시/대체/법정, 관리자 등록) |
+| bbs_categories | 게시판 카테고리 (트리, 쓰기권한, 대시보드 노출) |
+| user_dashboard_bbs_categories | 사용자별 대시보드 노출 게시판 선택 |
+| bbs_posts | 게시글/공문 (발신기관·시행일·수신부서, 소프트 삭제) |
+| bbs_comments | 게시판 댓글 (대댓글 트리) |
+| bbs_attachments | 게시판 첨부 (게시글/댓글) |
+| approval_form_types | 결재양식종류 (트리 분류) |
+| approval_templates | 결재양식 (입력필드·기본결재선 정의) |
+| approval_documents | 결재문서 (상태·문서번호·소프트 삭제) |
+| approval_doc_seq | 문서번호 채번 (양식코드+연도별 시퀀스) |
+| approval_steps | 결재단계 (결재자·직위·서명 스냅샷) |
+| approval_attachments | 결재 첨부 |
+| approval_comments | 결재 의견/댓글 |
+| internal_mails | 사내 메일 (스레드·답장·전달) |
+| internal_mail_recipients | 메일 수신자별 상태 (읽음/별표/폴더) |
+| internal_mail_labels | 메일 라벨 (사용자별 색상) |
+| internal_mail_label_links | 메일-라벨 N:M |
+| internal_mail_comments | 메일 코멘트 |
+| internal_mail_attachments | 메일 첨부 |
+| pii_block_logs | 개인정보 입력차단 검출로그 (마스킹본만) |
+| password_histories | 비밀번호 재사용 금지 이력 |
+
+---
+
+## 14. 전역 통합 검색
+
+### F-49. Command Palette (Ctrl+K)
+- **화면**: 어느 페이지에서나 오버레이 팔레트
+- **단축키**: `Ctrl+K` (Mac: `Cmd+K`), 헤더 검색 버튼 클릭
+- **검색 대상**: 업무·보드카드·메모·플레이북·WBS프로젝트·채팅메시지 동시 검색
+- **UX**: 250ms 디바운스, 그룹별 결과, ↑↓ 키보드 네비게이션, Enter로 해당 페이지 이동
+- **API**: `GET /api/search?q=...&limit=8`
+- **파일**: `backend/src/controllers/searchController.js`, `frontend/src/components/common/CommandPalette.jsx`
+
+---
+
+## 15. 통합 알림 인박스 및 @멘션
+
+### F-50. @멘션 알림
+- **트리거**: 업무 댓글에 `@표시명` 또는 `@아이디` 입력 시 해당 사용자에게 실시간 알림(SSE)
+- **알림 타입**: `mention` — 알림 팝업·인박스에 '멘션' 태그(마젠타)로 구분
+- **클릭 이동**: 알림 클릭 시 해당 업무 페이지로 자동 이동
+- **댓글 입력**: TaskForm 댓글창이 `Mentions` 컴포넌트로 대체 — `@` 입력 시 사용자 자동완성
+- **API**: `POST /api/tasks/:id/comments` (기존 엔드포인트, 멘션 파싱 내부 처리)
+- **서비스**: `backend/src/services/mentionService.js`
+- **DB**: `notifications.actor_id`, `notifications.link`, `notifications.type='mention'` 필드 추가
+
+---
+
+## 16. 워크로드 밸런싱
+
+### F-51. 워크로드 대시보드
+- **화면**: `/workload` — 사이드바 '워크로드' 메뉴
+- **설명**: 멤버별 진행 중 업무 수·우선순위·지연 현황을 카드 형태로 시각화
+- **부하 등급**: idle(0건) / normal / warning(기본 ≥5건) / overload(기본 ≥8건)
+- **요약 배너**: 과부하·여유 멤버 이름을 상단에 표시, 업무 배정 대상 추천
+- **정렬**: 부하순 / 이름순 전환
+- **클릭**: 카드 클릭 시 해당 담당자 필터가 적용된 업무 페이지로 이동
+- **임계치**: `.env`의 `WORKLOAD_OVERLOAD_THRESHOLD`로 조정 (기본 8)
+- **API**: `GET /api/users/workload`
+- **파일**: `backend/src/controllers/userController.js` (workload), `frontend/src/pages/Workload/index.jsx`
+
+---
+
+## 17. 전자결재
+
+### F-52. 전자결재 (결재양식 · 결재선 · 상신/승인 워크플로)
+- **화면**: `/approvals`(문서함), `/approvals/new`·`/approvals/:id/edit`(작성), `/approvals/:id`(상세), `admin/approval`(양식·양식종류 관리)
+- **개념 구조**: 결재양식종류(ApprovalFormType, 트리) → 결재양식(ApprovalTemplate) → 결재문서(ApprovalDocument) → 결재단계(ApprovalStep)
+- **결재양식종류**: 아이콘·색상·정렬을 가진 계층(parentId) 분류. 관리자 CRUD·순서변경
+- **결재양식(Template)**: 동적 입력필드 정의(`fieldsJson`), 기본 결재선(`lineJson`), 문서번호 코드(`code`, 기본 DOC)
+- **결재문서(Document)**: 양식 기반 작성. 상태 draft/pending/approved/rejected/cancelled, `currentStep`/`totalSteps` 진행 추적, 자동 문서번호(`docNo`, `ApprovalDocSeq`로 양식코드+연도별 채번), 소프트 삭제(`delYn`), 첨부·댓글
+- **결재선(Step)**: 순번(stepOrder)·결재자(approverId)·유형(approval)·상태(pending/approved/rejected/skipped). 결재 시 **결재자 직위·서명이미지·서명 IP·대결(actingType) 스냅샷** 저장 (User.`position`·`signImagePath` 활용)
+- **워크플로 API**: `submit`(상신)·`approve`(승인)·`reject`(반려)·`cancel`(취소)·`resubmit`(재상신)·`resume`(반려 후 재개)
+- **결재선 자동 해석**: `services/approvalLine.js` — 양식의 lineJson을 실제 결재자로 치환(`resolve-line`)
+- **API**:
+  - 양식종류: `GET/POST /api/approval-types`, `PUT /api/approval-types/reorder`, `PUT/DELETE /api/approval-types/:id`
+  - 양식: `GET /api/approval-templates(/:id)`, `POST/PUT/DELETE /api/approval-templates(/:id)`, `GET/POST /api/approval-templates/:id/resolve-line`
+  - 문서: `GET /api/approvals/pending-count`, `GET/POST /api/approvals`, `GET/PUT/DELETE /api/approvals/:id`, `POST /api/approvals/:id/{submit,approve,reject,cancel,resubmit,resume}`
+  - 첨부: `POST /api/approvals/:id/attachments`, `GET /api/approvals/:id/attachments/:aid/download`, `DELETE /api/approvals/:id/attachments/:aid`
+  - 댓글: `GET/POST /api/approvals/:id/comments`, `PUT/DELETE /api/approvals/:id/comments/:cid`
+- **파일**: `controllers/approvalController.js`·`approvalTemplateController.js`·`approvalFormTypeController.js`, `services/approvalLine.js`, `routes/approvals.js`, `pages/Approval/*`, `pages/Admin/ApprovalAdmin.jsx`
+
+---
+
+## 18. 게시판(BBS)
+
+### F-53. 게시판 (공지 · 공문)
+- **화면**: `/bbs`, `admin`(카테고리 관리는 게시판 내부/관리자)
+- **카테고리(BbsCategory)**: 아이콘·색상·계층(parentId)·정렬. 쓰기권한(`writeRole`, 기본 all), 대시보드 노출(`showOnDashboard`) 설정
+- **대시보드 위젯 연동**: 사용자별로 대시보드에 표시할 카테고리 선택(`UserDashboardBbsCategory`). `GET/PUT /api/bbs-categories/dashboard`
+- **게시글(BbsPost)**: 제목·내용, **공문 필드**(발신기관 `senderOrg`, 공문 시행일 `officialDueDate`, 수신부서 `recipientDepts[]`), 상단고정(pin), 조회수, 소프트 삭제(delYn)
+- **댓글(BbsComment)**: 대댓글(parentId 트리), 소프트 삭제, 첨부 가능
+- **첨부(BbsAttachment)**: 게시글·댓글 첨부(commentId 분리), multer 저장, 다운로드
+- **API**:
+  - 카테고리: `GET/POST /api/bbs-categories`, `GET/PUT /api/bbs-categories/dashboard`, `PUT /api/bbs-categories/reorder`, `PUT/DELETE /api/bbs-categories/:id`
+  - 게시글: `GET/POST /api/bbs`, `GET/PUT/DELETE /api/bbs/:id`, `PUT /api/bbs/:id/pin`
+  - 댓글: `GET/POST /api/bbs/:id/comments`, `PUT/DELETE /api/bbs/:id/comments/:cid`
+  - 첨부: `POST /api/bbs/:id/attachments`, `GET /api/bbs/:id/attachments/:aid/download`, `DELETE /api/bbs/:id/attachments/:aid`
+- **파일**: `controllers/bbsPostController.js`·`bbsCategoryController.js`, `routes/bbs.js`, `pages/BBS/*`
+
+---
+
+## 19. 사내 메일
+
+### F-54. 사내 메일 (내부 메일함)
+- **화면**: `/mail`(메일함 + 상세 + 작성 모달 + 라벨 관리), `/chat-popup`(팝업)
+- **메일(InternalMail)**: 제목·본문, 임시보관(isDraft), 중요도(normal/urgent), 답장·전달 원본(parentId·forwardedFrom), 대화 스레드(threadId)
+- **수신자(InternalMailRecipient)**: 수신유형(to/cc/bcc), 읽음(isRead/readAt), 별표(isStarred), 폴더(inbox/trash), 소프트 삭제(deletedAt) — 수신자별 상태 개별 관리
+- **라벨(InternalMailLabel)**: 사용자별 색상 라벨 + 메일 연결(InternalMailLabelLink)
+- **기능**: 발송·회신·전달, 별표 토글, 읽음 처리, 라벨 지정, 첨부(다운로드), 메일별 코멘트, 일괄처리, 휴지통 비우기, 안읽음 카운트
+- **API** (기본 마운트 `/api/mail`):
+  - `GET /api/mail`, `POST /api/mail`(임시저장/작성), `GET/PUT/DELETE /api/mail/:id`
+  - `GET /api/mail/unread-count`, `DELETE /api/mail/trash`(휴지통 비우기), `POST /api/mail/bulk`(일괄)
+  - `POST /api/mail/:id/{send,reply,forward}`, `PATCH /api/mail/:id/{star,read}`, `PUT /api/mail/:id/labels`
+  - 라벨: `GET/POST /api/mail/labels`, `PUT/DELETE /api/mail/labels/:id`
+  - 첨부: `POST /api/mail/:id/attachments`, `GET /api/mail/:id/attachments/:aid/download`, `DELETE /api/mail/:id/attachments/:aid`
+  - 코멘트: `GET/POST /api/mail/:id/comments`, `DELETE /api/mail/:id/comments/:cid`
+- **파일**: `controllers/mailController.js`, `routes/mail.js`, `pages/Mail/*`(index·MailDetail·ComposeModal·LabelManager), `pages/ChatPopup`
+
+---
+
+## 20. 일정 · 공휴일
+
+### F-55. 일정(스케줄) · 자원 예약 · 공휴일
+- **화면**: 대시보드 주간 일정·자원 위젯 + 월간 캘린더 (메모리 `schedule-feature.md` 참조)
+- **자원(ScheduleResource)**: 회의실(room)/차량(vehicle) 등 예약 대상. 이름·설명(정원/차종/번호판)·정렬·활성화
+- **일정(ScheduleEvent)**: 유형(휴가/반차/회의/외근/출장/재택/차량 등), 기간(startDate~endDate, 날짜 단위), 종일/시간(allDay·startTime·endTime), 장소, 메모, 자원 연결(resourceId), 공개 범위(visibility: public/shared/private)
+- **대상자(ScheduleEventAssignee)**: 타인 다중 지정 가능 (일정의 주체 — 본인 외 팀원 일정 등록)
+- **공유자(ScheduleEventShare)**: 주체는 아니지만 열람/알림 대상. `visibility='shared'`일 때만 지정. 지정 시 대상자에게 `schedule_shared` 알림 발송. `visibility='public'`(전체 공개)/`shared`(대상자·공유자만)/`private`(대상자·작성자만)에 따라 조회 필터(관리자는 전체 열람)
+- **공유 범위(ScheduleEventShareScope)**: 개인 외에 **부서/팀 단위 공유**(kind='dept'|'team'). 소속 인원 변동을 자동 반영(조회 시 요청자 소속 부서·팀으로 필터, 알림은 소속원으로 확장). 개인·부서·팀 공유는 함께 지정 가능
+- **공휴일(Holiday)**: 임시공휴일/대체공휴일/법정 등 관리자 등록(내장 기본 공휴일을 덮어씀). 캘린더·간트·일정에 반영
+- **API**:
+  - 일정: `GET/POST /api/schedules`, `PUT/DELETE /api/schedules/:id`
+  - 자원: `GET/POST /api/schedules/resources`, `PUT/DELETE /api/schedules/resources/:id`
+  - 공휴일: `GET/POST /api/holidays`, `DELETE /api/holidays/:id`
+- **파일**: `controllers/scheduleController.js`·`holidayController.js`, `routes/schedules.js`·`holidays.js`
+
+---
+
+## 21. 개인정보 보호(PII)
+
+### F-56. 개인정보 입력 차단 · 검출로그 · 직무분리
+- **입력 차단(piiGuard)**: 요청 본문에서 **주민등록번호·신용카드번호·계좌번호·연락처** 등 PII 패턴을 탐지하면 저장 전에 차단. 미들웨어 `middlewares/piiGuard.js` + `services/piiBlockService.js`
+- **검출로그(PiiBlockLog)**: 차단 이벤트를 append-only로 적재. **원문은 저장하지 않고 마스킹본(부분 비식별)만 보관**. 사용자·IP·User-Agent·엔드포인트·PII유형·필드경로 기록(사용자 삭제돼도 username 스냅샷 유지)
+- **직무분리(권한 레지스트리)**: role(admin/member)과 무관하게 `User.permissions[]` 집합으로 세밀 권한 부여. 검출로그 열람은 **`PII_AUDIT` 권한 보유자만** 가능(`middlewares/requirePermission.js`) → 시스템 관리자와 감사자 분리
+- **화면**: `pii-audit`(검출내역 조회, `pages/Admin/PiiBlockLog.jsx`)
+- **API**: `GET /api/pii-blocks` (권한: `PII_AUDIT`, query: `piiType`, `userId`, `limit`, `offset` — 마스킹본만 반환)
+- **파일**: `middlewares/piiGuard.js`·`requirePermission.js`, `services/piiBlockService.js`, `routes/piiBlocks.js`, `pages/Admin/PiiBlockLog.jsx`
+
+---
+
+## 22. 보안 강화
+
+### F-57. 세션 · 비밀번호 · 이상탐지 · 보관정책
+- **단일 세션 강제**: `User.sessionNonce`로 최신 로그인만 유효. 다른 기기/탭에서 로그인 시 이전 세션 무효화(커밋 `89c0375 feat: 단일 세션 강제`)
+- **비밀번호 재사용 금지**: `PasswordHistory`에 과거 해시 이력 저장, 변경 시 재사용 차단
+- **비밀번호 정책 단일화**: `config/security.js`의 `PASSWORD` + `utils/passwordPolicy.js`가 단일 기준(최소 8자·문자종류 4종 중 3종 이상, `.env` 조정). 신규/변경/재설정/관리자 계정생성 모두 `validateFormat` 사용
+- **이상징후 탐지**: `services/anomalyService.js` — 비정상 접근 패턴 감지 시 감사로그(`ANOMALY_DETECTED`) 적재
+- **보관정책(retention)**: `services/retentionService.js` — 감사로그 등 로그 보관기간 관리(접속기록 3년 요건, F-48 연계)
+- **보안설정 서비스**: `services/securitySettingsService.js` — 보안 관련 앱 설정 로드
+- **감사로그(F-48 연계)**: 로그인/로그아웃·비밀번호변경·권한거부·PII읽기·데이터내보내기·데이터삭제·이상징후 등 `AUDIT_ACTION` 적재
+- **파일**: `services/anomalyService.js`·`retentionService.js`·`securitySettingsService.js`·`auditService.js`, `config/security.js`, `utils/passwordPolicy.js`
 
 ---
 

@@ -21,7 +21,7 @@ router.post('/reset-password/request',    authController.requestPasswordReset);
 router.post('/reset-password/verify-otp', authController.verifyResetOtp);
 router.post('/reset-password/confirm',    authController.confirmPasswordReset);
 
-router.post('/logout', authController.logout);
+router.post('/logout', authenticate, authController.logout);
 router.get('/me', authenticate, authController.me);
 router.put('/password', authenticate, authController.changePassword);
 // 내 프로필(조직 정보: 관리부서/직책/직급) 수정

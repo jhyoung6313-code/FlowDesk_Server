@@ -16,6 +16,13 @@ export const NOTIFICATION_LABELS = {
   due_soon: '마감 임박',
   due_today: '오늘 마감',
   overdue: '마감 초과',
+  sla_warning: 'SLA 임박',
+  sla_breach: 'SLA 초과',
+  step_assigned: '스텝 배정',
+  step_reminder: '스텝 미처리',
+  security_alert: '보안 알림',
+  mention: '멘션',
+  schedule_shared: '일정 공유',
 };
 
 // 사용자 아바타 배경색 (id 기반 순환)

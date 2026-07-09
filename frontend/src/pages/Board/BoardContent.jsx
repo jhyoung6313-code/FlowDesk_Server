@@ -747,7 +747,7 @@ export default function BoardContent({ boardId: propBoardId }) {
                 <Dropdown
                   trigger={['click']}
                   dropdownRender={() => (
-                    <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 8, padding: 12, minWidth: 200, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                    <div style={{ background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 8, padding: 12, minWidth: 200, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
                       <Text strong style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>스위밍레인 기준</Text>
                       <Select
                         size="small"
@@ -867,7 +867,7 @@ export default function BoardContent({ boardId: propBoardId }) {
       </div>
 
       {/* 저장 뷰 탭 바 */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', borderBottom: '1px solid #f0f0f0', marginBottom: 12, paddingBottom: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap', borderBottom: '1px solid var(--fd-border)', marginBottom: 12, paddingBottom: 6 }}>
         {views.map(v => {
           const isActive = v.id === activeViewId;
           const typeMeta = VIEW_OPTIONS.find(o => o.value === v.type);
@@ -910,7 +910,7 @@ export default function BoardContent({ boardId: propBoardId }) {
 
       {/* F-B05 필터 패널 */}
       {filterOpen && (
-        <div style={{ background: '#f9f9f9', border: '1px solid #e8e8e8', borderRadius: 8, padding: '12px 16px', marginBottom: 12 }}>
+        <div style={{ background: 'var(--fd-surface-sunken)', border: '1px solid var(--fd-border)', borderRadius: 8, padding: '12px 16px', marginBottom: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
             <Text strong style={{ fontSize: 13 }}>필터</Text>
             {filters.map(f => (

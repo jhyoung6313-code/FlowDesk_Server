@@ -230,8 +230,7 @@ const scheduleNotifications = () => {
   // 매분: 플레이북 스케줄 자동 실행 체크
   cron.schedule('* * * * *', () => checkAndRunSchedules().catch(console.error));
 
-  // 서버 시작 시 즉시 1회 실행
-  generateNotifications().catch(console.error);
+  // 서버 시작 시 반복업무만 즉시 생성 (알림은 09:00 크론에서만 생성)
   generateRecurringTasks().catch(console.error);
   console.log('[알림 스케줄러] 등록 완료 (매일 09:00 실행)');
   console.log('[SLA 스케줄러] 등록 완료 (15분마다 실행)');
