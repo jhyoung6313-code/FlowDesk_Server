@@ -1,20 +1,86 @@
 const prisma = require('../lib/prisma');
+const { pushNotification } = require('../services/sseService');
 
 /** 허용 일정 유형 */
 const TYPES = ['vacation', 'half_day', 'meeting', 'field_work', 'business_trip', 'remote', 'vehicle', 'etc'];
+/** 공개 범위 */
+const VISIBILITIES = ['public', 'shared', 'private'];
 
 const eventInclude = {
   creator: { select: { id: true, displayName: true } },
   resource: { select: { id: true, kind: true, name: true } },
   assignees: { include: { user: { select: { id: true, displayName: true, avatarColor: true } } } },
+  shares: { include: { user: { select: { id: true, displayName: true, avatarColor: true } } } },
+  shareScopes: true,
 };
 
 /* 응답을 프론트가 쓰기 쉬운 형태로 평탄화 */
 function shape(ev) {
+  const scopes = ev.shareScopes || [];
   return {
     ...ev,
     assignees: (ev.assignees || []).map((a) => a.user),
+    shares: (ev.shares || []).map((s) => s.user),
+    shareDeptIds: scopes.filter((s) => s.kind === 'dept').map((s) => s.refId),
+    shareTeamIds: scopes.filter((s) => s.kind === 'team').map((s) => s.refId),
   };
+}
+
+/* 요청 사용자가 볼 수 있는 일정만 남기는 where 조건(OR 배열 반환, admin은 null).
+   공개(public) + 본인이 작성/대상자/공유자 + 본인 소속 부서·팀이 공유 범위인 일정 */
+function visibilityOr(user, deptId, teamId) {
+  if (user.role === 'admin') return null;
+  const or = [
+    { visibility: 'public' },
+    { createdBy: user.id },
+    { assignees: { some: { userId: user.id } } },
+    { shares: { some: { userId: user.id } } },
+  ];
+  const scopeOr = [];
+  if (deptId) scopeOr.push({ kind: 'dept', refId: deptId });
+  if (teamId) scopeOr.push({ kind: 'team', refId: teamId });
+  if (scopeOr.length) or.push({ shareScopes: { some: { OR: scopeOr } } });
+  return or;
+}
+
+/* 부서/팀 공유 범위를 실제 소속 사용자 id로 확장 */
+async function resolveScopeUserIds(deptIds, teamIds) {
+  const or = [];
+  if (deptIds.length) or.push({ departmentId: { in: deptIds } });
+  if (teamIds.length) or.push({ teamId: { in: teamIds } });
+  if (!or.length) return [];
+  const users = await prisma.user.findMany({ where: { isActive: true, OR: or }, select: { id: true } });
+  return users.map((u) => u.id);
+}
+
+/* 공유 대상(개인 + 부서/팀 소속원)에게 알림 발송 (본인·대상자 제외) */
+async function notifyShares(event, actor, { userIds = [], deptIds = [], teamIds = [], excludeIds = [] }) {
+  const scopeUserIds = await resolveScopeUserIds(deptIds, teamIds);
+  const targets = [...new Set([...userIds, ...scopeUserIds].map(Number).filter(Boolean))]
+    .filter((id) => id !== actor.id && !excludeIds.includes(id));
+  if (!targets.length) return;
+  const label = event.title || '일정';
+  const message = `${actor.displayName || '누군가'}님이 "${label}" 일정에 회원님을 공유했습니다.`;
+  for (const userId of targets) {
+    try {
+      const notif = await prisma.notification.create({
+        data: { userId, actorId: actor.id, type: 'schedule_shared', message, link: '/' },
+      });
+      pushNotification(userId, notif);
+    } catch (err) {
+      console.error('[일정 공유 알림] 발송 실패:', err.message);
+    }
+  }
+}
+
+/* shareIds / shareDeptIds / shareTeamIds 정규화 (비공개면 전부 비움, 대상자 중복 제거) */
+function normalizeShares({ visibility, shareIds, shareDeptIds, shareTeamIds }, assigneeIds) {
+  if (visibility !== 'shared') return { userIds: [], deptIds: [], teamIds: [] };
+  const userIds = Array.isArray(shareIds)
+    ? [...new Set(shareIds.map(Number).filter(Boolean))].filter((id) => !assigneeIds.includes(id)) : [];
+  const deptIds = Array.isArray(shareDeptIds) ? [...new Set(shareDeptIds.map(Number).filter(Boolean))] : [];
+  const teamIds = Array.isArray(shareTeamIds) ? [...new Set(shareTeamIds.map(Number).filter(Boolean))] : [];
+  return { userIds, deptIds, teamIds };
 }
 
 /** GET /api/schedules?start=YYYY-MM-DD&end=YYYY-MM-DD&type=...
@@ -34,6 +100,15 @@ const listEvents = async (req, res, next) => {
     }
     if (type) where.type = type;
 
+    // 공개 범위에 따라 조회 가능한 일정만 (본인 소속 부서·팀 공유 포함)
+    if (req.user.role !== 'admin') {
+      const me = await prisma.user.findUnique({
+        where: { id: req.user.id }, select: { departmentId: true, teamId: true },
+      });
+      const or = visibilityOr(req.user, me?.departmentId, me?.teamId);
+      if (or) where.OR = or;
+    }
+
     const events = await prisma.scheduleEvent.findMany({
       where,
       include: eventInclude,
@@ -48,7 +123,7 @@ const listEvents = async (req, res, next) => {
 /** POST /api/schedules */
 const createEvent = async (req, res, next) => {
   try {
-    const { type, title, startDate, endDate, allDay, startTime, endTime, location, memo, resourceId, assigneeIds } = req.body;
+    const { type, title, startDate, endDate, allDay, startTime, endTime, location, memo, resourceId, assigneeIds, shareIds, shareDeptIds, shareTeamIds, visibility } = req.body;
 
     if (!type || !TYPES.includes(type)) {
       return res.status(400).json({ error: '유효한 일정 유형이 필요합니다.' });
@@ -61,7 +136,13 @@ const createEvent = async (req, res, next) => {
     if (eDate < sDate) {
       return res.status(400).json({ error: '종료일은 시작일보다 빠를 수 없습니다.' });
     }
+    const vis = VISIBILITIES.includes(visibility) ? visibility : 'public';
     const ids = Array.isArray(assigneeIds) ? [...new Set(assigneeIds.map(Number).filter(Boolean))] : [];
+    const sh = normalizeShares({ visibility: vis, shareIds, shareDeptIds, shareTeamIds }, ids);
+    const scopeRows = [
+      ...sh.deptIds.map((refId) => ({ kind: 'dept', refId })),
+      ...sh.teamIds.map((refId) => ({ kind: 'team', refId })),
+    ];
 
     const event = await prisma.scheduleEvent.create({
       data: {
@@ -74,12 +155,16 @@ const createEvent = async (req, res, next) => {
         endTime: allDay === false ? (endTime || null) : null,
         location: location?.trim() || null,
         memo: memo?.trim() || null,
+        visibility: vis,
         resourceId: resourceId ? Number(resourceId) : null,
         createdBy: req.user.id,
         assignees: ids.length ? { create: ids.map((userId) => ({ userId })) } : undefined,
+        shares: sh.userIds.length ? { create: sh.userIds.map((userId) => ({ userId })) } : undefined,
+        shareScopes: scopeRows.length ? { create: scopeRows } : undefined,
       },
       include: eventInclude,
     });
+    await notifyShares(event, req.user, { userIds: sh.userIds, deptIds: sh.deptIds, teamIds: sh.teamIds, excludeIds: ids });
     res.status(201).json(shape(event));
   } catch (err) {
     next(err);
@@ -96,9 +181,12 @@ const updateEvent = async (req, res, next) => {
       return res.status(403).json({ error: '수정 권한이 없습니다.' });
     }
 
-    const { type, title, startDate, endDate, allDay, startTime, endTime, location, memo, resourceId, assigneeIds } = req.body;
+    const { type, title, startDate, endDate, allDay, startTime, endTime, location, memo, resourceId, assigneeIds, shareIds, shareDeptIds, shareTeamIds, visibility } = req.body;
     if (type && !TYPES.includes(type)) {
       return res.status(400).json({ error: '유효한 일정 유형이 필요합니다.' });
+    }
+    if (visibility !== undefined && !VISIBILITIES.includes(visibility)) {
+      return res.status(400).json({ error: '유효한 공개 범위가 필요합니다.' });
     }
     const sDate = startDate ? new Date(startDate) : existing.startDate;
     const eDate = endDate ? new Date(endDate) : (startDate ? sDate : existing.endDate);
@@ -114,6 +202,7 @@ const updateEvent = async (req, res, next) => {
       allDay: allDay !== undefined ? allDay !== false : existing.allDay,
       location: location !== undefined ? (location?.trim() || null) : existing.location,
       memo: memo !== undefined ? (memo?.trim() || null) : existing.memo,
+      visibility: visibility !== undefined ? visibility : existing.visibility,
       resourceId: resourceId !== undefined ? (resourceId ? Number(resourceId) : null) : existing.resourceId,
     };
     if (allDay !== undefined) {
@@ -125,15 +214,51 @@ const updateEvent = async (req, res, next) => {
     }
 
     // 대상자 재설정 (전달된 경우에만)
-    if (Array.isArray(assigneeIds)) {
-      const ids = [...new Set(assigneeIds.map(Number).filter(Boolean))];
+    const assigneeIdSet = Array.isArray(assigneeIds)
+      ? [...new Set(assigneeIds.map(Number).filter(Boolean))] : null;
+    if (assigneeIdSet) {
       await prisma.scheduleEventAssignee.deleteMany({ where: { eventId: id } });
-      if (ids.length) {
-        await prisma.scheduleEventAssignee.createMany({ data: ids.map((userId) => ({ eventId: id, userId })) });
+      if (assigneeIdSet.length) {
+        await prisma.scheduleEventAssignee.createMany({ data: assigneeIdSet.map((userId) => ({ eventId: id, userId })) });
       }
     }
 
+    // 공유(개인+부서/팀) 재설정 — 관련 필드나 공개범위가 전달된 경우에만
+    let notifyPayload = null;
+    const shareProvided = Array.isArray(shareIds) || Array.isArray(shareDeptIds)
+      || Array.isArray(shareTeamIds) || visibility !== undefined;
+    if (shareProvided) {
+      const excluded = assigneeIdSet
+        || (await prisma.scheduleEventAssignee.findMany({ where: { eventId: id }, select: { userId: true } })).map((a) => a.userId);
+      const sh = normalizeShares({ visibility: data.visibility, shareIds, shareDeptIds, shareTeamIds }, excluded);
+
+      // 기존 공유 상태(신규 지정분만 알림하기 위한 diff)
+      const oldPersonal = (await prisma.scheduleEventShare.findMany({ where: { eventId: id }, select: { userId: true } })).map((s) => s.userId);
+      const oldScopes = await prisma.scheduleEventShareScope.findMany({ where: { eventId: id }, select: { kind: true, refId: true } });
+      const oldDept = oldScopes.filter((s) => s.kind === 'dept').map((s) => s.refId);
+      const oldTeam = oldScopes.filter((s) => s.kind === 'team').map((s) => s.refId);
+
+      await prisma.scheduleEventShare.deleteMany({ where: { eventId: id } });
+      await prisma.scheduleEventShareScope.deleteMany({ where: { eventId: id } });
+      if (sh.userIds.length) {
+        await prisma.scheduleEventShare.createMany({ data: sh.userIds.map((userId) => ({ eventId: id, userId })) });
+      }
+      const scopeRows = [
+        ...sh.deptIds.map((refId) => ({ eventId: id, kind: 'dept', refId })),
+        ...sh.teamIds.map((refId) => ({ eventId: id, kind: 'team', refId })),
+      ];
+      if (scopeRows.length) await prisma.scheduleEventShareScope.createMany({ data: scopeRows });
+
+      notifyPayload = {
+        userIds: sh.userIds.filter((uid) => !oldPersonal.includes(uid)),
+        deptIds: sh.deptIds.filter((rid) => !oldDept.includes(rid)),
+        teamIds: sh.teamIds.filter((rid) => !oldTeam.includes(rid)),
+        excludeIds: excluded,
+      };
+    }
+
     const event = await prisma.scheduleEvent.update({ where: { id }, data, include: eventInclude });
+    if (notifyPayload) await notifyShares(event, req.user, notifyPayload);
     res.json(shape(event));
   } catch (err) {
     next(err);

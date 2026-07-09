@@ -22,6 +22,7 @@ export const NOTIFICATION_LABELS = {
   step_reminder: '스텝 미처리',
   security_alert: '보안 알림',
   mention: '멘션',
+  schedule_shared: '일정 공유',
 };
 
 // 사용자 아바타 배경색 (id 기반 순환)

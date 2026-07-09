@@ -19,6 +19,7 @@ const NOTIFICATION_COLORS = {
   step_reminder: 'purple',
   security_alert: 'error',
   mention: 'magenta',
+  schedule_shared: 'cyan',
 };
 
 export default function NotificationsPage() {

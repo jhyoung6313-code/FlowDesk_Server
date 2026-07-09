@@ -595,8 +595,10 @@
 ### F-55. 일정(스케줄) · 자원 예약 · 공휴일
 - **화면**: 대시보드 주간 일정·자원 위젯 + 월간 캘린더 (메모리 `schedule-feature.md` 참조)
 - **자원(ScheduleResource)**: 회의실(room)/차량(vehicle) 등 예약 대상. 이름·설명(정원/차종/번호판)·정렬·활성화
-- **일정(ScheduleEvent)**: 유형(휴가/반차/회의/외근/출장/재택/차량 등), 기간(startDate~endDate, 날짜 단위), 종일/시간(allDay·startTime·endTime), 장소, 메모, 자원 연결(resourceId)
-- **대상자(ScheduleEventAssignee)**: 타인 다중 지정 가능 (본인 외 팀원 일정 등록)
+- **일정(ScheduleEvent)**: 유형(휴가/반차/회의/외근/출장/재택/차량 등), 기간(startDate~endDate, 날짜 단위), 종일/시간(allDay·startTime·endTime), 장소, 메모, 자원 연결(resourceId), 공개 범위(visibility: public/shared/private)
+- **대상자(ScheduleEventAssignee)**: 타인 다중 지정 가능 (일정의 주체 — 본인 외 팀원 일정 등록)
+- **공유자(ScheduleEventShare)**: 주체는 아니지만 열람/알림 대상. `visibility='shared'`일 때만 지정. 지정 시 대상자에게 `schedule_shared` 알림 발송. `visibility='public'`(전체 공개)/`shared`(대상자·공유자만)/`private`(대상자·작성자만)에 따라 조회 필터(관리자는 전체 열람)
+- **공유 범위(ScheduleEventShareScope)**: 개인 외에 **부서/팀 단위 공유**(kind='dept'|'team'). 소속 인원 변동을 자동 반영(조회 시 요청자 소속 부서·팀으로 필터, 알림은 소속원으로 확장). 개인·부서·팀 공유는 함께 지정 가능
 - **공휴일(Holiday)**: 임시공휴일/대체공휴일/법정 등 관리자 등록(내장 기본 공휴일을 덮어씀). 캘린더·간트·일정에 반영
 - **API**:
   - 일정: `GET/POST /api/schedules`, `PUT/DELETE /api/schedules/:id`

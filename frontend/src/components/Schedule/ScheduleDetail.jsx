@@ -1,13 +1,30 @@
+import { useEffect, useState } from 'react';
 import { Modal, Button, Popconfirm, message } from 'antd';
 import dayjs from 'dayjs';
 import useAuthStore from '../../store/authStore';
 import useScheduleStore from '../../store/scheduleStore';
+import { getDepartments, getTeams } from '../../api/org';
 import { typeMeta } from './scheduleMeta';
 
 export default function ScheduleDetail({ open, event, onClose, onEdit }) {
   const user = useAuthStore((s) => s.user);
   const removeEvent = useScheduleStore((s) => s.removeEvent);
+  const [depts, setDepts] = useState([]);
+  const [teams, setTeams] = useState([]);
+
+  const hasScopes = !!(event && ((event.shareDeptIds || []).length || (event.shareTeamIds || []).length));
+  useEffect(() => {
+    if (!open || !hasScopes) return;
+    getDepartments().then(setDepts).catch(() => {});
+    getTeams().then(setTeams).catch(() => {});
+  }, [open, hasScopes]);
+
   if (!event) return null;
+
+  const scopeNames = [
+    ...(event.shareDeptIds || []).map((id) => `${depts.find((d) => d.id === id)?.name || `부서#${id}`} (부서)`),
+    ...(event.shareTeamIds || []).map((id) => `${teams.find((t) => t.id === id)?.name || `팀#${id}`} (팀)`),
+  ];
 
   const m = typeMeta(event.type);
   const canManage = user?.role === 'admin' || event.createdBy === user?.id;
@@ -54,6 +71,15 @@ export default function ScheduleDetail({ open, event, onClose, onEdit }) {
       </div>
 
       <Row k="대상자">{(event.assignees || []).map((a) => a.displayName).join(', ') || '-'}</Row>
+      {(event.shares || []).length > 0 && (
+        <Row k="공유자">{event.shares.map((s) => s.displayName).join(', ')}</Row>
+      )}
+      {scopeNames.length > 0 && (
+        <Row k="공유범위">{scopeNames.join(', ')}</Row>
+      )}
+      {event.visibility && event.visibility !== 'public' && (
+        <Row k="공개">{event.visibility === 'private' ? '🔒 비공개' : '👥 지정 공유'}</Row>
+      )}
       <Row k="기간">{period}</Row>
       {event.resource && <Row k={event.resource.kind === 'room' ? '회의실' : '차량'}>{event.resource.name}</Row>}
       {event.location && <Row k="장소">{event.location}</Row>}

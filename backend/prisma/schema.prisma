@@ -109,6 +109,7 @@ model User {
   dashboardBbsCategories UserDashboardBbsCategory[]
   scheduleEventsCreated  ScheduleEvent[]         @relation("ScheduleEventCreator")
   scheduleAssignments    ScheduleEventAssignee[]
+  scheduleShares         ScheduleEventShare[]
 
   @@map("users")
 }
@@ -333,13 +334,16 @@ model ScheduleEvent {
   endTime    String?                 @map("end_time") @db.VarChar(5)
   location   String?                 @db.VarChar(200)
   memo       String?                 @db.VarChar(500)
+  visibility String                  @default("public") @db.VarChar(10)   // public(전체공개) | shared(지정공유) | private(비공개)
   resourceId Int?                    @map("resource_id")
   resource   ScheduleResource?       @relation("ScheduleEventResource", fields: [resourceId], references: [id], onDelete: SetNull)
   createdBy  Int                     @map("created_by")
   creator    User                    @relation("ScheduleEventCreator", fields: [createdBy], references: [id], onDelete: Cascade)
   createdAt  DateTime                @default(now()) @map("created_at")
   updatedAt  DateTime                @updatedAt @map("updated_at")
-  assignees  ScheduleEventAssignee[]
+  assignees   ScheduleEventAssignee[]
+  shares      ScheduleEventShare[]
+  shareScopes ScheduleEventShareScope[]
 
   @@index([startDate, endDate])
   @@index([type])
@@ -356,6 +360,30 @@ model ScheduleEventAssignee {
   @@id([eventId, userId])
   @@index([userId])
   @@map("schedule_event_assignees")
+}
+
+/// 일정 공유자 (주체는 아니지만 열람/알림 대상)
+model ScheduleEventShare {
+  eventId Int           @map("event_id")
+  userId  Int           @map("user_id")
+  event   ScheduleEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user    User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, userId])
+  @@index([userId])
+  @@map("schedule_event_shares")
+}
+
+/// 일정 공유 범위 — 부서/팀 단위 공유 (인원 변동 자동 반영). refId는 Department/Team id의 loose 참조
+model ScheduleEventShareScope {
+  eventId Int           @map("event_id")
+  kind    String        @db.VarChar(10)   // 'dept' | 'team'
+  refId   Int           @map("ref_id")
+  event   ScheduleEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@id([eventId, kind, refId])
+  @@index([kind, refId])
+  @@map("schedule_event_share_scopes")
 }
 
 /// 공휴일 — 임시공휴일/대체공휴일 등 관리자가 등록(내장 기본값을 덮어씀)
@@ -632,6 +660,7 @@ enum NotificationType {
   approval_approved
   approval_rejected
   mail_received
+  schedule_shared
 }
 
 enum WbsIssueStatus {
