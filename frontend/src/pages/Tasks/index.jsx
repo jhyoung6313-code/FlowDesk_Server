@@ -1,14 +1,23 @@
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Tabs, Typography } from 'antd';
-import { UnorderedListOutlined, ProjectOutlined, CalendarOutlined, BarChartOutlined } from '@ant-design/icons';
+import { Tabs, Typography, Button } from 'antd';
+import { UnorderedListOutlined, ProjectOutlined, CalendarOutlined, BarChartOutlined, ThunderboltOutlined } from '@ant-design/icons';
 import ListView from './ListView';
 import KanbanView from './KanbanView';
 import CalendarView from './CalendarView';
 import GanttPage from '../Gantt';
+import AiTaskGenerator from '../../components/ai/AiTaskGenerator';
+import { getAiStatus } from '../../api/ai';
 
 export default function TasksPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const view = searchParams.get('view') || 'list';
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
+
+  useEffect(() => {
+    getAiStatus().then((s) => setAiEnabled(!!s.enabled)).catch(() => {});
+  }, []);
 
   const handleTabChange = (key) => {
     if (key === 'list') {
@@ -28,6 +37,13 @@ export default function TasksPage() {
         activeKey={view}
         onChange={handleTabChange}
         style={{ marginTop: 4 }}
+        tabBarExtraContent={
+          aiEnabled ? (
+            <Button icon={<ThunderboltOutlined />} onClick={() => setAiOpen(true)}>
+              AI 업무 생성
+            </Button>
+          ) : null
+        }
         items={[
           {
             key: 'list',
@@ -71,6 +87,7 @@ export default function TasksPage() {
           },
         ]}
       />
+      <AiTaskGenerator open={aiOpen} onClose={() => setAiOpen(false)} />
     </div>
   );
 }

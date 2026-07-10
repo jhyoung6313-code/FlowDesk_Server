@@ -1,7 +1,7 @@
 # FlowDesk 프로젝트
 
 풀스택 업무관리 시스템 (소규모 팀 2~10명, 로컬 전용)
-- 버전: v2.1.0 (기능 F-01~F-57 구현 완료 — 전자결재·게시판·사내메일·일정/공휴일·개인정보보호(PII)·보안강화 추가. 다크모드 제거, 조직구조 부서·팀 개편)
+- 버전: v2.5.0 (기능 F-01~F-61 구현 완료 — OKR/목표 관리(주기·목표·핵심결과·체크인·진척 자동계산) 추가. v2.4: 회의 관리. v2.3: 협업 위키/문서. v2.2: AI 어시스턴트(Claude API). v2.1: 전자결재·게시판·사내메일·일정/공휴일·PII·보안강화, 다크모드 제거, 조직구조 부서·팀 개편)
 - 기능정의서: `FEATURES.md`
 
 ## 접속 정보
@@ -94,6 +94,10 @@ FlowDesk_Repo/
 | `/tm-mail` | F-54 | 사내 메일 — 라벨·발송/회신/전달·별표·읽음·첨부·스레드 |
 | `/tm-schedule` | F-55 | 일정·공휴일 — 자원(회의실/차량) 예약, 일정, 공휴일 |
 | `/tm-security` | F-56, F-57 | 개인정보 보호(PII 입력차단·검출로그·직무분리) + 보안강화(단일세션·비번이력·이상탐지·보관정책) |
+| `/tm-ai` | F-58 | AI 어시스턴트(Claude API) — 업무 자동 생성·주간 요약 (`backend/src/services/aiService.js`) |
+| `/tm-wiki` | F-59 | 협업 위키/문서 — 스페이스·문서트리·버전이력·댓글 (`controllers/wikiController.js`, `pages/Wiki`) |
+| `/tm-meeting` | F-61 | 회의 관리 — 안건·참석자(RSVP)·회의록·결정사항·액션아이템(→업무전환) (`controllers/meetingController.js`, `pages/Meetings`) |
+| `/tm-okr` | F-60 | OKR/목표 관리 — 주기·목표·핵심결과·체크인·진척 자동계산 (`controllers/okrController.js`, `pages/Okr`) |
 
 ### 참조 문서
 | 명령어 | 내용 |

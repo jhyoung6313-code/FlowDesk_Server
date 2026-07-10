@@ -277,6 +277,9 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     if (pathname.startsWith('/chat')) return '/chat';
     if (pathname.startsWith('/workload')) return '/workload';
     if (pathname.startsWith('/bbs')) return '/bbs';
+    if (pathname.startsWith('/wiki')) return '/wiki';
+    if (pathname.startsWith('/meetings')) return '/meetings';
+    if (pathname.startsWith('/okr')) return '/okr';
     if (pathname.startsWith('/approvals')) return '/approvals';
     if (pathname.startsWith('/admin/approval')) return '/admin/approval';
     return '/';
@@ -423,6 +426,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     { key: '/', icon: <DashboardOutlined style={{ color: GROUPS.view.color }} />, label: '대시보드' },
     { key: '/tasks', icon: <CheckSquareOutlined style={{ color: GROUPS.view.color }} />, label: '업무 관리' },
     { key: '/workload', icon: <TeamOutlined style={{ color: GROUPS.view.color }} />, label: '워크로드' },
+    { key: '/okr', icon: <FlagOutlined style={{ color: GROUPS.view.color }} />, label: 'OKR' },
     { key: '/gantt', icon: <BarChartOutlined style={{ color: GROUPS.view.color }} />, label: '간트 차트' },
     { key: '/calendar', icon: <CalendarOutlined style={{ color: GROUPS.view.color }} />, label: '캘린더' },
     { key: '/memos', icon: <SnippetsOutlined style={{ color: GROUPS.view.color }} />, label: '메모지' },
@@ -438,6 +442,16 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
       key: '/boards',
       icon: <AppstoreOutlined style={{ color: collabClr }} />,
       label: boardUnread > 0 ? `보드 (${boardUnread})` : '보드',
+    },
+    {
+      key: '/wiki',
+      icon: <ReadOutlined style={{ color: collabClr }} />,
+      label: '위키',
+    },
+    {
+      key: '/meetings',
+      icon: <FileDoneOutlined style={{ color: collabClr }} />,
+      label: '회의',
     },
     {
       key: 'playbook-submenu',

@@ -27,6 +27,10 @@
 20. [일정 · 공휴일](#20-일정--공휴일) — F-55
 21. [개인정보 보호(PII)](#21-개인정보-보호pii) — F-56
 22. [보안 강화](#22-보안-강화) — F-57
+23. [AI 어시스턴트](#23-ai-어시스턴트) — F-58
+24. [협업 위키/문서](#24-협업-위키문서) — F-59
+25. [회의 관리](#25-회의-관리) — F-61
+26. [OKR / 목표 관리](#26-okr--목표-관리) — F-60
 
 > **[v2.1 변경 요약]** 전자결재·게시판·사내메일·일정·공휴일·개인정보보호·보안강화 도메인 추가(F-52~F-57). 다크모드(구 F-20)는 제거되고 CSS 변수 기반 테마로 대체됨. 조직구조는 파트→부서·팀 2단계로 개편(F-40). 플레이북 예약실행·채팅 예약메시지 확장.
 
@@ -489,6 +493,21 @@
 | internal_mail_attachments | 메일 첨부 |
 | pii_block_logs | 개인정보 입력차단 검출로그 (마스킹본만) |
 | password_histories | 비밀번호 재사용 금지 이력 |
+| ai_usage_logs | AI 어시스턴트 호출 사용량/비용 (F-58, append-only, 프롬프트 원문 미저장) |
+| wiki_spaces | 위키 스페이스 (F-59, 공개범위 public/private) |
+| wiki_docs | 위키 문서 (계층 트리 parentId, HTML 본문, 소프트 삭제) |
+| wiki_doc_versions | 위키 문서 버전 이력 (본문 변경 시 자동 스냅샷) |
+| wiki_doc_comments | 위키 문서 댓글 (소프트 삭제) |
+| meetings | 회의 (F-61, 상태·회의록 HTML, 소프트 삭제) |
+| meeting_agenda | 회의 안건 (순서·발표자·소요시간) |
+| meeting_attendees | 회의 참석자 (내부/외부, 역할, RSVP) |
+| meeting_decisions | 회의 결정사항 |
+| meeting_action_items | 회의 액션아이템 (담당자·기한·상태, taskId 업무 연결) |
+| okr_cycles | OKR 주기 (F-60, 분기/연간) |
+| objectives | 목표 (범위·책임자·상태·진척, KR 평균 자동) |
+| key_results | 핵심결과 (측정유형·시작/목표/현재값·autoProgress) |
+| key_result_links | KR↔업무 연결 (autoProgress 계산용) |
+| key_result_checkins | KR 체크인 이력 (값·신뢰도·코멘트) |
 
 ---
 
@@ -631,6 +650,87 @@
 - **보안설정 서비스**: `services/securitySettingsService.js` — 보안 관련 앱 설정 로드
 - **감사로그(F-48 연계)**: 로그인/로그아웃·비밀번호변경·권한거부·PII읽기·데이터내보내기·데이터삭제·이상징후 등 `AUDIT_ACTION` 적재
 - **파일**: `services/anomalyService.js`·`retentionService.js`·`securitySettingsService.js`·`auditService.js`, `config/security.js`, `utils/passwordPolicy.js`
+
+---
+
+## 23. AI 어시스턴트
+
+### F-58. AI 어시스턴트 (Claude API 연동) — 업무 자동 생성 · 주간 요약
+- **개요**: Anthropic Claude API(`claude-opus-4-8`)를 백엔드에서 호출해 축적된 업무 데이터를 활용. **API 키는 `backend/.env`(`ANTHROPIC_API_KEY`)에만 보관**하고 클라이언트에 노출하지 않는다(백엔드 프록시 전용). 키 미설정 시 AI 기능은 자동 비활성화되고 프론트 버튼도 숨겨진다(`GET /api/ai/status`).
+- **업무 자동 생성**: 자연어 요청 → 실행 가능한 업무 초안 배열(제목·설명·우선순위·기한·담당자 후보) 반환. 담당자는 이름 정확 일치로 **후보만 제시**(자동 배정 금지). 사용자가 검토·수정 후 기존 업무 생성 API로 등록. 구조화 출력(`output_config.format` json_schema) 사용.
+- **주간 요약**: 최근 7일간 갱신·마감 업무를 집계해 마크다운 리포트 생성(핵심요약·완료·진행중·지연·제언). 스코프 `me`(본인)/`all`(관리자 전용, 팀 전체).
+- **PII 보호(F-56 연계)**: AI 요청 본문은 전역 `piiGuard` 미들웨어가 사전 스캔·차단.
+- **감사·사용량**: 모든 호출을 감사로그 `AI_REQUEST`(F-48)로 적재. `AiUsageLog`(ai_usage_logs)에 모델·토큰수·성공여부 집계 적재(프롬프트 원문 미저장).
+- **화면**: 업무 관리(S-03) 헤더 "AI 업무 생성" 버튼 → 초안 검토 모달. 대시보드(S-02) 업무 보드 헤더 "AI 주간 요약" 버튼.
+- **API** (마운트 `/api/ai`, 인증 필요):
+  - `GET /api/ai/status` — AI 설정 여부·모델
+  - `POST /api/ai/tasks/generate` — { prompt } → { tasks: [...] }
+  - `POST /api/ai/summary` — { scope, from?, to? } → { summary, stats, period }
+- **파일**: `backend/src/services/aiService.js`, `controllers/aiController.js`, `routes/ai.js`; `frontend/src/api/ai.js`, `components/ai/AiTaskGenerator.jsx`·`AiWeeklySummary.jsx`
+- **미구현(후속 F-58 확장 후보)**: 채팅/회의 요약, 시맨틱 검색, 결재·메일 초안 보조 (기획: `docs/제안기능_기획서.md`)
+
+---
+
+## 24. 협업 위키/문서
+
+### F-59. 협업 위키/문서 (팀 지식베이스)
+- **개요**: 팀 지식베이스·회의록·매뉴얼을 **스페이스 → 문서(트리)** 구조로 작성·공유. 개인 메모지(F-47)와 달리 팀 공유·버전·댓글을 갖춘다. 본문은 기존 `RichEditor`(TipTap) HTML로 저장.
+- **스페이스(WikiSpace)**: 위키 최상위 묶음. 공개범위 `public`(전원)/`private`(작성자·관리자). 이름·아이콘·색상.
+- **문서(WikiDoc)**: 스페이스 내 계층 트리(`parentId` 자기참조). 제목·본문(HTML)·즐겨찾기·정렬. 소프트 삭제(delYn, 하위 문서 동반 삭제).
+- **버전 이력(WikiDocVersion)**: 본문 변경 시 직전 상태를 자동 스냅샷(최근 50건). 목록에서 특정 버전으로 **복원**(복원 전 현재본도 버전으로 보존).
+- **댓글(WikiDocComment)**: 문서별 댓글, 소프트 삭제, 작성자·관리자만 삭제.
+- **접근 제어(MVP)**: 스페이스 공개범위 기준(public 전원 / private 작성자·관리자). 접근 가능한 스페이스의 문서는 팀원이 편집 가능.
+- **화면**: `/wiki` — 좌측 스페이스·문서 트리 사이드바 + 우측 문서 뷰/편집(제목·리치에디터·댓글) + 변경 이력 드로어. 사이드바 '위키' 메뉴(협업 그룹).
+- **API** (마운트 `/api/wiki`, 인증 필요):
+  - 스페이스: `GET/POST /api/wiki/spaces`, `PUT/DELETE /api/wiki/spaces/:id`
+  - 문서: `POST /api/wiki/docs`, `GET/PUT/DELETE /api/wiki/docs/:id`
+  - 버전: `GET /api/wiki/docs/:id/versions`, `POST /api/wiki/docs/:id/versions/:vid/restore`
+  - 댓글: `GET/POST /api/wiki/docs/:id/comments`, `DELETE /api/wiki/docs/comments/:cid`
+- **파일**: `backend/src/controllers/wikiController.js`·`routes/wiki.js`; `frontend/src/api/wiki.js`, `pages/Wiki/index.jsx`(RichEditor 재사용)
+- **미구현(후속 확장 후보)**: 부서/팀 단위 세밀 권한, 블록 단위 인라인 코멘트, 실시간 공동 편집, 문서 간 `[[링크]]`·전역검색 색인 (기획: `docs/제안기능_기획서.md` F-59)
+
+---
+
+## 25. 회의 관리
+
+### F-61. 회의 관리 (안건 · 회의록 · 결정사항 · 액션아이템)
+- **개요**: 회의의 **안건 → 참석자(RSVP) → 회의록 → 결정사항 → 액션아이템** 라이프사이클 관리. 액션아이템은 원클릭으로 업무(F-03)로 전환·연결. 회의록 본문은 `RichEditor`(TipTap) HTML로 저장.
+- **회의(Meeting)**: 제목·일시(start/end)·장소·주최자·상태(scheduled/in_progress/done/cancelled)·회의록(minutes)·요약(summary, AI 연계 예비). 소프트 삭제(delYn). 수정 권한은 주최자·관리자.
+- **안건(MeetingAgenda)**: 순서·제목·발표자·소요시간(분). 회의 생성/수정 시 목록 교체.
+- **참석자(MeetingAttendee)**: 내부(userId)/외부(extName), 역할(organizer/attendee/optional), **RSVP**(invited/accepted/declined/attended/absent). 주최자는 자동 포함. 본인 RSVP는 `PATCH .../rsvp`로 응답.
+- **결정사항(MeetingDecision)**: 회의별 결정 기록 추가/삭제.
+- **액션아이템(MeetingActionItem)**: 내용·담당자·기한·상태(open/done). **업무 전환**(`to-task`) 시 Task 생성·담당자 연결·`taskId` 링크(중복 전환 방지).
+- **화면**: `/meetings` — 좌측 회의 목록(내 회의/예정/지난 필터) + 우측 상세(개요·RSVP·참석자·안건·회의록 편집·결정사항·액션아이템). 사이드바 '회의' 메뉴(협업 그룹).
+- **API** (마운트 `/api/meetings`, 인증 필요):
+  - 회의: `GET /api/meetings?filter=mine|upcoming|past`, `POST /api/meetings`, `GET/PUT/DELETE /api/meetings/:id`
+  - RSVP: `PATCH /api/meetings/:id/rsvp`
+  - 결정사항: `POST /api/meetings/:id/decisions`, `DELETE /api/meetings/:id/decisions/:did`
+  - 액션아이템: `POST/PUT/DELETE /api/meetings/:id/action-items(/:aid)`, `POST /api/meetings/:id/action-items/:aid/to-task`
+- **파일**: `backend/src/controllers/meetingController.js`·`routes/meetings.js`; `frontend/src/api/meetings.js`, `pages/Meetings/index.jsx`
+- **미구현(후속 확장 후보)**: 자원/일정(F-55) 연동, AI 회의록 요약(F-58), 회의록 메일 배포(F-54), 반복 회의 (기획: `docs/제안기능_기획서.md` F-61)
+
+---
+
+## 26. OKR / 목표 관리
+
+### F-60. OKR / 목표 관리 (Objective · Key Result · 체크인)
+- **개요**: 분기·연간 목표(Objective)와 핵심결과(Key Result)를 정의하고 진척을 자동 집계. 회사→부서/팀→개인 계층으로 목표 정렬.
+- **주기(OkrCycle)**: 연도·분기(예: 2026 Q3)·기간·활성여부. 관리자만 생성/삭제.
+- **목표(Objective)**: 주기 소속, 상위 목표 정렬(parentId), 범위(company/dept/team/personal), 책임자, 상태(on_track/at_risk/off_track), 진척률(KR 평균 자동). 소프트 삭제. 수정 권한: 책임자·관리자.
+- **핵심결과(KeyResult)**: 측정 유형(number/percent/boolean), 시작값·목표값·현재값, 담당자, **autoProgress**(연결 업무 완료율로 현재값 자동 갱신).
+- **진척 계산**: KR = `(현재-시작)/(목표-시작)` 0~100 클램프(boolean은 목표 도달 시 100). Objective = 소속 KR 평균. 체크인/수정/연결 시 자동 재계산.
+- **체크인(KeyResultCheckin)**: 주기적 현재값·신뢰도(1~10)·코멘트 기록(이력), 기록 시 KR 현재값 갱신.
+- **업무 연결(KeyResultLink)**: KR↔업무(task) 연결. autoProgress KR은 연결 업무 완료율로 진척 자동화.
+- **화면**: `/okr` — 주기 선택 + 주기 전체 진척 배너 + 목표 카드(진척바·상태·KR 리스트·체크인). 사이드바 'OKR' 메뉴(뷰 그룹).
+- **API** (마운트 `/api/okr`, 인증 필요):
+  - 주기: `GET /api/okr/cycles`, `POST /api/okr/cycles`(관리자), `DELETE /api/okr/cycles/:id`(관리자)
+  - 트리: `GET /api/okr/tree?cycleId=`
+  - 목표: `POST /api/okr/objectives`, `PUT/DELETE /api/okr/objectives/:id`
+  - KR: `POST /api/okr/objectives/:objId/key-results`, `PUT/DELETE /api/okr/key-results/:krId`
+  - 체크인: `GET/POST /api/okr/key-results/:krId/checkins`
+  - 연결: `POST /api/okr/key-results/:krId/links`, `DELETE .../links/:linkId`
+- **파일**: `backend/src/controllers/okrController.js`·`routes/okr.js`; `frontend/src/api/okr.js`, `pages/Okr/index.jsx`
+- **미구현(후속 확장 후보)**: 목표 정렬(alignment) 트리 시각화, 보드카드·WBS 연결, 진척 히트맵 대시보드 (기획: `docs/제안기능_기획서.md` F-60)
 
 ---
 

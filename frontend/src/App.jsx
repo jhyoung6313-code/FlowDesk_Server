@@ -54,6 +54,9 @@ const ApprovalDocumentForm = lazy(() => import('./pages/Approval/DocumentForm'))
 const ApprovalDocumentDetail = lazy(() => import('./pages/Approval/DocumentDetail'));
 const ApprovalAdminPage = lazy(() => import('./pages/Admin/ApprovalAdmin'));
 const MailPage = lazy(() => import('./pages/Mail'));
+const WikiPage = lazy(() => import('./pages/Wiki'));
+const MeetingsPage = lazy(() => import('./pages/Meetings'));
+const OkrPage = lazy(() => import('./pages/Okr'));
 
 const PrivateRoute = ({ children, adminOnly = false, permission = null }) => {
   const { user, loading } = useAuthStore();
@@ -228,6 +231,9 @@ export default function App() {
           <Route path="approvals/:id" element={<ApprovalDocumentDetail />} />
           <Route path="approvals/:id/edit" element={<ApprovalDocumentForm />} />
           <Route path="mail" element={<MailPage />} />
+          <Route path="wiki" element={<WikiPage />} />
+          <Route path="meetings" element={<MeetingsPage />} />
+          <Route path="okr" element={<OkrPage />} />
           <Route
             path="admin"
             element={

@@ -7,6 +7,24 @@ Types: `Added` / `Changed` / `Fixed` / `Removed`
 
 ---
 
+## [2.5.0] - 2026-07-10
+
+> 2025~2026 트렌드 반영 4대 신규 도메인 추가 (F-58~F-61). 각 기능은 기존 컨벤션(싱글턴 Prisma, `delYn` 소프트삭제, 감사로그, `RichEditor` 재사용)을 따름. 상세: `FEATURES.md`, 기획: `docs/제안기능_기획서.md`.
+
+### Added
+- **F-58 AI 어시스턴트 (Claude API 연동)**: 자연어 → 업무 초안 자동 생성, 최근 7일 주간 업무 요약(마크다운). Anthropic `claude-opus-4-8`, API 키는 `backend/.env`(`ANTHROPIC_API_KEY`) 전용·미설정 시 자동 비활성화. PII 가드(F-56) 사전 차단, 감사로그 `AI_REQUEST`, `ai_usage_logs` 사용량 적재(프롬프트 원문 미저장). 업무관리 헤더·대시보드 진입.
+- **F-59 협업 위키/문서**: 스페이스 → 문서(계층 트리) 구조, `RichEditor`(TipTap) 본문, 버전 이력 자동 스냅샷·복원, 문서 댓글, 공개범위(public/private). `/wiki`.
+- **F-61 회의 관리**: 안건 → 참석자(RSVP) → 회의록 → 결정사항 → 액션아이템 라이프사이클. 액션아이템 원클릭 업무(F-03) 전환·연결. `/meetings`.
+- **F-60 OKR/목표 관리**: 주기(Cycle) · 목표(Objective) · 핵심결과(KR) · 체크인. 진척 자동 계산(KR=`(현재-시작)/(목표-시작)`, Objective=KR 평균), KR↔업무 연결 시 완료율 자동 반영. `/okr`.
+
+### Changed
+- `backend/prisma/schema.prisma`: 위 4개 도메인 모델 추가(마이그레이션 `ai_usage_logs`·`wiki`·`meetings`·`okr`)
+- `config/security.js`: 감사 액션 `AI_REQUEST` 추가
+- 사이드바(협업/뷰 그룹)·라우트에 위키·회의·OKR 메뉴 추가
+- 의존성: `@anthropic-ai/sdk` 추가
+
+---
+
 ## [1.9.2] - 2026-06-26
 
 ### Added

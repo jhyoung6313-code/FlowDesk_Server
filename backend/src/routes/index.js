@@ -33,6 +33,10 @@ const bbsRoutes = require('./bbs');
 const approvalRoutes = require('./approvals');
 const mailRoutes = require('./mail');
 const piiBlockRoutes = require('./piiBlocks');
+const aiRoutes = require('./ai');
+const wikiRoutes = require('./wiki');
+const meetingRoutes = require('./meetings');
+const okrRoutes = require('./okr');
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
@@ -60,6 +64,10 @@ router.use('/boards', boardRoutes);
 router.use('/playbooks', playbookRoutes);
 router.use('/runs', runRoutes);
 router.use('/pii-blocks', piiBlockRoutes);
+router.use('/ai', aiRoutes);
+router.use('/wiki', wikiRoutes);
+router.use('/meetings', meetingRoutes);
+router.use('/okr', okrRoutes);
 
 // BBS 게시판 + 전자결재 (라우트 내부에서 경로 처리)
 router.use('/', bbsRoutes);
