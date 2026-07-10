@@ -28,6 +28,7 @@ router.get('/key-results/:krId/checkins', ctrl.listCheckins);
 router.post('/key-results/:krId/checkins', ctrl.createCheckin);
 
 // KR ↔ 업무 연결
+router.get('/key-results/:krId/links', ctrl.listLinks);
 router.post('/key-results/:krId/links', ctrl.addLink);
 router.delete('/key-results/:krId/links/:linkId', ctrl.removeLink);
 

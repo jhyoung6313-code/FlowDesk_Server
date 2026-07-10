@@ -12,6 +12,7 @@ router.put('/:id', ctrl.update);
 router.delete('/:id', ctrl.remove);
 
 router.patch('/:id/rsvp', ctrl.rsvp);
+router.post('/:id/ai-summary', ctrl.aiSummary);
 
 router.post('/:id/decisions', ctrl.addDecision);
 router.delete('/:id/decisions/:did', ctrl.removeDecision);

@@ -140,4 +140,28 @@ async function weeklySummary({ req, scopeLabel, periodLabel, stats, tasks }) {
   return firstText(message);
 }
 
-module.exports = { isConfigured, generateTasks, weeklySummary, MODEL };
+// ── 3) 회의록 요약 (F-61 연계) ───────────────────────────────
+// 안건·회의록·결정사항·액션아이템 → 간결한 요약 + 후속 제언(마크다운)
+async function summarizeMeeting({ req, title, dateLabel, agenda, minutesText, decisions, actionItems }) {
+  const c = getClient();
+  const system = [
+    '당신은 팀 업무관리 시스템의 AI 어시스턴트입니다.',
+    '제공된 회의 정보를 바탕으로 간결한 회의 요약을 마크다운으로 작성하세요.',
+    '구성: ① 핵심 요약(2~3문장) ② 주요 논의 ③ 결정사항 ④ 액션 아이템(담당/기한) ⑤ 후속 제언.',
+    '데이터에 없는 내용을 지어내지 마세요. 한국어로 응답합니다.',
+  ].join('\n');
+
+  const payload = { 제목: title, 일시: dateLabel, 안건: agenda, 회의록: minutesText, 결정사항: decisions, 액션아이템: actionItems };
+
+  const message = await c.messages.create({
+    model: MODEL,
+    max_tokens: 3000,
+    thinking: { type: 'adaptive' },
+    system,
+    messages: [{ role: 'user', content: '다음 회의를 요약해줘:\n\n' + JSON.stringify(payload, null, 2) }],
+  });
+  await logUsage({ req, feature: 'meeting_summary', usage: message.usage });
+  return firstText(message);
+}
+
+module.exports = { isConfigured, generateTasks, weeklySummary, summarizeMeeting, MODEL };

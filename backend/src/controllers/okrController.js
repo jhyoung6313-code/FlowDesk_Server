@@ -264,6 +264,19 @@ exports.createCheckin = async (req, res, next) => {
 };
 
 // ── KR ↔ 업무 연결 ────────────────────────────────────────────
+exports.listLinks = async (req, res, next) => {
+  try {
+    const krId = Number(req.params.krId);
+    const links = await prisma.keyResultLink.findMany({ where: { keyResultId: krId } });
+    const taskIds = links.filter((l) => l.refType === 'task').map((l) => l.refId);
+    const tasks = taskIds.length
+      ? await prisma.task.findMany({ where: { id: { in: taskIds } }, select: { id: true, title: true, status: true, delYn: true } })
+      : [];
+    const taskMap = Object.fromEntries(tasks.map((t) => [t.id, t]));
+    res.json(links.map((l) => ({ ...l, task: taskMap[l.refId] || null })));
+  } catch (err) { next(err); }
+};
+
 exports.addLink = async (req, res, next) => {
   try {
     const krId = Number(req.params.krId);

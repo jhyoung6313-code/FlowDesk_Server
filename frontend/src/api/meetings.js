@@ -10,6 +10,10 @@ export const deleteMeeting = (id) => api.delete(`/meetings/${id}`).then((r) => r
 export const rsvpMeeting = (id, rsvp) =>
   api.patch(`/meetings/${id}/rsvp`, { rsvp }).then((r) => r.data);
 
+// AI 회의록 요약 (모델 추론 시간이 길 수 있어 넉넉한 타임아웃)
+export const aiSummarizeMeeting = (id) =>
+  api.post(`/meetings/${id}/ai-summary`, {}, { timeout: 90000 }).then((r) => r.data);
+
 // 결정사항
 export const addDecision = (id, content) =>
   api.post(`/meetings/${id}/decisions`, { content }).then((r) => r.data);

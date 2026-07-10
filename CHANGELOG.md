@@ -16,6 +16,7 @@ Types: `Added` / `Changed` / `Fixed` / `Removed`
 - **F-59 협업 위키/문서**: 스페이스 → 문서(계층 트리) 구조, `RichEditor`(TipTap) 본문, 버전 이력 자동 스냅샷·복원, 문서 댓글, 공개범위(public/private). `/wiki`.
 - **F-61 회의 관리**: 안건 → 참석자(RSVP) → 회의록 → 결정사항 → 액션아이템 라이프사이클. 액션아이템 원클릭 업무(F-03) 전환·연결. `/meetings`.
 - **F-60 OKR/목표 관리**: 주기(Cycle) · 목표(Objective) · 핵심결과(KR) · 체크인. 진척 자동 계산(KR=`(현재-시작)/(목표-시작)`, Objective=KR 평균), KR↔업무 연결 시 완료율 자동 반영. `/okr`.
+- **연계**: 회의록 AI 요약(F-61↔F-58, `POST /meetings/:id/ai-summary`), OKR KR↔업무 연결 UI(자동진척 체크박스 + 연결 모달), 공용 `MarkdownLite` 컴포넌트 추출.
 
 ### Changed
 - `backend/prisma/schema.prisma`: 위 4개 도메인 모델 추가(마이그레이션 `ai_usage_logs`·`wiki`·`meetings`·`okr`)

@@ -1,19 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   Button, Select, Progress, Tag, Empty, Spin, message, Modal, Form, Input, DatePicker,
-  InputNumber, Space, Popconfirm, Typography, Tooltip,
+  InputNumber, Space, Popconfirm, Typography, Tooltip, Checkbox, List,
 } from 'antd';
 import {
   PlusOutlined, FlagOutlined, AimOutlined, DeleteOutlined, EditOutlined,
-  CheckCircleOutlined, RiseOutlined,
+  CheckCircleOutlined, RiseOutlined, LinkOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import useAuthStore from '../../store/authStore';
 import { getUsers } from '../../api/users';
+import { getTasks } from '../../api/tasks';
 import {
   getCycles, createCycle, getTree,
   createObjective, updateObjective, deleteObjective,
   createKeyResult, updateKeyResult, deleteKeyResult, createCheckin,
+  getLinks, addLink, removeLink,
 } from '../../api/okr';
 
 const SCOPE = { company: { label: '전사', color: 'purple' }, dept: { label: '부서', color: 'geekblue' }, team: { label: '팀', color: 'blue' }, personal: { label: '개인', color: 'default' } };
@@ -23,7 +25,7 @@ const METRIC = { percent: '%', number: '수치', boolean: '완료여부' };
 function progressColor(p) { return p >= 70 ? '#52c41a' : p >= 40 ? '#faad14' : '#ff4d4f'; }
 
 // ── KR 행 ──
-function KrRow({ kr, canEdit, users, onCheckin, onEdit, onDelete }) {
+function KrRow({ kr, canEdit, users, onCheckin, onEdit, onDelete, onLink }) {
   const unit = kr.metricType === 'percent' ? '%' : kr.metricType === 'boolean' ? '' : '';
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderTop: '1px dashed var(--fd-border)' }}>
@@ -31,6 +33,7 @@ function KrRow({ kr, canEdit, users, onCheckin, onEdit, onDelete }) {
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, fontWeight: 500 }}>{kr.title}
           {kr.autoProgress && <Tooltip title="연결 업무 완료율로 자동 계산"><Tag color="cyan" style={{ marginLeft: 6 }}>자동</Tag></Tooltip>}
+          {kr._count?.links > 0 && <Tag style={{ marginLeft: 6 }}><LinkOutlined /> {kr._count.links}</Tag>}
         </div>
         <div style={{ fontSize: 11, color: 'var(--fd-text-secondary)' }}>
           {kr.metricType === 'boolean' ? '완료 여부' : `${Number(kr.currentValue)}${unit} / ${Number(kr.targetValue)}${unit}`}
@@ -41,6 +44,7 @@ function KrRow({ kr, canEdit, users, onCheckin, onEdit, onDelete }) {
       {canEdit && (
         <Space size={2}>
           <Tooltip title="체크인"><Button size="small" type="text" icon={<RiseOutlined />} onClick={() => onCheckin(kr)} /></Tooltip>
+          <Tooltip title="업무 연결"><Button size="small" type="text" icon={<LinkOutlined />} onClick={() => onLink(kr)} /></Tooltip>
           <Button size="small" type="text" icon={<EditOutlined />} onClick={() => onEdit(kr)} />
           <Popconfirm title="KR을 삭제할까요?" onConfirm={() => onDelete(kr)}><Button size="small" type="text" danger icon={<DeleteOutlined />} /></Popconfirm>
         </Space>
@@ -50,7 +54,7 @@ function KrRow({ kr, canEdit, users, onCheckin, onEdit, onDelete }) {
 }
 
 // ── 목표 카드 ──
-function ObjectiveCard({ obj, canEdit, users, onChanged, onAddKr, onCheckin, onEditKr }) {
+function ObjectiveCard({ obj, canEdit, users, onChanged, onAddKr, onCheckin, onEditKr, onLink }) {
   const setStatus = async (status) => { await updateObjective(obj.id, { status }); onChanged(); };
   return (
     <div style={{ border: '1px solid var(--fd-border)', borderRadius: 8, padding: 16, marginBottom: 14, background: 'var(--fd-surface)' }}>
@@ -83,7 +87,7 @@ function ObjectiveCard({ obj, canEdit, users, onChanged, onAddKr, onCheckin, onE
           ? <Typography.Text type="secondary" style={{ fontSize: 12 }}>핵심결과(KR)가 없습니다.</Typography.Text>
           : obj.keyResults.map((kr) => (
               <KrRow key={kr.id} kr={kr} canEdit={canEdit} users={users}
-                onCheckin={onCheckin} onEdit={onEditKr}
+                onCheckin={onCheckin} onEdit={onEditKr} onLink={onLink}
                 onDelete={async (k) => { await deleteKeyResult(k.id); onChanged(); }} />
             ))}
         {canEdit && <Button size="small" type="dashed" icon={<PlusOutlined />} style={{ marginTop: 8 }} onClick={() => onAddKr(obj)}>핵심결과 추가</Button>}
@@ -106,6 +110,10 @@ export default function OkrPage() {
   const [krModal, setKrModal] = useState(null); // { objId } or { kr }
   const [checkinKr, setCheckinKr] = useState(null);
   const [cycleModal, setCycleModal] = useState(false);
+  const [linkKr, setLinkKr] = useState(null);
+  const [links, setLinks] = useState([]);
+  const [allTasks, setAllTasks] = useState([]);
+  const [linkTaskId, setLinkTaskId] = useState(null);
 
   const [objForm] = Form.useForm();
   const [krForm] = Form.useForm();
@@ -113,6 +121,27 @@ export default function OkrPage() {
   const [cycleForm] = Form.useForm();
 
   useEffect(() => { getUsers().then(setUsers).catch(() => {}); }, []);
+
+  // KR ↔ 업무 연결 모달
+  const openLink = async (kr) => {
+    setLinkKr(kr); setLinkTaskId(null);
+    try {
+      const [ls] = await Promise.all([
+        getLinks(kr.id),
+        allTasks.length ? Promise.resolve() : getTasks().then(setAllTasks),
+      ]);
+      setLinks(ls);
+    } catch { message.error('연결 정보를 불러오지 못했습니다.'); }
+  };
+  const doAddLink = async () => {
+    if (!linkTaskId) return;
+    await addLink(linkKr.id, linkTaskId);
+    setLinks(await getLinks(linkKr.id)); setLinkTaskId(null); loadTree();
+  };
+  const doRemoveLink = async (linkId) => {
+    await removeLink(linkKr.id, linkId);
+    setLinks(await getLinks(linkKr.id)); loadTree();
+  };
 
   const loadCycles = useCallback(async () => {
     const cs = await getCycles();
@@ -206,6 +235,7 @@ export default function OkrPage() {
             onAddKr={(o) => { krForm.resetFields(); krForm.setFieldsValue({ metricType: 'percent', startValue: 0, targetValue: 100, currentValue: 0 }); setKrModal({ objId: o.id }); }}
             onEditKr={(kr) => { krForm.setFieldsValue(kr); setKrModal({ kr }); }}
             onCheckin={(kr) => { checkinForm.resetFields(); checkinForm.setFieldsValue({ value: Number(kr.currentValue) }); setCheckinKr(kr); }}
+            onLink={openLink}
           />
         ))}
 
@@ -246,7 +276,28 @@ export default function OkrPage() {
             <Select style={{ width: 200 }} placeholder="미지정" allowClear optionFilterProp="label"
               options={users.map((u) => ({ value: u.id, label: u.displayName }))} />
           </Form.Item>
+          <Form.Item name="autoProgress" valuePropName="checked" style={{ marginBottom: 0 }}>
+            <Checkbox>연결된 업무 완료율로 진척 자동 계산</Checkbox>
+          </Form.Item>
         </Form>
+      </Modal>
+
+      {/* KR ↔ 업무 연결 모달 */}
+      <Modal title={<span><LinkOutlined /> 업무 연결 — {linkKr?.title}</span>} open={!!linkKr} onCancel={() => setLinkKr(null)} footer={<Button onClick={() => setLinkKr(null)}>닫기</Button>}>
+        <Typography.Paragraph type="secondary" style={{ fontSize: 12 }}>
+          업무를 연결하면 KR의 <b>자동 진척</b> 옵션이 켜져 있을 때 연결 업무 완료율로 진척이 계산됩니다.
+        </Typography.Paragraph>
+        <Space.Compact style={{ display: 'flex', marginBottom: 12 }}>
+          <Select showSearch value={linkTaskId} onChange={setLinkTaskId} placeholder="업무 선택" style={{ flex: 1 }} optionFilterProp="label"
+            options={allTasks.map((t) => ({ value: t.id, label: t.title }))} />
+          <Button type="primary" icon={<PlusOutlined />} onClick={doAddLink}>연결</Button>
+        </Space.Compact>
+        <List size="small" dataSource={links} locale={{ emptyText: '연결된 업무가 없습니다.' }}
+          renderItem={(l) => (
+            <List.Item actions={[<a key="x" onClick={() => doRemoveLink(l.id)}>해제</a>]}>
+              {l.task ? <span>{l.task.status === 'done' ? '✅' : '⬜'} {l.task.title}{l.task.delYn === '1' && <Tag color="default" style={{ marginLeft: 6 }}>삭제됨</Tag>}</span> : `업무 #${l.refId}`}
+            </List.Item>
+          )} />
       </Modal>
 
       {/* 체크인 모달 */}

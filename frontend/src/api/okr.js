@@ -24,3 +24,10 @@ export const deleteKeyResult = (krId) => api.delete(`/okr/key-results/${krId}`).
 export const getCheckins = (krId) => api.get(`/okr/key-results/${krId}/checkins`).then((r) => r.data);
 export const createCheckin = (krId, data) =>
   api.post(`/okr/key-results/${krId}/checkins`, data).then((r) => r.data);
+
+// KR ↔ 업무 연결
+export const getLinks = (krId) => api.get(`/okr/key-results/${krId}/links`).then((r) => r.data);
+export const addLink = (krId, refId) =>
+  api.post(`/okr/key-results/${krId}/links`, { refType: 'task', refId }).then((r) => r.data);
+export const removeLink = (krId, linkId) =>
+  api.delete(`/okr/key-results/${krId}/links/${linkId}`).then((r) => r.data);

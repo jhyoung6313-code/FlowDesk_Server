@@ -6,14 +6,16 @@ import {
 } from 'antd';
 import {
   PlusOutlined, TeamOutlined, EnvironmentOutlined, ClockCircleOutlined, EditOutlined,
-  DeleteOutlined, SaveOutlined, CheckOutlined, CloseOutlined, ExportOutlined, SendOutlined,
+  DeleteOutlined, SaveOutlined, CheckOutlined, CloseOutlined, ExportOutlined, SendOutlined, ThunderboltOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import RichEditor from '../../components/RichEditor';
+import MarkdownLite from '../../components/ai/MarkdownLite';
 import useAuthStore from '../../store/authStore';
 import { getUsers } from '../../api/users';
+import { getAiStatus } from '../../api/ai';
 import {
-  getMeetings, getMeeting, createMeeting, updateMeeting, deleteMeeting, rsvpMeeting,
+  getMeetings, getMeeting, createMeeting, updateMeeting, deleteMeeting, rsvpMeeting, aiSummarizeMeeting,
   addDecision, deleteDecision, addActionItem, updateActionItem, deleteActionItem, actionItemToTask,
 } from '../../api/meetings';
 
@@ -126,11 +128,20 @@ export default function MeetingsPage() {
   const [minutesEdit, setMinutesEdit] = useState(false);
   const [minutesDraft, setMinutesDraft] = useState('');
   const [decisionText, setDecisionText] = useState('');
+  const [aiEnabled, setAiEnabled] = useState(false);
+  const [aiBusy, setAiBusy] = useState(false);
   const [aiContent, setAiContent] = useState('');
   const [aiAssignee, setAiAssignee] = useState(null);
   const [aiDue, setAiDue] = useState(null);
 
-  useEffect(() => { getUsers().then(setUsers).catch(() => {}); }, []);
+  useEffect(() => { getUsers().then(setUsers).catch(() => {}); getAiStatus().then((s) => setAiEnabled(!!s.enabled)).catch(() => {}); }, []);
+
+  const handleAiSummary = async () => {
+    setAiBusy(true);
+    try { const updated = await aiSummarizeMeeting(meeting.id); setMeeting(updated); message.success('AI 회의록 요약을 생성했습니다.'); }
+    catch (err) { message.error(err.response?.data?.error || 'AI 요약 실패'); }
+    finally { setAiBusy(false); }
+  };
 
   const loadList = useCallback(async () => {
     setListLoading(true);
@@ -247,6 +258,7 @@ export default function MeetingsPage() {
                 </div>
                 {canEdit && (
                   <Space>
+                    {aiEnabled && <Tooltip title="AI 회의록 요약"><Button size="small" icon={<ThunderboltOutlined />} loading={aiBusy} onClick={handleAiSummary}>AI 요약</Button></Tooltip>}
                     <Select size="small" value={meeting.status} style={{ width: 96 }} onChange={setStatus}
                       options={Object.entries(STATUS).map(([v, s]) => ({ value: v, label: s.label }))} />
                     <Button size="small" icon={<EditOutlined />} onClick={() => { setEditingMeeting(meeting); setModalOpen(true); }} />
@@ -264,6 +276,14 @@ export default function MeetingsPage() {
                     <Button size="small" type={myAtt.rsvp === 'declined' ? 'primary' : 'default'} danger={myAtt.rsvp === 'declined'} icon={<CloseOutlined />} onClick={() => doRsvp('declined')}>불참</Button>
                     <Button size="small" type={myAtt.rsvp === 'attended' ? 'primary' : 'default'} onClick={() => doRsvp('attended')}>참석함</Button>
                   </Space.Compact>
+                </div>
+              )}
+
+              {/* AI 요약 */}
+              {meeting.summary && (
+                <div style={{ marginTop: 14, padding: '12px 16px', background: 'var(--fd-surface-sunken)', borderRadius: 8, borderLeft: '3px solid #722ed1' }}>
+                  <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 6, color: '#722ed1' }}><ThunderboltOutlined /> AI 요약</div>
+                  <MarkdownLite text={meeting.summary} />
                 </div>
               )}
 

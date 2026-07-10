@@ -5,8 +5,12 @@
 // ─────────────────────────────────────────────────────────────
 
 const prisma = require('../lib/prisma');
+const ai = require('../services/aiService');
+const audit = require('../services/auditService');
+const { AUDIT_ACTION } = require('../config/security');
 
 const USER_SEL = { id: true, displayName: true, avatarColor: true };
+const stripHtml = (h) => String(h || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 function isAdmin(req) { return req.user.role === 'admin'; }
 
 const DETAIL_INCLUDE = {
@@ -249,6 +253,32 @@ exports.removeActionItem = async (req, res, next) => {
     if (error) return res.status(error).json({ error: error === 404 ? '회의를 찾을 수 없습니다.' : '권한이 없습니다.' });
     await prisma.meetingActionItem.deleteMany({ where: { id: Number(req.params.aid), meetingId: id } });
     res.json({ message: '삭제되었습니다.' });
+  } catch (err) { next(err); }
+};
+
+// ── AI 회의록 요약 (F-58 연계) ──
+exports.aiSummary = async (req, res, next) => {
+  try {
+    if (!ai.isConfigured()) return res.status(503).json({ error: 'AI 기능이 설정되지 않았습니다. 관리자에게 문의하세요.' });
+    const id = Number(req.params.id);
+    const { error } = await loadEditable(id, req);
+    if (error) return res.status(error).json({ error: error === 404 ? '회의를 찾을 수 없습니다.' : '권한이 없습니다.' });
+    const dayjs = require('dayjs');
+    const m = await prisma.meeting.findUnique({ where: { id }, include: DETAIL_INCLUDE });
+
+    const summary = await ai.summarizeMeeting({
+      req,
+      title: m.title,
+      dateLabel: dayjs(m.startAt).format('YYYY-MM-DD HH:mm'),
+      agenda: m.agenda.map((a) => a.title),
+      minutesText: stripHtml(m.minutes),
+      decisions: m.decisions.map((d) => d.content),
+      actionItems: m.actionItems.map((it) => ({ 내용: it.content, 담당자: it.assignee?.displayName || null, 기한: it.dueDate ? dayjs(it.dueDate).format('YYYY-MM-DD') : null })),
+    });
+
+    const updated = await prisma.meeting.update({ where: { id }, data: { summary }, include: DETAIL_INCLUDE });
+    await audit.record({ action: AUDIT_ACTION.AI_REQUEST, req, resource: 'meeting_summary', detail: `회의 #${id}` });
+    res.json(updated);
   } catch (err) { next(err); }
 };
 

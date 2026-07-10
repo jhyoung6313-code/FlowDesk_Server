@@ -659,6 +659,7 @@
 - **개요**: Anthropic Claude API(`claude-opus-4-8`)를 백엔드에서 호출해 축적된 업무 데이터를 활용. **API 키는 `backend/.env`(`ANTHROPIC_API_KEY`)에만 보관**하고 클라이언트에 노출하지 않는다(백엔드 프록시 전용). 키 미설정 시 AI 기능은 자동 비활성화되고 프론트 버튼도 숨겨진다(`GET /api/ai/status`).
 - **업무 자동 생성**: 자연어 요청 → 실행 가능한 업무 초안 배열(제목·설명·우선순위·기한·담당자 후보) 반환. 담당자는 이름 정확 일치로 **후보만 제시**(자동 배정 금지). 사용자가 검토·수정 후 기존 업무 생성 API로 등록. 구조화 출력(`output_config.format` json_schema) 사용.
 - **주간 요약**: 최근 7일간 갱신·마감 업무를 집계해 마크다운 리포트 생성(핵심요약·완료·진행중·지연·제언). 스코프 `me`(본인)/`all`(관리자 전용, 팀 전체).
+- **회의록 요약(F-61 연계)**: 회의 상세에서 안건·회의록·결정사항·액션아이템을 요약(`POST /api/meetings/:id/ai-summary`, `meetings.summary`에 저장). `aiService.summarizeMeeting`.
 - **PII 보호(F-56 연계)**: AI 요청 본문은 전역 `piiGuard` 미들웨어가 사전 스캔·차단.
 - **감사·사용량**: 모든 호출을 감사로그 `AI_REQUEST`(F-48)로 적재. `AiUsageLog`(ai_usage_logs)에 모델·토큰수·성공여부 집계 적재(프롬프트 원문 미저장).
 - **화면**: 업무 관리(S-03) 헤더 "AI 업무 생성" 버튼 → 초안 검토 모달. 대시보드(S-02) 업무 보드 헤더 "AI 주간 요약" 버튼.
@@ -667,7 +668,7 @@
   - `POST /api/ai/tasks/generate` — { prompt } → { tasks: [...] }
   - `POST /api/ai/summary` — { scope, from?, to? } → { summary, stats, period }
 - **파일**: `backend/src/services/aiService.js`, `controllers/aiController.js`, `routes/ai.js`; `frontend/src/api/ai.js`, `components/ai/AiTaskGenerator.jsx`·`AiWeeklySummary.jsx`
-- **미구현(후속 F-58 확장 후보)**: 채팅/회의 요약, 시맨틱 검색, 결재·메일 초안 보조 (기획: `docs/제안기능_기획서.md`)
+- **미구현(후속 F-58 확장 후보)**: 채팅 요약, 시맨틱 검색, 결재·메일 초안 보조 (기획: `docs/제안기능_기획서.md`)
 
 ---
 
@@ -704,10 +705,12 @@
 - **API** (마운트 `/api/meetings`, 인증 필요):
   - 회의: `GET /api/meetings?filter=mine|upcoming|past`, `POST /api/meetings`, `GET/PUT/DELETE /api/meetings/:id`
   - RSVP: `PATCH /api/meetings/:id/rsvp`
+  - AI 요약(F-58): `POST /api/meetings/:id/ai-summary`
   - 결정사항: `POST /api/meetings/:id/decisions`, `DELETE /api/meetings/:id/decisions/:did`
   - 액션아이템: `POST/PUT/DELETE /api/meetings/:id/action-items(/:aid)`, `POST /api/meetings/:id/action-items/:aid/to-task`
 - **파일**: `backend/src/controllers/meetingController.js`·`routes/meetings.js`; `frontend/src/api/meetings.js`, `pages/Meetings/index.jsx`
-- **미구현(후속 확장 후보)**: 자원/일정(F-55) 연동, AI 회의록 요약(F-58), 회의록 메일 배포(F-54), 반복 회의 (기획: `docs/제안기능_기획서.md` F-61)
+- **AI 회의록 요약(F-58)**: 회의 상세의 "AI 요약" 버튼(AI 설정 시). `meetings.summary` 저장·표시(`MarkdownLite`).
+- **미구현(후속 확장 후보)**: 자원/일정(F-55) 연동, 회의록 메일 배포(F-54), 반복 회의 (기획: `docs/제안기능_기획서.md` F-61)
 
 ---
 
@@ -728,9 +731,9 @@
   - 목표: `POST /api/okr/objectives`, `PUT/DELETE /api/okr/objectives/:id`
   - KR: `POST /api/okr/objectives/:objId/key-results`, `PUT/DELETE /api/okr/key-results/:krId`
   - 체크인: `GET/POST /api/okr/key-results/:krId/checkins`
-  - 연결: `POST /api/okr/key-results/:krId/links`, `DELETE .../links/:linkId`
+  - 연결: `GET/POST /api/okr/key-results/:krId/links`, `DELETE .../links/:linkId` (KR 편집 모달의 자동진척 체크박스 + KR 행의 연결 버튼으로 업무 연결/해제)
 - **파일**: `backend/src/controllers/okrController.js`·`routes/okr.js`; `frontend/src/api/okr.js`, `pages/Okr/index.jsx`
-- **미구현(후속 확장 후보)**: 목표 정렬(alignment) 트리 시각화, 보드카드·WBS 연결, 진척 히트맵 대시보드 (기획: `docs/제안기능_기획서.md` F-60)
+- **미구현(후속 확장 후보)**: 목표 정렬(alignment) 트리 시각화, 보드카드·WBS 연결(현재 업무 연결만), 진척 히트맵 대시보드 (기획: `docs/제안기능_기획서.md` F-60)
 
 ---
 
