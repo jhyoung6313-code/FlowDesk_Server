@@ -21,8 +21,10 @@ frontend/dist/
 # 업로드 파일 (사용자 데이터, 바이너리)
 backend/uploads/
 
-# Claude Code 개인 설정
-.claude/
+# Claude Code 개인 설정 (settings.local.json·lock 등은 무시)
+.claude/*
+# 단, 기능 문서(Skill)는 팀 공유를 위해 버전관리에 포함
+!.claude/commands/
 
 # 임시 디자인 비교용 preview 파일
 frontend/public/preview-*.html
