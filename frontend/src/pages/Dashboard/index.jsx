@@ -18,6 +18,7 @@ import { AVATAR_COLOR_PRESETS } from '../../utils/colors';
 import MemoCard from '../../components/Memo/MemoCard';
 import TaskForm from '../../components/Task/TaskForm';
 import ScheduleWidget from '../../components/Schedule/ScheduleWidget';
+import AiWeeklySummary from '../../components/ai/AiWeeklySummary';
 
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
@@ -348,7 +349,11 @@ export default function DashboardPage() {
       <div style={{
         fontSize: 9.5, fontWeight: 700, color: D.text2,
         letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8, flexShrink: 0,
-      }}>🗂 업무 보드</div>
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <span>🗂 업무 보드</span>
+        <AiWeeklySummary compact />
+      </div>
       <div style={{
         display: 'flex',
         flexDirection: 'row',
