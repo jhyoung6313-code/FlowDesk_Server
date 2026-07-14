@@ -508,6 +508,12 @@
 | key_results | 핵심결과 (측정유형·시작/목표/현재값·autoProgress) |
 | key_result_links | KR↔업무 연결 (autoProgress 계산용) |
 | key_result_checkins | KR 체크인 이력 (값·신뢰도·코멘트) |
+| automation_rules | 자동화 규칙 (F-62, event·conditions·actions JSON, 실행횟수·최근오류) |
+| automation_logs | 자동화 실행 로그 (success/failed/skipped + detail) |
+| forms | 설문 (F-66, 상태·익명·재응답, 소프트 삭제) |
+| form_fields | 설문 문항 (유형·필수·보기 JSON) |
+| form_responses | 설문 응답 (익명이면 respondent_id null) |
+| form_answers | 문항별 응답 값 (다중선택은 JSON 배열) |
 
 ---
 
@@ -734,6 +740,149 @@
   - 연결: `GET/POST /api/okr/key-results/:krId/links`, `DELETE .../links/:linkId` (KR 편집 모달의 자동진척 체크박스 + KR 행의 연결 버튼으로 업무 연결/해제)
 - **파일**: `backend/src/controllers/okrController.js`·`routes/okr.js`; `frontend/src/api/okr.js`, `pages/Okr/index.jsx`
 - **미구현(후속 확장 후보)**: 목표 정렬(alignment) 트리 시각화, 보드카드·WBS 연결(현재 업무 연결만), 진척 히트맵 대시보드 (기획: `docs/제안기능_기획서.md` F-60)
+
+---
+
+## 27. 자동화 규칙 엔진
+
+### F-62. 범용 자동화 규칙 엔진 (Power Automate 경량판)
+- **개요**: 전역 이벤트(업무·결재·게시판·OKR·회의 등)가 발생하면 **조건**을 평가해 **액션**(알림·이메일·채팅·아웃바운드 웹훅·업무 자동생성)을 자동 실행. M365 Power Automate의 로컬 경량판. 기존 자동화가 보드(F-34)·플레이북(F-36)에 갇혀 있던 것을 도메인 무관 전역 엔진으로 승격.
+- **설계 원칙**: ①기존 모델 무손상 순수 추가(additive) ②`emit()`은 fire-and-forget으로 호출자(업무 흐름)에 예외 전파 없음 ③기존 서비스(`notificationService`/`emailService`/`linkedRoomService`) 재사용.
+- **규칙(AutomationRule)**: 이름·설명·활성여부·이벤트·조건(JSON)·액션(JSON)·실행횟수·최근실행·최근오류. `createdBy`는 경량 Int(FK 미사용, BoardAutomation 패턴).
+- **이벤트 카탈로그**: `task.created`, `task.status_changed`(현재 트리거 연결됨), `approval.approved/rejected`, `bbs.post_created`, `okr.at_risk`, `meeting.finished`(후속 트리거 연결 예정).
+- **조건 연산자**: `eq/ne/in/nin/contains/gt/lt/changed_to/is_empty/not_empty`. 여러 조건은 AND 결합. `changed_to`는 상태 전이(이전값≠, 현재값=)만 참.
+- **액션**:
+  - `notify`: 대상(userIds/toAssignees/toCreator)에 알림 생성(type `automation`) + SSE 실시간 전송
+  - `email`: `emailService.sendGenericEmail`로 발송(SMTP 미설정 시 스킵)
+  - `chat`: `linkedRoomService.postMessage`로 지정 방에 메시지
+  - `webhook`: 아웃바운드 POST(fetch, 8초 타임아웃). Slack·사내시스템 연동
+  - `create_task`: 업무 자동 생성(담당자 연결)
+  - **템플릿**: 액션 설정에서 `{{field}}` 토큰이 이벤트 컨텍스트 값으로 치환(예: `{{title}}`)
+- **실행 로그(AutomationLog)**: 규칙별 실행 이력(success/failed/skipped + detail). 규칙 상세/드로어에서 최근 50건 조회.
+- **화면**: `/admin/automations`(관리자 전용) — 규칙 목록·생성/수정 모달(조건·액션 동적 빌더)·테스트 실행·실행 로그 드로어. 관리자 콘솔 '기준정보' 그룹에 진입점.
+- **API** (마운트 `/api/automations`, 인증 필요 · 쓰기는 관리자):
+  - `GET /api/automations/catalog` — 이벤트/액션/연산자 카탈로그(편집기용)
+  - `GET/POST /api/automations`, `GET/PUT/DELETE /api/automations/:id`
+  - `POST /api/automations/:id/test` — 임의 컨텍스트로 수동 테스트 실행
+- **파일**: `backend/src/services/automationService.js`(엔진)·`controllers/automationController.js`·`routes/automations.js`; 트리거 emit은 `taskController`(create/updateStatus)에 연결. `frontend/src/api/automation.js`, `pages/Admin/Automations.jsx`
+- **미구현(후속 확장 후보)**: 결재/게시판/OKR/회의 이벤트 트리거 연결, 조건부 결재선, 스케줄 트리거(cron), 인바운드 웹훅과의 통합
+
+---
+
+## 28. AI 시맨틱 검색 · 채팅 요약
+
+### F-63. AI 질의응답(RAG) · 채팅/스레드 요약
+- **개요**: 자연어 질문을 사내 데이터(업무·위키·회의록·게시판·보드카드·내 메모)에서 검색해 **Claude가 근거를 인용하며 답변**(RAG-lite). 별도 임베딩 벤더·벡터DB 없이(로컬·소규모 적합) 기존 데이터의 키워드 검색으로 컨텍스트를 모아 LLM에 전달. Anthropic은 네이티브 임베딩 엔드포인트가 없어 이 방식을 채택(향후 Voyage/OpenAI 임베딩으로 업그레이드 가능한 확장 지점).
+- **환각 방지**: "제공된 컨텍스트만 근거로, 없으면 모른다고 답하라"는 시스템 프롬프트 + 문장 끝 `[번호]` 인용. 근거 0건이면 LLM 호출 없이 "관련 정보를 찾지 못했습니다" 반환.
+- **접근제어**: 전역검색(F-49) 신뢰모델을 따르되 — 메모는 본인 것만, 위키는 공개 스페이스+본인작성, 회의는 주최자/참석자만, 업무·보드·게시판은 미삭제(delYn='0') 대상.
+- **채팅 요약**: 본인이 속한 방의 최근 200개 메시지를 핵심요약·주요논의·후속할일로 요약.
+- **PII·감사**: 요청 본문은 전역 `piiGuard`(F-56)가 사전 스캔. 모든 호출은 감사로그 `AI_REQUEST`(F-48) + `AiUsageLog`에 적재.
+- **모델/파라미터**: `claude-opus-4-8`, adaptive thinking + `output_config.effort='medium'` (기존 aiService 패턴 재사용).
+- **화면**: 대시보드 업무 보드 헤더 "AI에게 질문" 버튼 → 질의응답 모달(질문 입력·마크다운 답변·출처 링크). AI 키 미설정 시 버튼 자동 숨김(`GET /api/ai/status`).
+- **API** (마운트 `/api/ai`, 인증 필요):
+  - `POST /api/ai/ask` — { question } → { answer, sources: [{ n, source, title, path }] }
+  - `POST /api/ai/chat-summary` — { roomId } → { summary }
+- **파일**: `backend/src/services/ragService.js`(검색·컨텍스트 수집)·`aiService.js`(answerFromContext·summarizeChat)·`controllers/aiController.js`; `frontend/src/api/ai.js`, `components/ai/AiAsk.jsx`(대시보드)
+- **미구현(후속 확장 후보)**: 진짜 벡터 임베딩(pgvector/Voyage), 결재·메일 초안 보조, 채팅 페이지 요약 버튼 연결, 전문검색(tsvector) 색인
+
+---
+
+## 29. 개인 "내 하루" 통합 홈
+
+### F-64. 내 하루 (개인 할 일 집계 대시보드)
+- **개요**: 여러 도메인에 흩어진 "내가 할 일"을 한 화면으로 집계. M365 To Do / My Day 대응. 기존 테이블만 조회하는 순수 추가(additive) — 신규 스키마 없음.
+- **집계 항목**:
+  - **내 업무**: 담당자 또는 생성자이면서 미완료(대기/진행중/보류), 마감 오름차순. 지연(overdue) 배지.
+  - **오늘 회의**: 주최자/참석자이면서 오늘 시작하는 회의(취소 제외).
+  - **내 액션아이템**: 회의(F-61)에서 내게 배정된 미완료(open) 액션아이템(업무연결·지연 표시).
+  - **결재 대기**: 상신(pending) 문서 중 **현재 결재 순번이 나인** 것만(`ApprovalStep.stepOrder === ApprovalDocument.currentStep`).
+  - **요약 카운트**: 내 업무·지연·결재대기·오늘회의·액션아이템·안읽은 알림·안읽은 메일.
+- **화면**: `/my-day` — 상단 요약 카드(클릭 시 해당 페이지 이동) + 내 업무/오늘 회의/액션아이템/결재 대기 리스트. 사이드바 '뷰' 그룹 '내 하루'(대시보드 아래).
+- **API** (인증 필요): `GET /api/me/today` → { date, tasks[], meetings[], actionItems[], approvals[], counts{} }
+- **파일**: `backend/src/controllers/meController.js`·`routes/me.js`; `frontend/src/api/me.js`, `pages/MyDay/index.jsx`
+- **미구현(후속 확장 후보)**: OKR 체크인 리마인더, 위키/게시판 멘션, 개인 커스텀 위젯 배치
+
+---
+
+## 30. 회의 빈시간 찾기 (Scheduling Assistant)
+
+### F-65. 회의 빈시간 찾기 (참석자 공통 가용 시간 제안)
+- **개요**: 참석자들의 회의(F-61)·일정(F-55, 휴가·외근·출장·차량 등)을 교차해 **근무시간 내 공통 가용 슬롯**을 제안. M365 Outlook "일정 도우미" 대응. 기존 데이터만 조회하는 순수 계산 — 신규 스키마 없음.
+- **알고리즘**: 시간을 자정 기준 분(minute-of-day) 정수로 다뤄 ①참석자 바쁜 구간 수집(회의 startAt~endAt, 일정 allDay=근무시간 전체/시간지정=startTime~endTime) → ②구간 병합 → ③근무시간에서 빼서 gap 산출 → ④gap에서 duration 슬롯을 step 간격으로 추출. 순수함수 `schedulingService`로 분리(테스트 용이).
+- **바쁜 유형**: vacation·half_day·meeting·field_work·business_trip·vehicle(remote/etc는 가용 간주).
+- **파라미터**: attendeeIds(필수), from/to(최대 14일), durationMin(기본 60), workStart/workEnd(기본 09:00–18:00), stepMin(기본 30).
+- **화면**: 회의 생성/수정 모달(F-61) 참석자 옆 "빈 시간 찾기" 버튼 → 슬롯 클릭 시 일시 자동 입력.
+- **API** (인증 필요): `POST /api/schedules/free-slots` → { durationMin, workStart, workEnd, days: [{ date, slots: [{ start, end }] }] }
+- **파일**: `backend/src/services/schedulingService.js`·`controllers/scheduleController.js`(freeSlots); `frontend/src/api/schedule.js`(findFreeSlots), `components/Schedule/FreeSlotFinder.jsx`, `pages/Meetings`(연동)
+- **presence 참고**: 재실 상태(온라인/오프라인)는 기존 Socket.IO `onlineUsers`(user-online/offline 이벤트)로 이미 제공, 상태 메시지(이모지·텍스트)는 `PUT /api/users/me/status`로 이미 제공됨.
+- **미구현(후속 확장 후보)**: 회의실(자원) 가용성 교차, 참석자별 가용률 히트맵, 타임존 다중 지원
+
+---
+
+## 31. Forms (설문 · 투표)
+
+### F-66. Forms 엔진 (설문·투표·응답 집계)
+- **개요**: 설문/투표를 만들고 응답을 수집·집계. M365 Forms 경량판. **설문(Form) → 문항(FormField) → 응답(FormResponse) → 문항응답(FormAnswer)** 정규화 구조(순수 추가 스키마).
+- **문항 유형**: 단답형(text)·장문형(textarea)·단일선택(single)·복수선택(multiple)·별점(rating)·숫자(number)·날짜(date). 선택형 보기는 `options`(JSON).
+- **설문 옵션**: 상태(draft/open/closed), 익명 응답(anonymous), 재응답 허용(multiResponse).
+- **응답 규칙**: `status='open'`일 때만 접수. 비익명·단일응답 설문은 중복 응답 차단. 필수 문항 미응답 시 400. 익명이면 `respondentId=null`. 다중선택 값은 JSON 배열로 저장.
+- **문항 잠금**: 응답이 1건이라도 있으면 문항 변경 불가(집계 정합성 보호, 409).
+- **결과 집계**: 선택형은 보기별 득표수(막대/퍼센트), 별점·숫자는 평균, 텍스트는 응답 목록. **결과 열람은 작성자·관리자만.**
+- **접근**: 목록은 개시된 설문 + 내가 만든 설문(관리자는 전체). 초안은 작성자·관리자만.
+- **화면**: `/forms` — 카드 목록(상태·문항/응답수) + 빌더 모달(문항 동적 추가) + 응답 모달(유형별 위젯) + 결과 모달(막대·평균). 사이드바 '협업' 그룹 '설문'.
+- **API** (인증 필요):
+  - `GET/POST /api/forms`, `GET/PUT/DELETE /api/forms/:id`, `PATCH /api/forms/:id/status`
+  - `POST /api/forms/:id/responses`(응답 제출), `GET /api/forms/:id/results`(집계, 작성자·관리자)
+- **파일**: `backend/src/controllers/formController.js`·`routes/forms.js`; `frontend/src/api/forms.js`, `pages/Forms/index.jsx`
+- **미구현(후속 확장 후보)**: 대상자 지정·마감일 자동화, 분기(조건부 문항), CSV 내보내기, 결재/회의 연동
+
+---
+
+## 32. 민감도 라벨 (문서 분류)
+
+### F-67. 민감도 라벨 · 기밀 접근 게이트
+- **개요**: 문서·게시글에 **민감도 라벨**(public 공개 / internal 사내한 / confidential 기밀)을 부여. M365 Purview 민감도 라벨 경량판. 기존 접근제어를 재작성하지 않는 **순수 추가(additive)** 설계 — `sensitivity` 컬럼 기본값 `public`으로 기존 동작 무변경.
+- **적용 대상**: 위키 문서(WikiDoc), 게시글(BbsPost)에 `sensitivity` 필드 추가.
+- **기밀 게이트**: `confidential` 항목은 **작성자·관리자만** 열람. 격리된 추가 검사로 구현:
+  - 위키: `loadAccessibleDoc`에 게이트 + `listSpaces` 문서 트리에서 기밀 제외(비작성자/비관리자).
+  - 게시판: 상세(`get`)에서 403 + 목록(`list`) where에 `OR: [{NOT: confidential}, {createdBy: me}]` 필터(관리자는 전체).
+- **화면**: 게시글 작성 폼·위키 문서 편집 헤더에 민감도 Select, 상세/헤더에 배지(🔒 기밀 / 🏢 사내한).
+- **API**: 기존 위키/게시판 create·update에 `sensitivity` 필드 수용(위키 `POST/PUT /api/wiki/docs`, 게시판 `POST/PUT /api/bbs`).
+- **파일**: `controllers/wikiController.js`·`bbsPostController.js`; `frontend/pages/Wiki/index.jsx`, `pages/BBS/PostFormDrawer.jsx`·`PostDetail.jsx`
+- **미구현(후속 확장 후보)**: **전면 부서/팀 스코프 RBAC**(현재는 라벨 게이트만 — 크로스커팅 접근제어는 회귀 위험이 커 별도 확장으로 분리), 결재/보드/업무로 라벨 확대, 라벨별 다운로드·복사 제어, DLP(F-56) 연계
+
+---
+
+## 33. 통합 문서/첨부 허브
+
+### F-68. 문서함 (전 도메인 첨부 통합 검색)
+- **개요**: 여러 도메인(업무·보드·게시판·결재·메일)에 흩어진 **기존 첨부 파일을 한 곳에서 검색**. M365 SharePoint 라이브러리 경량판. **polymorphic 마이그레이션 없이** 기존 첨부 테이블만 읽기 전용 집계(무의존·무마이그레이션·additive).
+- **집계 대상**: `task_attachments`·`board_card_attachments`·`bbs_attachments`·`approval_attachments`·`internal_mail_attachments`(공통 필드 originalName·mimeType·size·uploadedBy·createdAt + 부모 FK)를 정규화 병합.
+- **접근제어(도메인별 존중)**:
+  - 메일: **개인정보라 관리자도 예외 없이** 발신자/수신자만.
+  - 결재: 기안자/결재자만(관리자는 전체).
+  - 게시판: 민감도 라벨(F-67) 기밀 게이트 적용(비관리자는 기밀 제외).
+  - 업무/보드: 팀 공개(기존 전역검색 신뢰모델과 동일).
+- **기능**: 파일명 검색(디바운스), 출처별 필터(세그먼트+카운트), 원본 위치로 이동 링크, 파일유형 아이콘·크기·올린이·등록일.
+- **화면**: `/documents` — 사이드바 '협업' 그룹 '문서함'.
+- **API** (인증 필요): `GET /api/documents?q=&source=&limit=` → { total, counts, items: [{ source, fileName, mimeType, size, uploaderName, createdAt, contextTitle, contextPath }] }
+- **파일**: `backend/src/controllers/documentController.js`·`routes/documents.js`; `frontend/src/api/documents.js`, `pages/Documents/index.jsx`
+- **미구현(후속 확장 후보)**: 직접 다운로드(현재 원본 위치 이동), 전문검색(파일 본문 tsvector/pg_bigm), 위키 첨부·WBS 산출물 포함, 태그·즐겨찾기
+
+---
+
+## 34. 실시간 공동편집
+
+### F-69. 위키 실시간 공동편집 (Yjs)
+- **개요**: 위키 문서를 **여러 명이 동시에 편집**(CRDT 기반 자동 머지 + 협업 커서). M365 Word 온라인 공동작업 대응. 기존 편집 경로 회귀를 막기 위해 **공유 RichEditor는 무변경**, 별도 `CollaborativeEditor` opt-in 컴포넌트로 격리.
+- **기술**: TipTap v3 Collaboration + CollaborationCaret + `@tiptap/y-tiptap`, Yjs(CRDT), y-websocket. 서버는 `ws` + `y-websocket`(`setupWSConnection`)을 **기존 http 서버에 `/collab` path로 임베드**(Socket.IO(채팅)와 포트 공유, upgrade 핸들러는 path로 분리).
+- **인증·격리**: ws 핸드셰이크 쿼리의 **JWT 검증**, 방 이름 접두사 화이트리스트(`wiki-doc-`, `meeting-`). 그 외 path의 upgrade는 절대 건드리지 않아 Socket.IO와 안전 공존.
+- **영속화**: 서버는 인메모리 릴레이. **DB 저장은 클라이언트가 편집 종료·저장 시 HTML로 수행**(기존 `wiki_docs.content` + 버전이력 F-59와 호환). 최초 접속 시 Yjs 문서가 비어있으면 DB 본문으로 시드(중복 방지 가드).
+- **UX**: 위키 편집 헤더 "공동편집" 토글 → 실시간 모드 진입. 접속자 아바타·연결상태 배지·협업 커서(이름·색상) 표시.
+- **화면/파일**: `frontend/src/components/CollaborativeEditor.jsx`(신규), `pages/Wiki/index.jsx`(opt-in 연동); `backend/src/collabServer.js`, `app.js`(setupCollab).
+- **검증**: WS 인증(유효토큰 OPEN / 무토큰 401 / 잘못된 방 400), Socket.IO 공존, **2-클라이언트 Yjs 동기화(헤드리스) 성공**. 브라우저 커서 렌더링은 실제 2창 동시 편집으로 확인 권장.
+- **배포 주의**: 운영(nginx) 환경은 `/collab` WebSocket을 백엔드로 프록시하도록 설정 필요(`/socket.io`와 동일 패턴, Upgrade/Connection 헤더 전달).
+- **미구현(후속 확장 후보)**: 회의록(F-61) 연동(방 접두사 `meeting-` 이미 허용), 서버측 영속화(y-leveldb)로 무손실 지속, 편집 잠금·리비전 병합 알림
 
 ---
 
