@@ -351,7 +351,89 @@ const removeResource = async (req, res, next) => {
   }
 };
 
+// ── 회의 빈시간 찾기(Scheduling Assistant, F-65) ───────────────────────────────
+const { toMin, toHHMM, freeSlotsForDay } = require('../services/schedulingService');
+
+// 참석자를 바쁘게 만드는 일정 유형(remote/etc는 가용으로 간주)
+const BUSY_TYPES = ['vacation', 'half_day', 'meeting', 'field_work', 'business_trip', 'vehicle'];
+
+const localYMD = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const utcYMD = (d) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
+
+// POST /api/schedules/free-slots  { attendeeIds, from, to?, durationMin?, workStart?, workEnd?, stepMin? }
+const freeSlots = async (req, res, next) => {
+  try {
+    const b = req.body || {};
+    const ids = [...new Set((b.attendeeIds || []).map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+    if (!ids.length) return res.status(400).json({ error: '참석자를 1명 이상 지정해주세요.' });
+
+    const dur = Math.min(Math.max(Number(b.durationMin) || 60, 5), 480);
+    const wsMin = toMin(b.workStart, 540);   // 09:00
+    const weMin = toMin(b.workEnd, 1080);     // 18:00
+    const step = Math.min(Math.max(Number(b.stepMin) || 30, 5), 120);
+
+    const fromD = b.from ? new Date(b.from) : new Date();
+    fromD.setHours(0, 0, 0, 0);
+    let toD = b.to ? new Date(b.to) : new Date(fromD);
+    toD.setHours(0, 0, 0, 0);
+    if (isNaN(fromD) || isNaN(toD) || toD < fromD) return res.status(400).json({ error: '기간이 올바르지 않습니다.' });
+    const dayCount = Math.min(Math.floor((toD - fromD) / 86400000) + 1, 14); // 최대 14일
+
+    const rangeStart = new Date(fromD);
+    const rangeEnd = new Date(fromD); rangeEnd.setDate(rangeEnd.getDate() + dayCount);
+
+    const [meetings, events] = await Promise.all([
+      prisma.meeting.findMany({
+        where: {
+          delYn: '0', status: { not: 'cancelled' },
+          startAt: { gte: rangeStart, lt: rangeEnd },
+          OR: [{ organizerId: { in: ids } }, { attendees: { some: { userId: { in: ids } } } }],
+        },
+        select: { startAt: true, endAt: true },
+      }),
+      prisma.scheduleEvent.findMany({
+        where: {
+          type: { in: BUSY_TYPES },
+          startDate: { lt: rangeEnd }, endDate: { gte: rangeStart },
+          OR: [{ createdBy: { in: ids } }, { assignees: { some: { userId: { in: ids } } } }],
+        },
+        select: { startDate: true, endDate: true, allDay: true, startTime: true, endTime: true },
+      }),
+    ]);
+
+    const days = [];
+    for (let i = 0; i < dayCount; i++) {
+      const day = new Date(fromD); day.setDate(day.getDate() + i);
+      const dayStart = new Date(day); dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(dayStart); dayEnd.setDate(dayEnd.getDate() + 1);
+      const dayKey = localYMD(day);
+      const busy = [];
+
+      for (const m of meetings) {
+        const s = new Date(m.startAt);
+        const e = m.endAt ? new Date(m.endAt) : new Date(s.getTime() + 60 * 60000);
+        if (e <= dayStart || s >= dayEnd) continue;
+        busy.push({ start: (s - dayStart) / 60000, end: (e - dayStart) / 60000 });
+      }
+      for (const ev of events) {
+        // db.Date는 UTC 자정 → UTC 성분으로 달력일 비교
+        if (dayKey < utcYMD(new Date(ev.startDate)) || dayKey > utcYMD(new Date(ev.endDate))) continue;
+        if (ev.allDay) busy.push({ start: wsMin, end: weMin });
+        else busy.push({ start: toMin(ev.startTime, wsMin), end: toMin(ev.endTime, weMin) });
+      }
+
+      const slots = freeSlotsForDay({ workStart: wsMin, workEnd: weMin, busy, durationMin: dur, stepMin: step });
+      days.push({ date: dayKey, slots: slots.map((s) => ({ start: toHHMM(s.startMin), end: toHHMM(s.endMin) })) });
+    }
+
+    res.json({ durationMin: dur, workStart: toHHMM(wsMin), workEnd: toHHMM(weMin), days });
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   listEvents, createEvent, updateEvent, removeEvent,
   listResources, createResource, updateResource, removeResource,
+  freeSlots,
 };

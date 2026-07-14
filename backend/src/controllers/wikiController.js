@@ -16,6 +16,13 @@ function canAccessSpace(space, req) {
   return isAdmin(req) || space.createdBy === req.user.id;
 }
 
+// 민감도 라벨(F-67): 기밀(confidential) 문서는 작성자·관리자만 열람
+function canSeeSensitive(doc, req) {
+  if (doc.sensitivity !== 'confidential') return true;
+  return isAdmin(req) || doc.createdBy === req.user.id;
+}
+const SENSITIVITIES = ['public', 'internal', 'confidential'];
+
 // ── 스페이스 ──────────────────────────────────────────────────
 exports.listSpaces = async (req, res, next) => {
   try {
@@ -26,11 +33,14 @@ exports.listSpaces = async (req, res, next) => {
         docs: {
           where: { delYn: '0' },
           orderBy: [{ sortOrder: 'asc' }, { id: 'asc' }],
-          select: { id: true, title: true, icon: true, parentId: true, isFavorite: true, updatedAt: true },
+          select: { id: true, title: true, icon: true, parentId: true, isFavorite: true, updatedAt: true, sensitivity: true, createdBy: true },
         },
       },
     });
-    const visible = spaces.filter((s) => canAccessSpace(s, req));
+    // 스페이스 접근 필터 + 기밀 문서(작성자·관리자 외) 트리에서 제외
+    const visible = spaces
+      .filter((s) => canAccessSpace(s, req))
+      .map((s) => ({ ...s, docs: s.docs.filter((d) => canSeeSensitive(d, req)) }));
     res.json(visible);
   } catch (err) { next(err); }
 };
@@ -98,6 +108,7 @@ async function loadAccessibleDoc(id, req) {
   });
   if (!doc) return { error: 404 };
   if (!canAccessSpace(doc.space, req)) return { error: 403 };
+  if (!canSeeSensitive(doc, req)) return { error: 403 }; // 기밀 문서 게이트(F-67)
   return { doc };
 }
 
@@ -112,7 +123,7 @@ exports.getDoc = async (req, res, next) => {
 
 exports.createDoc = async (req, res, next) => {
   try {
-    const { spaceId, parentId, title } = req.body || {};
+    const { spaceId, parentId, title, sensitivity } = req.body || {};
     const space = await prisma.wikiSpace.findUnique({ where: { id: Number(spaceId) } });
     if (!space) return res.status(400).json({ error: '스페이스를 찾을 수 없습니다.' });
     if (!canAccessSpace(space, req)) return res.status(403).json({ error: '문서 생성 권한이 없습니다.' });
@@ -126,6 +137,7 @@ exports.createDoc = async (req, res, next) => {
         parentId: parentId ? Number(parentId) : null,
         title: (title || '제목 없음').slice(0, 200),
         content: '',
+        sensitivity: SENSITIVITIES.includes(sensitivity) ? sensitivity : 'public',
         sortOrder: (max._max.sortOrder ?? 0) + 1,
         createdBy: req.user.id,
         updatedBy: req.user.id,
@@ -143,7 +155,7 @@ exports.updateDoc = async (req, res, next) => {
     if (error === 404) return res.status(404).json({ error: '문서를 찾을 수 없습니다.' });
     if (error === 403) return res.status(403).json({ error: '수정 권한이 없습니다.' });
 
-    const { title, content, icon, isFavorite, parentId } = req.body || {};
+    const { title, content, icon, isFavorite, parentId, sensitivity } = req.body || {};
     const contentChanged = content !== undefined && content !== doc.content;
 
     // 본문 변경 시 직전 상태를 버전으로 스냅샷(빈 문서 최초 저장은 제외)
@@ -161,6 +173,7 @@ exports.updateDoc = async (req, res, next) => {
         ...(icon !== undefined ? { icon: icon || null } : {}),
         ...(isFavorite !== undefined ? { isFavorite: !!isFavorite } : {}),
         ...(parentId !== undefined ? { parentId: parentId ? Number(parentId) : null } : {}),
+        ...(sensitivity !== undefined && SENSITIVITIES.includes(sensitivity) ? { sensitivity } : {}),
         updatedBy: req.user.id,
       },
       include: { creator: { select: USER_SEL } },

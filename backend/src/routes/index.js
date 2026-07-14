@@ -37,6 +37,10 @@ const aiRoutes = require('./ai');
 const wikiRoutes = require('./wiki');
 const meetingRoutes = require('./meetings');
 const okrRoutes = require('./okr');
+const automationRoutes = require('./automations');
+const meRoutes = require('./me');
+const formRoutes = require('./forms');
+const documentRoutes = require('./documents');
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
@@ -68,6 +72,10 @@ router.use('/ai', aiRoutes);
 router.use('/wiki', wikiRoutes);
 router.use('/meetings', meetingRoutes);
 router.use('/okr', okrRoutes);
+router.use('/automations', automationRoutes);
+router.use('/me', meRoutes);
+router.use('/forms', formRoutes);
+router.use('/documents', documentRoutes);
 
 // BBS 게시판 + 전자결재 (라우트 내부에서 경로 처리)
 router.use('/', bbsRoutes);

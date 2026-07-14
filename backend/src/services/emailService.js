@@ -78,6 +78,33 @@ async function sendDeadlineEmail(toEmail, displayName, task) {
 }
 
 /**
+ * 범용 이메일 발송 (자동화 규칙 엔진 등에서 사용).
+ * SMTP 미설정 시 조용히 스킵하고 false 반환.
+ * @param {string} toEmail
+ * @param {string} subject
+ * @param {string} html
+ * @returns {Promise<boolean>} 발송 여부
+ */
+async function sendGenericEmail(toEmail, subject, html) {
+  const transporter = await createTransporter();
+  if (!transporter || !toEmail) return false;
+
+  const settings = await prisma.appSetting.findMany({ where: { key: { in: ['smtp_from'] } } });
+  const cfg = {};
+  for (const s of settings) cfg[s.key] = s.value;
+  const from = cfg.smtp_from || 'Flowdesk <noreply@flowdesk.local>';
+
+  await transporter.sendMail({
+    from,
+    to: toEmail,
+    subject: subject || '[Flowdesk] 알림',
+    html: html || '',
+    encoding: 'utf-8',
+  });
+  return true;
+}
+
+/**
  * SMTP 연결 테스트
  */
 async function testSmtpConnection(config) {

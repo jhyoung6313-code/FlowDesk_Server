@@ -32,11 +32,17 @@ const list = async (req, res, next) => {
     if (dateFrom) dateRange.gte = new Date(`${dateFrom}T00:00:00`);
     if (dateTo) dateRange.lte = new Date(`${dateTo}T23:59:59.999`);
 
+    // 민감도(F-67): 기밀 게시글은 작성자·관리자만 목록에 노출
+    const sensFilter = req.user.role === 'admin'
+      ? {}
+      : { OR: [{ NOT: { sensitivity: 'confidential' } }, { createdBy: req.user.id }] };
+
     const where = {
       delYn: '0',
       ...(categoryId && { categoryId: Number(categoryId) }),
       ...(search && buildSearch(search, searchField)),
       ...(Object.keys(dateRange).length && { [dateCol]: dateRange }),
+      ...sensFilter,
     };
 
     const [total, pinned, normal] = await Promise.all([
@@ -86,6 +92,11 @@ const get = async (req, res, next) => {
     });
     if (!post) return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
 
+    // 기밀 게시글 게이트(F-67): 작성자·관리자만 열람
+    if (post.sensitivity === 'confidential' && req.user.role !== 'admin' && post.createdBy !== req.user.id) {
+      return res.status(403).json({ error: '열람 권한이 없습니다.' });
+    }
+
     // 조회수 원자 증가
     await prisma.bbsPost.update({ where: { id }, data: { viewCount: { increment: 1 } } });
 
@@ -98,10 +109,11 @@ const get = async (req, res, next) => {
 // POST /api/bbs
 const create = async (req, res, next) => {
   try {
-    const { categoryId, title, content, senderOrg, officialDueDate, recipientDepts } = req.body;
+    const { categoryId, title, content, senderOrg, officialDueDate, recipientDepts, sensitivity } = req.body;
     if (!categoryId || !title || !content) {
       return res.status(400).json({ error: '카테고리, 제목, 내용은 필수입니다.' });
     }
+    const sens = ['public', 'internal', 'confidential'].includes(sensitivity) ? sensitivity : 'public';
 
     const category = await prisma.bbsCategory.findUnique({ where: { id: Number(categoryId) } });
     if (!category) return res.status(404).json({ error: '카테고리를 찾을 수 없습니다.' });
@@ -119,6 +131,7 @@ const create = async (req, res, next) => {
         senderOrg: senderOrg || null,
         officialDueDate: officialDueDate ? new Date(officialDueDate) : null,
         recipientDepts: Array.isArray(recipientDepts) ? recipientDepts : [],
+        sensitivity: sens,
         createdBy: req.user.id,
       },
       include: {
@@ -143,7 +156,7 @@ const update = async (req, res, next) => {
       return res.status(403).json({ error: '수정 권한이 없습니다.' });
     }
 
-    const { title, content, categoryId, senderOrg, officialDueDate, recipientDepts } = req.body;
+    const { title, content, categoryId, senderOrg, officialDueDate, recipientDepts, sensitivity } = req.body;
     const updated = await prisma.bbsPost.update({
       where: { id },
       data: {
@@ -153,6 +166,7 @@ const update = async (req, res, next) => {
         ...(senderOrg !== undefined && { senderOrg: senderOrg || null }),
         ...(officialDueDate !== undefined && { officialDueDate: officialDueDate ? new Date(officialDueDate) : null }),
         ...(recipientDepts !== undefined && { recipientDepts: Array.isArray(recipientDepts) ? recipientDepts : [] }),
+        ...(sensitivity !== undefined && ['public', 'internal', 'confidential'].includes(sensitivity) ? { sensitivity } : {}),
       },
       include: {
         creator: { select: { id: true, displayName: true, avatarColor: true } },

@@ -164,4 +164,53 @@ async function summarizeMeeting({ req, title, dateLabel, agenda, minutesText, de
   return firstText(message);
 }
 
-module.exports = { isConfigured, generateTasks, weeklySummary, summarizeMeeting, MODEL };
+// ── 4) RAG 질의응답 (F-63) ───────────────────────────────────
+// 수집된 컨텍스트 스니펫만 근거로 자연어 질문에 답한다(환각 방지: 근거 없으면 모른다고 답).
+async function answerFromContext({ req, question, contexts }) {
+  const c = getClient();
+  const system = [
+    '당신은 팀 업무관리 시스템의 AI 검색 어시스턴트입니다.',
+    '아래에 제공된 "컨텍스트"만을 근거로 사용자 질문에 답하세요. 컨텍스트에 없는 내용은 추측하지 말고, 근거가 부족하면 "관련 정보를 찾지 못했습니다."라고 답하세요.',
+    '답변에 사용한 근거는 문장 끝에 [번호] 형태로 인용하세요(예: 배포는 완료되었습니다[2]).',
+    '간결한 마크다운으로 한국어로 답변합니다.',
+  ].join('\n');
+
+  const contextText = (contexts || [])
+    .map((c, i) => `[${i + 1}] (${c.source}) ${c.title}\n${c.text}`)
+    .join('\n\n');
+
+  const message = await c.messages.create({
+    model: MODEL,
+    max_tokens: 2000,
+    thinking: { type: 'adaptive' },
+    output_config: { effort: 'medium' },
+    system,
+    messages: [{ role: 'user', content: `질문: ${question}\n\n=== 컨텍스트 ===\n${contextText || '(컨텍스트 없음)'}` }],
+  });
+  await logUsage({ req, feature: 'rag_answer', usage: message.usage });
+  return firstText(message);
+}
+
+// ── 5) 채팅 스레드/방 요약 (F-63) ─────────────────────────────
+async function summarizeChat({ req, roomName, messages: chatMessages }) {
+  const c = getClient();
+  const system = [
+    '당신은 팀 채팅 요약 어시스턴트입니다.',
+    '제공된 채팅 로그를 간결한 마크다운으로 요약하세요.',
+    '구성: ① 핵심 요약(2~3문장) ② 주요 논의/결정 ③ 후속 할 일(있으면). 데이터에 없는 내용은 지어내지 마세요. 한국어로 응답합니다.',
+  ].join('\n');
+
+  const log = (chatMessages || []).map((m) => `${m.sender}: ${m.content}`).join('\n');
+  const message = await c.messages.create({
+    model: MODEL,
+    max_tokens: 2000,
+    thinking: { type: 'adaptive' },
+    output_config: { effort: 'medium' },
+    system,
+    messages: [{ role: 'user', content: `채팅방: ${roomName}\n\n=== 대화 로그 ===\n${log}` }],
+  });
+  await logUsage({ req, feature: 'chat_summary', usage: message.usage });
+  return firstText(message);
+}
+
+module.exports = { isConfigured, generateTasks, weeklySummary, summarizeMeeting, answerFromContext, summarizeChat, MODEL };

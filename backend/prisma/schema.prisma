@@ -671,6 +671,7 @@ enum NotificationType {
   approval_rejected
   mail_received
   schedule_shared
+  automation
 }
 
 enum WbsIssueStatus {
@@ -1430,6 +1431,7 @@ model BbsPost {
   senderOrg      String?      @map("sender_org") @db.VarChar(200)
   officialDueDate DateTime?   @map("official_due_date") @db.Date
   recipientDepts String[]     @map("recipient_depts")
+  sensitivity String          @default("public") @db.VarChar(20) // public | internal | confidential (F-67)
   isPinned    Boolean         @default(false) @map("is_pinned")
   viewCount   Int             @default(0) @map("view_count")
   createdBy   Int             @map("created_by")
@@ -1765,6 +1767,7 @@ model WikiDoc {
   content    String?   @db.Text
   icon       String?   @db.VarChar(20)
   isFavorite Boolean   @default(false) @map("is_favorite")
+  sensitivity String   @default("public") @db.VarChar(20) // public | internal | confidential (F-67)
   sortOrder  Int       @default(0) @map("sort_order")
   createdBy  Int       @map("created_by")
   updatedBy  Int?      @map("updated_by")
@@ -1962,4 +1965,100 @@ model KeyResultCheckin {
   author      User      @relation("OkrCheckinAuthor", fields: [createdBy], references: [id])
 
   @@map("key_result_checkins")
+}
+
+// ───────────────────────── Automation (범용 자동화 규칙 엔진, F-62) ─────────────────────────
+// M365 Power Automate 경량판. 전역 이벤트(업무/결재/게시판 등) → 조건 → 액션(알림/이메일/채팅/웹훅/업무생성).
+// 기존 모델을 건드리지 않는 순수 추가(additive) 설계. createdBy는 FK 관계 없이 Int로만 보관(BoardAutomation과 동일한 경량 패턴).
+model AutomationRule {
+  id          Int              @id @default(autoincrement())
+  name        String           @db.VarChar(200)
+  description String?          @db.VarChar(500)
+  isActive    Boolean          @default(true) @map("is_active")
+  event       String           @db.VarChar(60)   // 예: task.created, task.status_changed, approval.approved
+  conditions  String?          @db.Text          // JSON 배열: [{ field, op, value }]
+  actions     String           @db.Text          // JSON 배열: [{ type, config }]
+  runCount    Int              @default(0) @map("run_count")
+  lastRunAt   DateTime?        @map("last_run_at")
+  lastError   String?          @map("last_error") @db.VarChar(500)
+  createdBy   Int              @map("created_by")
+  createdAt   DateTime         @default(now()) @map("created_at")
+  updatedAt   DateTime         @updatedAt @map("updated_at")
+  logs        AutomationLog[]
+
+  @@index([event, isActive])
+  @@map("automation_rules")
+}
+
+model AutomationLog {
+  id        Int            @id @default(autoincrement())
+  ruleId    Int            @map("rule_id")
+  event     String         @db.VarChar(60)
+  status    String         @db.VarChar(20)  // success | failed | skipped
+  detail    String?        @db.Text
+  createdAt DateTime       @default(now()) @map("created_at")
+  rule      AutomationRule @relation(fields: [ruleId], references: [id], onDelete: Cascade)
+
+  @@index([ruleId, createdAt])
+  @@map("automation_logs")
+}
+
+// ───────────────────────── Forms (설문/투표, F-66) ─────────────────────────
+// M365 Forms 대응. 설문 → 문항 → 응답 → 문항응답. createdBy/respondentId는 경량 Int(FK 미사용).
+model Form {
+  id            Int            @id @default(autoincrement())
+  title         String         @db.VarChar(200)
+  description   String?        @db.VarChar(1000)
+  status        String         @default("draft") @db.VarChar(20) // draft | open | closed
+  anonymous     Boolean        @default(false)   // 익명 응답
+  multiResponse Boolean        @default(false) @map("multi_response") // 재응답 허용
+  createdBy     Int            @map("created_by")
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  delYn         String         @default("0") @map("del_yn") @db.Char(1)
+  fields        FormField[]
+  responses     FormResponse[]
+
+  @@index([status, delYn])
+  @@map("forms")
+}
+
+model FormField {
+  id       Int          @id @default(autoincrement())
+  formId   Int          @map("form_id")
+  order    Int          @default(0)
+  type     String       @db.VarChar(20) // text | textarea | single | multiple | rating | number | date
+  label    String       @db.VarChar(300)
+  required Boolean      @default(false)
+  options  String?      @db.Text        // 선택형 보기(JSON 배열)
+  form     Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
+  answers  FormAnswer[]
+
+  @@index([formId, order])
+  @@map("form_fields")
+}
+
+model FormResponse {
+  id           Int          @id @default(autoincrement())
+  formId       Int          @map("form_id")
+  respondentId Int?         @map("respondent_id") // 익명이면 null
+  createdAt    DateTime     @default(now()) @map("created_at")
+  form         Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
+  answers      FormAnswer[]
+
+  @@index([formId])
+  @@map("form_responses")
+}
+
+model FormAnswer {
+  id         Int          @id @default(autoincrement())
+  responseId Int          @map("response_id")
+  fieldId    Int          @map("field_id")
+  value      String?      @db.Text // 텍스트/숫자/날짜; 다중선택은 JSON 배열 문자열
+  response   FormResponse @relation(fields: [responseId], references: [id], onDelete: Cascade)
+  field      FormField    @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  @@index([responseId])
+  @@index([fieldId])
+  @@map("form_answers")
 }
