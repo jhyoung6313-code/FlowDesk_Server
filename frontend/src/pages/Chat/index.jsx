@@ -7,13 +7,15 @@ import { createPortal } from 'react-dom';
 import {
   Badge, Button, Tooltip, Avatar, Spin, Modal,
   Select, Radio, Form, Input, message as antMsg, Dropdown, Empty,
-  DatePicker,
+  DatePicker, Popover, InputNumber, Space,
 } from 'antd';
 import ResizableDrawer from '../../components/common/ResizableDrawer';
 import {
   PlusOutlined, SendOutlined, TeamOutlined, UserOutlined,
   LogoutOutlined, PaperClipOutlined, BoldOutlined, ItalicOutlined,
   UnderlineOutlined, StrikethroughOutlined, FontColorsOutlined,
+  UndoOutlined, RedoOutlined, AlignLeftOutlined, AlignCenterOutlined, AlignRightOutlined,
+  OrderedListOutlined, UnorderedListOutlined, LinkOutlined, TableOutlined,
   DownloadOutlined, FileOutlined, FilePdfOutlined, FileWordOutlined,
   FileExcelOutlined, FileZipOutlined, FileImageOutlined, MessageOutlined,
   PushpinOutlined, StarOutlined, StarFilled, BellOutlined, BellFilled,
@@ -553,12 +555,100 @@ function MessageBubble({ msg, prevMsg, myId, onReact, onEdit, onDelete, onPin, o
   );
 }
 
-/* ── 서식 툴바 ── */
+/* ── 색상 팔레트 팝오버 (글자색/형광펜 공용, contentEditable 포커스 보존) ── */
+function PalettePicker({ title, icon, current, onPick }) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState({ top: 0, left: 0 });
+  const iconRef = useRef(null);
+  return (
+    <>
+      <Tooltip title={title}>
+        <div ref={iconRef} style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0, padding: '0 3px' }}
+          onMouseDown={(e) => { e.preventDefault(); const r = iconRef.current?.getBoundingClientRect(); if (r) setPos({ top: r.bottom + 4, left: r.left }); setOpen((v) => !v); }}>
+          {icon}
+          <div style={{ position: 'absolute', bottom: -1, left: 2, right: 2, height: 3, background: current, borderRadius: 1 }} />
+        </div>
+      </Tooltip>
+      {open && createPortal(
+        <>
+          <div style={{ position: 'fixed', inset: 0, zIndex: 99998 }} onMouseDown={() => setOpen(false)} />
+          <div style={{ position: 'fixed', top: pos.top, left: pos.left, zIndex: 99999, background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.18)', padding: 6, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4 }}>
+            {COLOR_PALETTE.map((color) => (
+              <div key={color} title={color}
+                onMouseDown={(e) => { e.preventDefault(); onPick(color); setOpen(false); }}
+                style={{ width: 22, height: 22, background: color, borderRadius: 3, cursor: 'pointer', border: color === current ? '2px solid #1677ff' : '1px solid var(--fd-border)', boxSizing: 'border-box' }} />
+            ))}
+          </div>
+        </>, document.body)}
+    </>
+  );
+}
+
+/* ── 서식 툴바 (RichEditor와 동일한 버튼 구성) ── */
 function FormatToolbar({ editorRef, fontSize, setFontSize, fontFamily, setFontFamily, fontColor, setFontColor }) {
+  const [hiliteColor, setHiliteColor] = useState('#ffff00');
+  const [tableOpen, setTableOpen] = useState(false);
+  const [tRows, setTRows] = useState(3);
+  const [tCols, setTCols] = useState(3);
+  const savedRangeRef = useRef(null);
   const exec = (cmd) => { editorRef.current?.focus(); document.execCommand(cmd, false, null); };
-  const [colorOpen, setColorOpen] = useState(false);
-  const [colorPos, setColorPos] = useState({ top: 0, left: 0 });
-  const colorIconRef = useRef(null);
+
+  // 팝오버로 포커스가 옮겨가기 전에 현재 커서 위치를 저장(표 삽입 지점 보존)
+  const captureRange = () => {
+    const sel = window.getSelection();
+    if (sel?.rangeCount && editorRef.current?.contains(sel.anchorNode)) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    }
+  };
+
+  // 표 그리기(N×M 삽입) — 저장된 커서 위치, 없으면 끝에 추가. 첫 행은 헤더(th).
+  const insertTable = (rows, cols) => {
+    const table = document.createElement('table');
+    table.className = 'chat-table';
+    const tbody = document.createElement('tbody');
+    for (let r = 0; r < rows; r++) {
+      const tr = document.createElement('tr');
+      for (let c = 0; c < cols; c++) {
+        const cell = document.createElement(r === 0 ? 'th' : 'td');
+        cell.appendChild(document.createElement('br'));
+        tr.appendChild(cell);
+      }
+      tbody.appendChild(tr);
+    }
+    table.appendChild(tbody);
+    const after = document.createElement('div');
+    after.appendChild(document.createElement('br'));
+    editorRef.current?.focus();
+    const range = savedRangeRef.current;
+    if (range && editorRef.current?.contains(range.startContainer)) {
+      range.collapse(false);
+      range.insertNode(table);
+      table.after(after);
+    } else {
+      editorRef.current.appendChild(table);
+      editorRef.current.appendChild(after);
+    }
+    savedRangeRef.current = null;
+  };
+  const insertLink = () => {
+    editorRef.current?.focus();
+    const url = window.prompt('링크 URL 입력', 'https://');
+    if (url === null) return;
+    if (url === '') { document.execCommand('unlink', false, null); return; }
+    document.execCommand('createLink', false, url);
+  };
+  const insertCodeBlock = () => {
+    editorRef.current?.focus();
+    const sel = window.getSelection();
+    const selected = sel?.rangeCount > 0 ? sel.getRangeAt(0).cloneContents().textContent : '';
+    const pre = document.createElement('pre');
+    pre.className = 'chat-code-block';
+    const code = document.createElement('code');
+    code.textContent = selected || '코드를 입력하세요';
+    pre.appendChild(code);
+    if (sel?.rangeCount > 0) { sel.getRangeAt(0).deleteContents(); sel.getRangeAt(0).insertNode(pre); }
+    else editorRef.current.appendChild(pre);
+  };
 
   const applySpan = (prop, val, setter) => {
     setter(val);
@@ -607,86 +697,70 @@ function FormatToolbar({ editorRef, fontSize, setFontSize, fontFamily, setFontFa
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 2, padding: '3px 8px', borderBottom: '1px solid var(--fd-border)', background: 'var(--fd-surface-sunken)', flexWrap: 'wrap' }}>
+      {/* 실행취소/다시실행 */}
+      <Tooltip title="실행 취소"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('undo'); }}><UndoOutlined /></button></Tooltip>
+      <Tooltip title="다시 실행"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('redo'); }}><RedoOutlined /></button></Tooltip>
+      <div style={sep} />
+      {/* 폰트/크기 */}
+      <select value={fontFamily} onChange={(e) => { editorRef.current?.focus(); applySpan('fontFamily', e.target.value, setFontFamily); }} style={{ height: 24, fontSize: 11, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: 'var(--fd-surface)', width: 78 }}>
+        {FONT_FAMILIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+      </select>
+      <select value={fontSize} onChange={(e) => { editorRef.current?.focus(); applySpan('fontSize', e.target.value, setFontSize); }} style={{ height: 24, fontSize: 11, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: 'var(--fd-surface)', width: 54 }}>
+        {FONT_SIZES.map((s) => <option key={s} value={s}>{s}px</option>)}
+      </select>
+      <div style={sep} />
+      {/* 기본 서식 */}
       <Tooltip title="굵게"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('bold'); }}><BoldOutlined /></button></Tooltip>
       <Tooltip title="기울임"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('italic'); }}><ItalicOutlined /></button></Tooltip>
       <Tooltip title="밑줄"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('underline'); }}><UnderlineOutlined /></button></Tooltip>
       <Tooltip title="취소선"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('strikeThrough'); }}><StrikethroughOutlined /></button></Tooltip>
-      <Tooltip title="코드 블록">
-        <button type="button" style={btn} onMouseDown={(e) => {
-          e.preventDefault();
-          editorRef.current?.focus();
-          const sel = window.getSelection();
-          const selected = sel?.rangeCount > 0 ? sel.getRangeAt(0).cloneContents().textContent : '';
-          const pre = document.createElement('pre');
-          pre.className = 'chat-code-block';
-          const code = document.createElement('code');
-          code.textContent = selected || '코드를 입력하세요';
-          pre.appendChild(code);
-          if (sel?.rangeCount > 0) { sel.getRangeAt(0).deleteContents(); sel.getRangeAt(0).insertNode(pre); }
-          else editorRef.current.appendChild(pre);
-        }}><CodeOutlined /></button>
-      </Tooltip>
       <div style={sep} />
-      <select value={fontSize} onChange={(e) => { editorRef.current?.focus(); applySpan('fontSize', e.target.value, setFontSize); }} style={{ height: 24, fontSize: 11, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: 'var(--fd-surface)', width: 54 }}>
-        {FONT_SIZES.map((s) => <option key={s} value={s}>{s}px</option>)}
-      </select>
-      <select value={fontFamily} onChange={(e) => { editorRef.current?.focus(); applySpan('fontFamily', e.target.value, setFontFamily); }} style={{ height: 24, fontSize: 11, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: 'var(--fd-surface)', width: 78 }}>
-        {FONT_FAMILIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
-      </select>
+      {/* 정렬 */}
+      <Tooltip title="왼쪽 정렬"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('justifyLeft'); }}><AlignLeftOutlined /></button></Tooltip>
+      <Tooltip title="가운데 정렬"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('justifyCenter'); }}><AlignCenterOutlined /></button></Tooltip>
+      <Tooltip title="오른쪽 정렬"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('justifyRight'); }}><AlignRightOutlined /></button></Tooltip>
       <div style={sep} />
-
-      {/* ── 색상 팔레트 (portal + overlay 방식) */}
-      <Tooltip title="글자 색상">
-        <div
-          ref={colorIconRef}
-          style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0, padding: '0 3px' }}
-          onMouseDown={(e) => {
-            e.preventDefault();
-            const rect = colorIconRef.current?.getBoundingClientRect();
-            if (rect) setColorPos({ top: rect.bottom + 4, left: rect.left });
-            setColorOpen((v) => !v);
-          }}
-        >
-          <FontColorsOutlined style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }} />
-          <div style={{ position: 'absolute', bottom: -1, left: 2, right: 2, height: 3, background: fontColor, borderRadius: 1 }} />
-        </div>
-      </Tooltip>
-      {colorOpen && createPortal(
-        <>
-          {/* 외부 클릭 시 닫기용 투명 오버레이 */}
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 99998 }}
-            onMouseDown={() => setColorOpen(false)}
-          />
-          {/* 색상 팔레트 */}
-          <div
-            style={{
-              position: 'fixed', top: colorPos.top, left: colorPos.left, zIndex: 99999,
-              background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 6,
-              boxShadow: '0 4px 12px rgba(0,0,0,0.18)', padding: 6,
-              display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4,
-            }}
-          >
-            {COLOR_PALETTE.map((color) => (
-              <div
-                key={color}
-                title={color}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  applySpan('color', color, setFontColor);
-                  setColorOpen(false);
-                }}
-                style={{
-                  width: 22, height: 22, background: color, borderRadius: 3, cursor: 'pointer',
-                  border: color === fontColor ? '2px solid #1677ff' : '1px solid var(--fd-border)',
-                  boxSizing: 'border-box',
-                }}
-              />
-            ))}
+      {/* 목록 */}
+      <Tooltip title="번호 목록"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('insertOrderedList'); }}><OrderedListOutlined /></button></Tooltip>
+      <Tooltip title="글머리 목록"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('insertUnorderedList'); }}><UnorderedListOutlined /></button></Tooltip>
+      <div style={sep} />
+      {/* 색상 / 형광펜 */}
+      <PalettePicker title="글자 색상" icon={<FontColorsOutlined style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }} />} current={fontColor} onPick={(c) => applySpan('color', c, setFontColor)} />
+      <PalettePicker title="형광펜" icon={<span style={{ fontSize: 12, fontWeight: 700, color: 'var(--fd-text-secondary)' }}>H</span>} current={hiliteColor} onPick={(c) => applySpan('backgroundColor', c, setHiliteColor)} />
+      <div style={sep} />
+      {/* 링크 */}
+      <Tooltip title="링크 삽입"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); insertLink(); }}><LinkOutlined /></button></Tooltip>
+      {/* 표 삽입 */}
+      <Popover
+        open={tableOpen}
+        onOpenChange={setTableOpen}
+        trigger="click"
+        placement="topLeft"
+        arrow={false}
+        content={
+          <div style={{ width: 180 }}>
+            <div style={{ marginBottom: 8, fontSize: 12, fontWeight: 600 }}>표 삽입</div>
+            <Space direction="vertical" style={{ width: '100%' }} size={6}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12, width: 20 }}>행</span>
+                <InputNumber min={1} max={20} value={tRows} onChange={(v) => setTRows(v || 1)} size="small" style={{ flex: 1 }} />
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 12, width: 20 }}>열</span>
+                <InputNumber min={1} max={10} value={tCols} onChange={(v) => setTCols(v || 1)} size="small" style={{ flex: 1 }} />
+              </div>
+              <Button type="primary" size="small" block onClick={() => { insertTable(tRows, tCols); setTableOpen(false); }}>삽입</Button>
+            </Space>
           </div>
-        </>,
-        document.body
-      )}
+        }
+      >
+        <Tooltip title="표 삽입">
+          <button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); captureRange(); }}><TableOutlined /></button>
+        </Tooltip>
+      </Popover>
+      <div style={sep} />
+      {/* 코드 블록 */}
+      <Tooltip title="코드 블록"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); insertCodeBlock(); }}><CodeOutlined /></button></Tooltip>
     </div>
   );
 }
@@ -2035,6 +2109,25 @@ export default function ChatPage() {
         }
         .chat-msg-content span[style] {
           display: inline;
+        }
+        /* 표(에디터/메시지 공용, RichEditor와 동일한 스타일) */
+        [contenteditable] table.chat-table,
+        .chat-msg-content table.chat-table {
+          border-collapse: collapse;
+          margin: 6px 0;
+          width: auto;
+        }
+        [contenteditable] table.chat-table td, [contenteditable] table.chat-table th,
+        .chat-msg-content table.chat-table td, .chat-msg-content table.chat-table th {
+          border: 1px solid #d1d5db;
+          padding: 6px 10px;
+          min-width: 48px;
+          vertical-align: top;
+        }
+        [contenteditable] table.chat-table th,
+        .chat-msg-content table.chat-table th {
+          background: #f8fafc;
+          font-weight: 600;
         }
       `}</style>
     </div>
