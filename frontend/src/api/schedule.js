@@ -13,6 +13,10 @@ export const updateScheduleEvent = (id, data) =>
 export const deleteScheduleEvent = (id) =>
   api.delete(`/schedules/${id}`).then((r) => r.data);
 
+/* ── 회의 빈시간 찾기 (Scheduling Assistant, F-65) ── */
+export const findFreeSlots = (data) =>
+  api.post('/schedules/free-slots', data).then((r) => r.data);
+
 /* ── 자원(회의실·차량) ── */
 export const getScheduleResources = (kind) =>
   api.get('/schedules/resources', { params: kind ? { kind } : {} }).then((r) => r.data);

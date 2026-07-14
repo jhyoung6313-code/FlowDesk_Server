@@ -19,6 +19,9 @@ import Forbidden from './pages/Error/Forbidden';
 
 // 페이지는 라우트 단위 코드 스플리팅 (무거운 라이브러리—캘린더/간트/차트/PDF—를 각 청크로 분리)
 const DashboardPage = lazy(() => import('./pages/Dashboard'));
+const MyDayPage = lazy(() => import('./pages/MyDay'));
+const FormsPage = lazy(() => import('./pages/Forms'));
+const DocumentsPage = lazy(() => import('./pages/Documents'));
 const TasksPage = lazy(() => import('./pages/Tasks'));
 const CalendarPage = lazy(() => import('./pages/Calendar'));
 const MemosPage = lazy(() => import('./pages/Memos'));
@@ -53,6 +56,7 @@ const ApprovalPage = lazy(() => import('./pages/Approval'));
 const ApprovalDocumentForm = lazy(() => import('./pages/Approval/DocumentForm'));
 const ApprovalDocumentDetail = lazy(() => import('./pages/Approval/DocumentDetail'));
 const ApprovalAdminPage = lazy(() => import('./pages/Admin/ApprovalAdmin'));
+const AutomationsPage = lazy(() => import('./pages/Admin/Automations'));
 const MailPage = lazy(() => import('./pages/Mail'));
 const WikiPage = lazy(() => import('./pages/Wiki'));
 const MeetingsPage = lazy(() => import('./pages/Meetings'));
@@ -205,6 +209,9 @@ export default function App() {
           }
         >
           <Route index element={<DashboardPage />} />
+          <Route path="my-day" element={<MyDayPage />} />
+          <Route path="forms" element={<FormsPage />} />
+          <Route path="documents" element={<DocumentsPage />} />
           <Route path="tasks" element={<TasksPage />} />
           <Route path="kanban" element={<Navigate to="/tasks?view=kanban" replace />} />
           <Route path="calendar" element={<CalendarPage />} />
@@ -343,6 +350,14 @@ export default function App() {
             element={
               <PrivateRoute adminOnly>
                 <ApprovalAdminPage />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="admin/automations"
+            element={
+              <PrivateRoute adminOnly>
+                <AutomationsPage />
               </PrivateRoute>
             }
           />

@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu, ConfigProvider, Button, Modal, Form, Input, DatePicker, Tag, Space, message, Tooltip, Avatar, Dropdown } from 'antd';
 import {
   DashboardOutlined,
+  ScheduleOutlined,
+  FormOutlined,
   CheckSquareOutlined,
   BarChartOutlined,
   TeamOutlined,
@@ -424,6 +426,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   // ── 섹션별 메뉴 항목 (아이콘에 그룹색)
   const viewItems = [
     { key: '/', icon: <DashboardOutlined style={{ color: GROUPS.view.color }} />, label: '대시보드' },
+    { key: '/my-day', icon: <ScheduleOutlined style={{ color: GROUPS.view.color }} />, label: '내 하루' },
     { key: '/tasks', icon: <CheckSquareOutlined style={{ color: GROUPS.view.color }} />, label: '업무 관리' },
     { key: '/workload', icon: <TeamOutlined style={{ color: GROUPS.view.color }} />, label: '워크로드' },
     { key: '/okr', icon: <FlagOutlined style={{ color: GROUPS.view.color }} />, label: 'OKR' },
@@ -452,6 +455,16 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
       key: '/meetings',
       icon: <FileDoneOutlined style={{ color: collabClr }} />,
       label: '회의',
+    },
+    {
+      key: '/forms',
+      icon: <FormOutlined style={{ color: collabClr }} />,
+      label: '설문',
+    },
+    {
+      key: '/documents',
+      icon: <FolderOutlined style={{ color: collabClr }} />,
+      label: '문서함',
     },
     {
       key: 'playbook-submenu',
@@ -570,6 +583,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   // ── 1차 아이콘 레일 항목 (그룹색)
   const railItems = [
     { key: '/', icon: <DashboardOutlined />, title: '대시보드', color: GROUPS.view.color },
+    { key: '/my-day', icon: <ScheduleOutlined />, title: '내 하루', color: GROUPS.view.color },
     { key: '/tasks', icon: <CheckSquareOutlined />, title: '업무 관리', color: GROUPS.view.color },
     { key: '/workload', icon: <TeamOutlined />, title: '워크로드', color: GROUPS.view.color },
     { key: '/memos', icon: <SnippetsOutlined />, title: '메모지', color: GROUPS.view.color },

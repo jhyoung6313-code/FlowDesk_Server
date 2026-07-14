@@ -15,6 +15,7 @@ import {
 } from '../../api/bbs';
 import PostFormDrawer from './PostFormDrawer';
 import useAuthStore from '../../store/authStore';
+import SensitivityTag from '../../components/common/SensitivityTag';
 import dayjs from 'dayjs';
 
 const { Title, Text, Paragraph } = Typography;
@@ -261,6 +262,7 @@ export default function PostDetail({ postId, onBack, onChanged }) {
         {/* 제목 */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 18, flexWrap: 'wrap' }}>
           {post.isPinned && <Tag icon={<PushpinOutlined />} color="warning" style={{ margin: 0 }}>공지</Tag>}
+          <SensitivityTag value={post.sensitivity} style={{ margin: 0 }} />
           {post.category?.name && (
             <Tag style={{ margin: 0, color: token.colorTextSecondary }}>{post.category.name}</Tag>
           )}

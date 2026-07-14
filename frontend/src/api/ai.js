@@ -13,3 +13,11 @@ export const generateTasks = (prompt) =>
 // 주간 요약 (scope: 'me' | 'all')
 export const getWeeklySummary = (scope = 'me', range = {}) =>
   api.post('/ai/summary', { scope, ...range }, { timeout: AI_TIMEOUT }).then((r) => r.data);
+
+// RAG 질의응답 (F-63): 자연어 질문 → { answer, sources }
+export const askAi = (question) =>
+  api.post('/ai/ask', { question }, { timeout: AI_TIMEOUT }).then((r) => r.data);
+
+// 채팅방/스레드 요약 (F-63): roomId → { summary }
+export const summarizeChatRoom = (roomId) =>
+  api.post('/ai/chat-summary', { roomId }, { timeout: AI_TIMEOUT }).then((r) => r.data);

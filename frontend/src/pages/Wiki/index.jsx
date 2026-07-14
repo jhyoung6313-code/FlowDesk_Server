@@ -2,14 +2,16 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Button, Input, Tree, Modal, Dropdown, Empty, Spin, message, Popconfirm, Drawer,
-  List, Avatar, Typography, Tooltip, Space,
+  List, Avatar, Typography, Tooltip, Space, Select, Tag,
 } from 'antd';
 import {
   PlusOutlined, FileTextOutlined, MoreOutlined, EditOutlined, DeleteOutlined,
-  HistoryOutlined, SaveOutlined, CloseOutlined, BookOutlined, CommentOutlined, SendOutlined,
+  HistoryOutlined, SaveOutlined, CloseOutlined, BookOutlined, CommentOutlined, SendOutlined, TeamOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import RichEditor from '../../components/RichEditor';
+import CollaborativeEditor from '../../components/CollaborativeEditor';
+import SensitivityTag, { SENSITIVITY_OPTIONS } from '../../components/common/SensitivityTag';
 import useAuthStore from '../../store/authStore';
 import {
   getSpaces, createSpace, updateSpace, deleteSpace,
@@ -47,6 +49,8 @@ export default function WikiPage() {
   const [editing, setEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState('');
   const [draftContent, setDraftContent] = useState('');
+  const [draftSensitivity, setDraftSensitivity] = useState('public');
+  const [collab, setCollab] = useState(false); // 실시간 공동편집 모드(F-69)
   const [saving, setSaving] = useState(false);
 
   const [comments, setComments] = useState([]);
@@ -116,13 +120,14 @@ export default function WikiPage() {
   const startEdit = () => {
     setDraftTitle(doc.title);
     setDraftContent(doc.content || '');
+    setDraftSensitivity(doc.sensitivity || 'public');
     setEditing(true);
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const updated = await updateDoc(doc.id, { title: draftTitle, content: draftContent });
+      const updated = await updateDoc(doc.id, { title: draftTitle, content: draftContent, sensitivity: draftSensitivity });
       setDoc(updated); setEditing(false);
       await loadSpaces();
       message.success('저장되었습니다.');
@@ -235,7 +240,10 @@ export default function WikiPage() {
                 <Input value={draftTitle} onChange={(e) => setDraftTitle(e.target.value)} placeholder="문서 제목" style={{ fontSize: 18, fontWeight: 700, border: 'none', boxShadow: 'none', padding: 0 }} maxLength={200} />
               ) : (
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 18, fontWeight: 700 }}>{doc.title}</div>
+                  <div style={{ fontSize: 18, fontWeight: 700 }}>
+                    {doc.title}
+                    <SensitivityTag value={doc.sensitivity} style={{ marginLeft: 8 }} />
+                  </div>
                   <div style={{ fontSize: 11, color: 'var(--fd-text-secondary)' }}>
                     {doc.creator?.displayName} · {dayjs(doc.updatedAt).format('YYYY-MM-DD HH:mm')} 수정
                   </div>
@@ -244,6 +252,10 @@ export default function WikiPage() {
               <Space>
                 {editing ? (
                   <>
+                    <Select value={draftSensitivity} onChange={setDraftSensitivity} style={{ width: 150 }} options={SENSITIVITY_OPTIONS} />
+                    <Tooltip title="여러 명이 동시에 편집합니다(실시간 동기화)">
+                      <Button type={collab ? 'primary' : 'default'} icon={<TeamOutlined />} onClick={() => setCollab((v) => !v)}>공동편집</Button>
+                    </Tooltip>
                     <Button icon={<CloseOutlined />} onClick={() => setEditing(false)}>취소</Button>
                     <Button type="primary" icon={<SaveOutlined />} loading={saving} onClick={handleSave}>저장</Button>
                   </>
@@ -262,7 +274,17 @@ export default function WikiPage() {
             {/* 본문 */}
             <div style={{ flex: 1, overflowY: 'auto', padding: 20 }}>
               {editing ? (
-                <RichEditor defaultValue={draftContent} onChange={setDraftContent} minHeight={360} placeholder="문서 내용을 입력하세요…" />
+                collab ? (
+                  <CollaborativeEditor
+                    room={`wiki-doc-${doc.id}`}
+                    initialHTML={doc.content || ''}
+                    user={{ name: user?.displayName || '사용자' }}
+                    onChange={setDraftContent}
+                    minHeight={360}
+                  />
+                ) : (
+                  <RichEditor defaultValue={draftContent} onChange={setDraftContent} minHeight={360} placeholder="문서 내용을 입력하세요…" />
+                )
               ) : (
                 <>
                   {(doc.content || '').trim() ? (

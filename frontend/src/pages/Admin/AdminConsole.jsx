@@ -8,6 +8,7 @@ import {
   LoginOutlined, UserOutlined, ApartmentOutlined, ReloadOutlined, TagsOutlined,
   FlagOutlined, FileTextOutlined, FileDoneOutlined, MailOutlined, HistoryOutlined,
   SafetyCertificateOutlined, DatabaseOutlined, SettingOutlined, RightOutlined,
+  ThunderboltOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getAdminSummary, getSystemSettings } from '../../api/admin';
@@ -38,6 +39,7 @@ const FUNCTION_GROUPS = [
       { path: '/admin/milestones', icon: <FlagOutlined />, label: '마일스톤 관리', desc: '프로젝트 이정표' },
       { path: '/admin/templates', icon: <FileTextOutlined />, label: '업무 템플릿 관리', desc: '반복 양식 템플릿' },
       { path: '/admin/approval', icon: <FileDoneOutlined />, label: '결재 양식 관리', desc: '전자결재 양식' },
+      { path: '/admin/automations', icon: <ThunderboltOutlined />, label: '자동화 규칙', desc: '이벤트 기반 워크플로 자동화' },
     ],
   },
   {

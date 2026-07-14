@@ -19,6 +19,7 @@ import MemoCard from '../../components/Memo/MemoCard';
 import TaskForm from '../../components/Task/TaskForm';
 import ScheduleWidget from '../../components/Schedule/ScheduleWidget';
 import AiWeeklySummary from '../../components/ai/AiWeeklySummary';
+import AiAsk from '../../components/ai/AiAsk';
 
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
@@ -352,7 +353,10 @@ export default function DashboardPage() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
         <span>🗂 업무 보드</span>
-        <AiWeeklySummary compact />
+        <span style={{ display: 'inline-flex', gap: 6 }}>
+          <AiAsk compact />
+          <AiWeeklySummary compact />
+        </span>
       </div>
       <div style={{
         display: 'flex',
