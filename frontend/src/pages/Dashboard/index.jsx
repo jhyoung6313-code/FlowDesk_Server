@@ -423,8 +423,9 @@ export default function DashboardPage() {
   const kpiSub   = { fontSize: 10.5, color: D.text3 ?? D.text2, marginTop: 5 };
   const qbtn     = (green) => ({
     background: green ? '#16a34a' : D.cardBg, color: green ? '#fff' : D.text2,
-    border: `1px solid ${green ? '#16a34a' : D.cardBor}`, borderRadius: 8, padding: '5px 9px',
+    border: `1px solid ${green ? '#16a34a' : D.cardBor}`, borderRadius: 8, padding: '6px 8px',
     fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
   });
 
   /* 표시할 블록 + 그리드 레이아웃 (숨김 블록·빈 메모는 제외) */
@@ -546,7 +547,7 @@ export default function DashboardPage() {
             </div>
             <div style={kpiTile()}>
               <div style={kpiLbl}>⚡ 빠른 실행</div>
-              <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 10 }}>
                 <span style={qbtn(true)} onClick={() => { setSelectedTask(null); setFormStatus('pending'); setFormOpen(true); }}>+ 업무</span>
                 <span style={qbtn()} onClick={() => navigate('/memos')}>메모</span>
                 <span style={qbtn()} onClick={() => navigate('/mail')}>메일</span>
@@ -563,10 +564,9 @@ export default function DashboardPage() {
       {dashEnabled.schedule && (
       <div key="schedule">
       <DashBlock editing={dashEditing} onHide={() => toggleDashBlock('schedule')} D={D}>
-      {/* ══ 주간 일정 · 자원 현황 ══ */}
-      <div style={{ flexShrink: 0, padding: '14px 16px' }}>
-        <div style={secTitle}>📅 이번 주 일정 · 자원 현황</div>
-        <ScheduleWidget isDark={isDark} D={D} />
+      {/* ══ 주간 일정 · 자원 현황 (블록 크기에 맞춰 채움) ══ */}
+      <div style={{ height: '100%', padding: 12, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <ScheduleWidget isDark={isDark} D={D} fill />
       </div>
       </DashBlock>
       </div>
