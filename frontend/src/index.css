@@ -134,6 +134,15 @@ img, svg, canvas {
   background: var(--fd-scroll-hover, rgba(124,58,237,0.4));
 }
 
+/* ── 대시보드 커스터마이즈 그리드(react-grid-layout) ── */
+.dashboard-grid .react-grid-item.react-grid-placeholder {
+  background: var(--fd-accent-mid, #16a34a) !important;
+  opacity: 0.14 !important;
+  border-radius: 14px !important;
+}
+.dashboard-grid .react-grid-item.react-draggable-dragging { transition: none; z-index: 5; }
+.dashboard-grid .react-resizable-handle { z-index: 4; }
+
 /* ── RichEditor 플레이스홀더 ── */
 .rich-editor-body:empty::before {
   content: attr(data-placeholder);

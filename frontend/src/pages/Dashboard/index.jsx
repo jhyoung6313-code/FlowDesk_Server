@@ -1,7 +1,11 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Spin, message, Popover, Checkbox, Button, Empty as AntEmpty } from 'antd';
-import { SettingOutlined } from '@ant-design/icons';
+import { Spin, message, Popover, Checkbox, Button, Empty as AntEmpty, Tooltip } from 'antd';
+import { SettingOutlined, EditOutlined, CheckOutlined, EyeInvisibleOutlined, ReloadOutlined, HolderOutlined } from '@ant-design/icons';
+import GridLayout, { WidthProvider } from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
+import { getDashboardLayout, updateDashboardLayout } from '../../api/settings';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -45,6 +49,54 @@ function daysLate(dueDate) {
   return dayjs().startOf('day').diff(dayjs(dueDate).startOf('day'), 'day');
 }
 
+const RGL = WidthProvider(GridLayout);
+
+/* 대시보드 커스터마이즈: 섹션(블록) 정의 · 기본 레이아웃 · 기본 사용여부 */
+const DASH_BLOCKS = [
+  { id: 'focus',    title: '🎯 오늘의 포커스' },
+  { id: 'schedule', title: '📅 이번 주 일정·자원' },
+  { id: 'board',    title: '🗂 업무 보드' },
+  { id: 'widgets',  title: '📥 받은항목·게시판·결재' },
+  { id: 'memo',     title: '📌 고정 메모' },
+];
+const DASH_DEFAULT_LAYOUT = [
+  { i: 'focus',    x: 0, y: 0,  w: 12, h: 9 },
+  { i: 'schedule', x: 0, y: 9,  w: 12, h: 6 },
+  { i: 'board',    x: 0, y: 15, w: 12, h: 11 },
+  { i: 'widgets',  x: 0, y: 26, w: 12, h: 9 },
+  { i: 'memo',     x: 0, y: 35, w: 12, h: 4 },
+];
+const DASH_DEFAULT_ENABLED = { focus: true, schedule: true, board: true, widgets: true, memo: true };
+
+/* 각 섹션을 감싸는 블록 카드 — 편집모드에서만 드래그 핸들/숨김 표시 */
+function DashBlock({ editing, onHide, D, children }) {
+  return (
+    <div style={{
+      height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      background: D.cardBg, borderRadius: 14,
+      border: `1px solid ${editing ? '#93c5fd' : D.cardBor}`,
+      boxShadow: editing ? '0 2px 10px rgba(59,130,246,.12)' : 'none',
+    }}>
+      {editing && (
+        <div className="dash-drag-handle" style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '6px 12px', flexShrink: 0, cursor: 'move',
+          borderBottom: `1px solid ${D.border}`, background: D.stripBg,
+        }}>
+          <span style={{ fontSize: 11.5, color: D.text2, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <HolderOutlined /> 드래그 이동 · 모서리로 크기조절
+          </span>
+          <span onClick={(e) => { e.stopPropagation(); onHide(); }}
+            style={{ fontSize: 11.5, color: '#c73a2f', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <EyeInvisibleOutlined /> 숨기기
+          </span>
+        </div>
+      )}
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>{children}</div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const navigate   = useNavigate();
   const isDark     = useThemeStore((s) => s.isDark);
@@ -76,6 +128,63 @@ export default function DashboardPage() {
   });
   const [bbsPosts, setBbsPosts] = useState([]);
   const [approvals, setApprovals] = useState([]);
+
+  /* ── 대시보드 커스터마이즈(레이아웃/사용여부) 상태 ── */
+  const [dashLayout, setDashLayout]   = useState(DASH_DEFAULT_LAYOUT);
+  const [dashEnabled, setDashEnabled] = useState(DASH_DEFAULT_ENABLED);
+  const [dashEditing, setDashEditing] = useState(false);
+  const dashSaveTimer = useRef(null);
+
+  // 서버에서 저장된 레이아웃 로드
+  useEffect(() => {
+    getDashboardLayout().then((d) => {
+      if (d && Array.isArray(d.layout) && d.layout.length) {
+        const byId = Object.fromEntries(d.layout.map((l) => [l.i, l]));
+        const merged = DASH_BLOCKS.map((b) => {
+          const s = byId[b.id];
+          const def = DASH_DEFAULT_LAYOUT.find((dl) => dl.i === b.id);
+          return s ? { i: b.id, x: s.x, y: s.y, w: s.w, h: s.h } : def;
+        });
+        setDashLayout(merged);
+        if (d.enabled) setDashEnabled({ ...DASH_DEFAULT_ENABLED, ...d.enabled });
+      }
+    }).catch(() => {});
+  }, []);
+
+  const persistDash = useCallback((layout, enabled) => {
+    clearTimeout(dashSaveTimer.current);
+    dashSaveTimer.current = setTimeout(() => {
+      updateDashboardLayout({ v: 1, layout, enabled }).catch(() => {});
+    }, 600);
+  }, []);
+
+  const handleDashLayoutChange = useCallback((l) => {
+    setDashLayout((prev) => {
+      const byId = Object.fromEntries(l.map((x) => [x.i, x]));
+      const merged = prev.map((p) => (byId[p.i] ? { ...p, ...byId[p.i] } : p));
+      l.forEach((x) => { if (!merged.some((m) => m.i === x.i)) merged.push(x); });
+      return merged;
+    });
+  }, []);
+
+  const toggleDashBlock = useCallback((id) => {
+    setDashEnabled((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      setDashLayout((lay) => { persistDash(lay, next); return lay; });
+      return next;
+    });
+  }, [persistDash]);
+
+  const resetDashLayout = useCallback(() => {
+    setDashLayout(DASH_DEFAULT_LAYOUT);
+    setDashEnabled(DASH_DEFAULT_ENABLED);
+    persistDash(DASH_DEFAULT_LAYOUT, DASH_DEFAULT_ENABLED);
+  }, [persistDash]);
+
+  const finishDashEdit = useCallback(() => {
+    setDashEditing(false);
+    setDashLayout((lay) => { setDashEnabled((en) => { persistDash(lay, en); return en; }); return lay; });
+  }, [persistDash]);
 
   // 개인 게시판 설정 Popover
   const [allCats, setAllCats] = useState([]);
@@ -314,6 +423,13 @@ export default function DashboardPage() {
     fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
   });
 
+  /* 표시할 블록 + 그리드 레이아웃 (숨김 블록·빈 메모는 제외) */
+  const dashVisibleIds = DASH_BLOCKS
+    .filter((b) => dashEnabled[b.id] && !(b.id === 'memo' && pinnedMemos.length === 0))
+    .map((b) => b.id);
+  const dashVisLayout = dashLayout.filter((l) => dashVisibleIds.includes(l.i));
+  const dashHiddenBlocks = DASH_BLOCKS.filter((b) => !dashEnabled[b.id]);
+
   return (
     <div style={{
       flex: 1,
@@ -324,8 +440,46 @@ export default function DashboardPage() {
       overflowY: 'auto',
     }}>
 
+      {/* ══ 편집 툴바 ══ */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, padding: '12px 24px 0', flexWrap: 'wrap' }}>
+        {dashEditing && dashHiddenBlocks.map((b) => (
+          <Button key={b.id} size="small" onClick={() => toggleDashBlock(b.id)}>+ {b.title}</Button>
+        ))}
+        {dashEditing && (
+          <Tooltip title="레이아웃·표시 상태를 기본값으로 되돌립니다">
+            <Button size="small" icon={<ReloadOutlined />} onClick={resetDashLayout}>기본값 복원</Button>
+          </Tooltip>
+        )}
+        <Button
+          size="small"
+          type={dashEditing ? 'primary' : 'default'}
+          icon={dashEditing ? <CheckOutlined /> : <EditOutlined />}
+          onClick={() => (dashEditing ? finishDashEdit() : setDashEditing(true))}
+        >
+          {dashEditing ? '편집 완료' : '대시보드 편집'}
+        </Button>
+      </div>
+
+      {/* ══ 커스터마이즈 그리드 ══ */}
+      <RGL
+        className="dashboard-grid"
+        layout={dashVisLayout}
+        cols={12}
+        rowHeight={40}
+        margin={[14, 14]}
+        containerPadding={[20, 12]}
+        isDraggable={dashEditing}
+        isResizable={dashEditing}
+        draggableHandle=".dash-drag-handle"
+        onLayoutChange={handleDashLayoutChange}
+        useCSSTransforms
+      >
+
+      {dashEnabled.focus && (
+      <div key="focus">
+      <DashBlock editing={dashEditing} onHide={() => toggleDashBlock('focus')} D={D}>
       {/* ══ 히어로: 오늘의 포커스 (오늘 우선순위 + KPI) ══ */}
-      <div style={{ padding: '16px 24px 4px', flexShrink: 0 }}>
+      <div style={{ padding: '14px 16px', flexShrink: 0 }}>
         <div style={secTitle}>🎯 오늘의 포커스
           <span style={{ fontSize: 11, fontWeight: 600, color: D.text2 }}>지금 집중해야 할 일</span>
         </div>
@@ -397,21 +551,30 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+      </DashBlock>
+      </div>
+      )}
 
+      {dashEnabled.schedule && (
+      <div key="schedule">
+      <DashBlock editing={dashEditing} onHide={() => toggleDashBlock('schedule')} D={D}>
       {/* ══ 주간 일정 · 자원 현황 ══ */}
-      <div style={{
-        flexShrink: 0,
-        padding: '10px 24px 8px',
-      }}>
+      <div style={{ flexShrink: 0, padding: '14px 16px' }}>
         <div style={secTitle}>📅 이번 주 일정 · 자원 현황</div>
         <ScheduleWidget isDark={isDark} D={D} />
       </div>
+      </DashBlock>
+      </div>
+      )}
 
+      {dashEnabled.board && (
+      <div key="board">
+      <DashBlock editing={dashEditing} onHide={() => toggleDashBlock('board')} D={D}>
       {/* ── 업무 칸반 보드 섹션 ── */}
       <div style={{
         flexShrink: 0,
         display: 'flex', flexDirection: 'column',
-        padding: '12px 24px 0',
+        padding: '14px 16px 0',
         boxSizing: 'border-box',
       }}>
       <div style={{ ...secTitle, justifyContent: 'space-between' }}>
@@ -605,17 +768,23 @@ export default function DashboardPage() {
         ))}
       </div>
       </div>
+      </DashBlock>
+      </div>
+      )}
 
+      {dashEnabled.widgets && (
+      <div key="widgets">
+      <DashBlock editing={dashEditing} onHide={() => toggleDashBlock('widgets')} D={D}>
       {/* ── 받은 항목 · 게시판 · 결재 위젯 섹션 ── */}
       <div style={{
         flexShrink: 0,
         display: 'flex', flexDirection: 'column',
-        padding: '12px 24px 16px',
+        padding: '14px 16px',
         boxSizing: 'border-box',
       }}>
-        <div style={{ ...secTitle, marginTop: 4 }}>📥 받은 항목 · 게시판 · 결재</div>
+        <div style={{ ...secTitle, marginTop: 0 }}>📥 받은 항목 · 게시판 · 결재</div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14, minHeight: 320 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14, minHeight: 300 }}>
 
           {/* ① 받은 메일 */}
           <div style={wCard}>
@@ -804,10 +973,15 @@ export default function DashboardPage() {
 
         </div>
       </div>
+      </DashBlock>
+      </div>
+      )}
 
+      {dashEnabled.memo && pinnedMemos.length > 0 && (
+      <div key="memo">
+      <DashBlock editing={dashEditing} onHide={() => toggleDashBlock('memo')} D={D}>
       {/* ══ 고정 메모 스트립 ══ */}
-      {pinnedMemos.length > 0 && (
-        <div style={{ flexShrink: 0, padding: '0 24px 20px' }}>
+      <div style={{ flexShrink: 0, padding: '14px 16px' }}>
           <div style={secTitle}>📌 고정 메모
             <span onClick={() => navigate('/memos')} style={{ fontSize: 11, fontWeight: 500, color: D.text2, cursor: 'pointer' }}>· 전체 보기</span>
           </div>
@@ -825,8 +999,12 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-        </div>
+      </div>
+      </DashBlock>
+      </div>
       )}
+
+      </RGL>
 
       {/* ── 업무 등록 폼 ── */}
       <TaskForm
