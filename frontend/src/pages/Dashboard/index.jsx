@@ -444,24 +444,25 @@ export default function DashboardPage() {
       overflowY: 'auto',
     }}>
 
-      {/* ══ 편집 툴바 ══ */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 8, padding: '12px 24px 0', flexWrap: 'wrap' }}>
+      {/* ══ 편집 툴바 (아이콘 최소화) ══ */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, padding: '6px 16px 0', flexWrap: 'wrap' }}>
         {dashEditing && dashHiddenBlocks.map((b) => (
           <Button key={b.id} size="small" onClick={() => toggleDashBlock(b.id)}>+ {b.title}</Button>
         ))}
         {dashEditing && (
           <Tooltip title="레이아웃·표시 상태를 기본값으로 되돌립니다">
-            <Button size="small" icon={<ReloadOutlined />} onClick={resetDashLayout}>기본값 복원</Button>
+            <Button size="small" shape="circle" icon={<ReloadOutlined />} onClick={resetDashLayout} />
           </Tooltip>
         )}
-        <Button
-          size="small"
-          type={dashEditing ? 'primary' : 'default'}
-          icon={dashEditing ? <CheckOutlined /> : <EditOutlined />}
-          onClick={() => (dashEditing ? finishDashEdit() : setDashEditing(true))}
-        >
-          {dashEditing ? '편집 완료' : '대시보드 편집'}
-        </Button>
+        <Tooltip title={dashEditing ? '편집 완료' : '대시보드 편집'}>
+          <Button
+            size="small"
+            shape="circle"
+            type={dashEditing ? 'primary' : 'default'}
+            icon={dashEditing ? <CheckOutlined /> : <EditOutlined />}
+            onClick={() => (dashEditing ? finishDashEdit() : setDashEditing(true))}
+          />
+        </Tooltip>
       </div>
 
       {/* ══ 커스터마이즈 그리드 ══ */}
@@ -1009,6 +1010,9 @@ export default function DashboardPage() {
       )}
 
       </RGL>
+
+      {/* 하단 여백 — 마지막 콘텐츠가 작업표시줄 등에 가리지 않도록 확보 */}
+      <div style={{ height: 48, flexShrink: 0 }} />
 
       {/* ── 업무 등록 폼 ── */}
       <TaskForm
