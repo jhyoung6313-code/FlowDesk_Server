@@ -141,7 +141,23 @@ img, svg, canvas {
   border-radius: 14px !important;
 }
 .dashboard-grid .react-grid-item.react-draggable-dragging { transition: none; z-index: 5; }
-.dashboard-grid .react-resizable-handle { z-index: 4; }
+/* 리사이즈 핸들: 잘 보이고 항상 최상단에서 이벤트 수신 */
+.dashboard-grid .react-resizable-handle {
+  z-index: 20;
+  width: 24px; height: 24px;
+  pointer-events: auto;
+}
+.dashboard-grid .react-resizable-handle-se {
+  right: 2px; bottom: 2px;
+  background-image: none;
+}
+.dashboard-grid .react-resizable-handle-se::after {
+  content: ''; position: absolute; right: 4px; bottom: 4px;
+  width: 9px; height: 9px;
+  border-right: 2px solid var(--fd-accent-mid, #16a34a);
+  border-bottom: 2px solid var(--fd-accent-mid, #16a34a);
+  border-radius: 0 0 3px 0;
+}
 
 /* ── RichEditor 플레이스홀더 ── */
 .rich-editor-body:empty::before {

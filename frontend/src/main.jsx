@@ -1,3 +1,10 @@
+// react-grid-layout(내부 react-draggable)이 process.env.NODE_ENV 를 참조하는데
+// Vite 브라우저 환경엔 process 전역이 없어 드래그/리사이즈 핸들러가 예외로 죽는다.
+// 최소 폴리필로 process 전역을 정의해 이를 방지한다.
+if (typeof window !== 'undefined' && typeof window.process === 'undefined') {
+  window.process = { env: { NODE_ENV: import.meta.env.MODE } };
+}
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';

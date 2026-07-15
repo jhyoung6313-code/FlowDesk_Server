@@ -72,7 +72,9 @@ const DASH_DEFAULT_ENABLED = { focus: true, schedule: true, board: true, widgets
 function DashBlock({ editing, onHide, D, children }) {
   return (
     <div style={{
-      height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      height: '100%', display: 'flex', flexDirection: 'column',
+      // 편집 중엔 overflow visible 로 두어 우하단 리사이즈 핸들이 가려지지 않게 한다.
+      overflow: editing ? 'visible' : 'hidden',
       background: D.cardBg, borderRadius: 14,
       border: `1px solid ${editing ? '#93c5fd' : D.cardBor}`,
       boxShadow: editing ? '0 2px 10px rgba(59,130,246,.12)' : 'none',
@@ -82,6 +84,7 @@ function DashBlock({ editing, onHide, D, children }) {
           display: 'flex', alignItems: 'center', justifyContent: 'space-between',
           padding: '6px 12px', flexShrink: 0, cursor: 'move',
           borderBottom: `1px solid ${D.border}`, background: D.stripBg,
+          borderRadius: '13px 13px 0 0',
         }}>
           <span style={{ fontSize: 11.5, color: D.text2, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <HolderOutlined /> 드래그 이동 · 모서리로 크기조절
@@ -92,7 +95,8 @@ function DashBlock({ editing, onHide, D, children }) {
           </span>
         </div>
       )}
-      <div style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>{children}</div>
+      {/* 편집 중엔 body pointer-events 를 none 으로: 우하단 리사이즈 핸들/드래그를 방해하지 않음 */}
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', pointerEvents: editing ? 'none' : 'auto' }}>{children}</div>
     </div>
   );
 }
