@@ -5,6 +5,7 @@ import ResizableDrawer from '../common/ResizableDrawer';
 import Sidebar from './Sidebar';
 import AppHeader from './AppHeader';
 import SubHeader from './SubHeader';
+import StatusBar from './StatusBar';
 import ChatFab from './ChatFab';
 import AdminBackBar from './AdminBackBar';
 import NotificationToast from '../Notification/NotificationToast';
@@ -123,6 +124,7 @@ export default function MainLayout() {
           {isAdminSubpage && <AdminBackBar />}
           <Outlet />
         </Content>
+        <StatusBar />
       </Layout>
       <NotificationToast />
       <CommandPalette />
