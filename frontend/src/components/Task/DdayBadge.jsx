@@ -12,9 +12,9 @@ export default function DdayBadge({ dueDate, status }) {
         fontWeight: 700,
         color,
         background: `${color}18`,
-        borderRadius: 4,
-        padding: '1px 6px',
-        border: `1px solid ${color}40`,
+        borderRadius: 20,
+        padding: '1px 8px',
+        border: `1px solid ${color}33`,
       }}
     >
       {label}

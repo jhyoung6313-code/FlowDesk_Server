@@ -51,9 +51,9 @@ export default function SubHeader() {
   const displayName = user?.displayName || user?.username || '';
   const dateStr     = dayjs().format('YYYY년 M월 D일');
 
-  const BORDER = isDark ? '#303030' : '#E8ECF4';
-  const TEXT2  = isDark ? 'rgba(255,255,255,0.45)' : '#94A3B8';
-  const TEXT1  = isDark ? 'rgba(255,255,255,0.88)' : '#0F172A';
+  const BORDER = isDark ? '#303030' : '#e9e7e2';
+  const TEXT2  = isDark ? 'rgba(255,255,255,0.45)' : '#a8a29a';
+  const TEXT1  = isDark ? 'rgba(255,255,255,0.88)' : '#37352f';
   const BG     = isDark ? '#141414' : '#ffffff';
 
   const stats = [

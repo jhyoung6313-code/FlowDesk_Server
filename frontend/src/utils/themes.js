@@ -177,7 +177,7 @@ export const THEMES = {
       },
       layout: {
         bodyBgDark:     '#0f0d1a',
-        contentBgLight: '#f0f2f5',
+        contentBgLight: '#f4f4f2',
         contentBgDark:  '#111018',
         headerBgLight:  'rgba(255,255,255,0.95)',
         headerBgDark:   'rgba(14,12,26,0.95)',
@@ -254,7 +254,7 @@ export const THEMES = {
       },
       layout: {
         bodyBgDark:     '#080e10',
-        contentBgLight: '#f0f2f5',
+        contentBgLight: '#f4f4f2',
         contentBgDark:  '#0a1215',
         headerBgLight:  'rgba(255,255,255,0.95)',
         headerBgDark:   'rgba(8,14,16,0.95)',
@@ -331,7 +331,7 @@ export const THEMES = {
       },
       layout: {
         bodyBgDark:     '#0a1209',
-        contentBgLight: '#f0f2f5',
+        contentBgLight: '#f4f4f2',
         contentBgDark:  '#111b12',
         headerBgLight:  'rgba(255,255,255,0.95)',
         headerBgDark:   'rgba(10,18,9,0.95)',
@@ -408,7 +408,7 @@ export const THEMES = {
       },
       layout: {
         bodyBgDark:     '#100a04',
-        contentBgLight: '#f0f2f5',
+        contentBgLight: '#f4f4f2',
         contentBgDark:  '#150e08',
         headerBgLight:  'rgba(255,255,255,0.95)',
         headerBgDark:   'rgba(16,10,4,0.95)',
@@ -485,7 +485,7 @@ export const THEMES = {
       },
       layout: {
         bodyBgDark:     '#100608',
-        contentBgLight: '#f0f2f5',
+        contentBgLight: '#f4f4f2',
         contentBgDark:  '#150a0e',
         headerBgLight:  'rgba(255,255,255,0.95)',
         headerBgDark:   'rgba(16,6,8,0.95)',
@@ -557,7 +557,7 @@ export const THEMES = {
       },
       layout: {
         bodyBgDark:     '#0a0f1e',
-        contentBgLight: '#f0f2f5',
+        contentBgLight: '#f4f4f2',
         contentBgDark:  '#0f172a',
         headerBgLight:  'rgba(255,255,255,0.95)',
         headerBgDark:   'rgba(10,15,30,0.95)',

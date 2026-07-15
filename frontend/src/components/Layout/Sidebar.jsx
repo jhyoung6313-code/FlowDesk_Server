@@ -180,13 +180,14 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     toggleHoverBg:c.sidebarHoverBg,
   };
 
-  // 1차 아이콘 레일 팔레트 — 라이트: 테마색으로 밝게, 다크: 다크 서피스 유지
+  // 1차 아이콘 레일 팔레트 — 라이트: Notion Warm 뉴트럴(웜 종이색), 다크: 다크 서피스 유지
+  // (활성 아이콘은 그룹 강조색을 그대로 사용 → 테마 색 스왑 유지)
   const RAIL = {
-    bg:           isDark ? '#1f1f1f' : c.sidebarBg,
-    border:       isDark ? '#303030' : c.sidebarDivider,
-    idle:         isDark ? 'rgba(255,255,255,0.5)' : c.sidebarText,
-    hoverBg:      isDark ? 'rgba(255,255,255,0.08)' : c.sidebarHoverBg,
-    avatarBorder: isDark ? 'rgba(255,255,255,0.15)' : c.sidebarDivider,
+    bg:           isDark ? '#1f1f1f' : '#f4f3ef',
+    border:       isDark ? '#303030' : '#e9e7e2',
+    idle:         isDark ? 'rgba(255,255,255,0.5)' : '#8a827a',
+    hoverBg:      isDark ? 'rgba(255,255,255,0.08)' : '#e7e5df',
+    avatarBorder: isDark ? 'rgba(255,255,255,0.15)' : '#e2e0da',
   };
 
   const [approvalPendingCount, setApprovalPendingCount] = useState(0);

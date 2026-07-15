@@ -144,9 +144,9 @@ export default function App() {
         token: {
           colorPrimary:       c.accentMid,
           colorLink:          c.accentMid,
-          borderRadius:       8,
-          borderRadiusLG:     10,
-          borderRadiusSM:     6,
+          borderRadius:       10,
+          borderRadiusLG:     14,
+          borderRadiusSM:     8,
           fontFamily:         "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif",
           fontSize:           13,
           // 라이트는 흰 배경/짙은 텍스트 고정. 다크는 거의-검정 대신 부드러운 슬레이트 톤으로 상향
@@ -160,7 +160,14 @@ export default function App() {
                 colorBorder:          '#3a4150',
                 colorBorderSecondary: '#2b313d',
               }
-            : { colorBgBase: '#ffffff', colorTextBase: '#0f172a' }),
+            : {
+                // 라이트: 따뜻한 종이(Notion Warm) 톤 — 흰 카드 위 종이색 배경, 웜 그레이 테두리
+                colorBgBase:          '#ffffff',
+                colorTextBase:        '#37352f',
+                colorBgLayout:        '#f4f4f2',
+                colorBorder:          '#e2e0da',
+                colorBorderSecondary: '#f1efea',
+              }),
           controlHeight:      32,
           // 모션: 전역으로 끄지 않고 빠른 슬라이드로 통일 (Drawer/Modal이 번쩍이지 않고 매끄럽게 열림)
           motionDurationFast: '0.1s',

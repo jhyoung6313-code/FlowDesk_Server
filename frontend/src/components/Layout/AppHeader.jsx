@@ -398,19 +398,20 @@ export default function AppHeader({ collapsed, onCollapse }) {
   const c = theme.colors;
 
   // ── 라이트/다크 표면 팔레트 (셸 전용) ──
+  // 라이트: Notion Warm 뉴트럴 셸 — 흰 헤더 + 웜 그레이 트랙/테두리 (강조색은 활성 상태에만)
   const surf = {
-    headerBg:     isDark ? '#141414' : c.sidebarBg,
-    headerBorder: isDark ? '#303030' : c.sidebarDivider,
-    track:        isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-    linkText:     isDark ? 'rgba(255,255,255,0.72)' : '#64748b',
-    linkHover:    isDark ? 'rgba(255,255,255,0.95)' : '#334155',
-    linkHoverBg:  isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,255,255,0.65)',
+    headerBg:     isDark ? '#141414' : '#ffffff',
+    headerBorder: isDark ? '#303030' : '#e9e7e2',
+    track:        isDark ? 'rgba(255,255,255,0.06)' : '#f3f2ee',
+    linkText:     isDark ? 'rgba(255,255,255,0.72)' : '#6b6459',
+    linkHover:    isDark ? 'rgba(255,255,255,0.95)' : '#37352f',
+    linkHoverBg:  isDark ? 'rgba(255,255,255,0.08)' : '#efeee9',
     linkActiveBg: isDark ? '#1f1f1f' : '#ffffff',
-    iconBg:       isDark ? '#1f1f1f' : '#f8fafc',
-    iconBorder:   isDark ? '#303030' : '#e2e8f0',
-    iconColor:    isDark ? 'rgba(255,255,255,0.65)' : '#6b7280',
+    iconBg:       isDark ? '#1f1f1f' : '#f3f2ee',
+    iconBorder:   isDark ? '#303030' : '#e5e2db',
+    iconColor:    isDark ? 'rgba(255,255,255,0.65)' : '#6b6459',
     popBg:        isDark ? '#1f1f1f' : '#ffffff',
-    popBorder:    isDark ? '#303030' : '#e2e8f0',
+    popBorder:    isDark ? '#303030' : '#e9e7e2',
   };
 
   // ── 상단 2줄 그룹 메뉴 (워크스페이스 / 협업기능) ──
