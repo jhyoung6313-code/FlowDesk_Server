@@ -174,17 +174,18 @@ export default function DashboardPage() {
     addTxt:   '#94a3b8',
     stripBg:  '#1e222c',
   } : {
-    pageBg:   '#F8F9FC',
-    navBg:    '#fff',
-    border:   '#E8ECF4',
-    text1:    '#0F172A',
-    text2:    '#94A3B8',
-    colBg:    '#F1F5F9',
-    cardBg:   '#fff',
-    cardBor:  '#E8ECF4',
-    addBor:   '#CBD5E1',
-    addTxt:   '#94A3B8',
-    stripBg:  '#fff',
+    // Notion Warm 기준에 맞춘 대시보드 중립 팔레트 (의미색 틴트는 컬럼/위젯에서 유지)
+    pageBg:   '#f4f4f2',
+    navBg:    '#ffffff',
+    border:   '#e9e7e2',
+    text1:    '#37352f',
+    text2:    '#a8a29a',
+    colBg:    '#f2f1ec',
+    cardBg:   '#ffffff',
+    cardBor:  '#e9e7e2',
+    addBor:   '#dcd8d0',
+    addTxt:   '#a8a29a',
+    stripBg:  '#ffffff',
   };
 
   if (loading) {
@@ -200,11 +201,11 @@ export default function DashboardPage() {
     {
       key: 'pending',
       label: '대기',
-      dot:   '#94A3B8',
-      cntBg: isDark ? 'rgba(255,255,255,.06)' : '#F1F5F9',
-      cntC:  isDark ? '#cbd5e1' : '#64748B',
-      colBg: isDark ? 'rgba(148,163,184,.08)' : '#F8FAFC',
-      borderColor: isDark ? 'rgba(148,163,184,.15)' : '#E2E8F0',
+      dot:   '#a8a29a',
+      cntBg: isDark ? 'rgba(255,255,255,.06)' : '#f2f1ec',
+      cntC:  isDark ? '#cbd5e1' : '#8a827a',
+      colBg: isDark ? 'rgba(148,163,184,.08)' : '#faf9f6',
+      borderColor: isDark ? 'rgba(148,163,184,.15)' : '#e9e7e2',
       tasks: cols.pending,
     },
     {
@@ -277,6 +278,42 @@ export default function DashboardPage() {
 
   const unreadCount = mails.filter((m) => !m.isRead).length;
 
+  /* ── 히어로: 오늘의 포커스 파생 데이터 ── */
+  const today = dayjs().startOf('day');
+  const isToday = (d) => d && dayjs(d).startOf('day').isSame(today);
+  const rankPrio = (t) => (isOverdue(t.dueDate, t.status) ? 0 : isToday(t.dueDate) ? 1 : 2);
+  const todayPriorities = active
+    .filter((t) => t.status !== 'done')
+    .filter((t) => isOverdue(t.dueDate, t.status) || isToday(t.dueDate) || t.priority === 'high')
+    .sort((a, b) => rankPrio(a) - rankPrio(b))
+    .slice(0, 6);
+  const dueTodayCount = active.filter((t) => t.status !== 'done' && isToday(t.dueDate)).length;
+  const atRisk = active
+    .filter((t) => t.status !== 'done' && (isOverdue(t.dueDate, t.status) || isToday(t.dueDate)))
+    .sort((a, b) => rankPrio(a) - rankPrio(b))
+    .slice(0, 4);
+
+  /* 히어로 전용 스타일 */
+  const heroCard = { background: D.cardBg, border: `1px solid ${D.cardBor}`, borderRadius: 12, boxShadow: '0 1px 2px rgba(55,53,47,.05), 0 1px 3px rgba(55,53,47,.04)', padding: 16, display: 'flex', flexDirection: 'column', minHeight: 0 };
+  const heroHd   = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 };
+  const heroHdT  = { fontSize: 13, fontWeight: 700, color: D.text1, display: 'flex', alignItems: 'center', gap: 7 };
+  const secTitle = { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: D.text1, marginBottom: 10 };
+  const kpiTile  = (variant) => ({
+    borderRadius: 12, padding: 14, border: '1px solid',
+    display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 92,
+    ...(variant === 'accent' ? { background: isDark ? 'rgba(22,163,74,.12)' : 'linear-gradient(140deg,#e7f5ec,#f2fbf5)', borderColor: isDark ? 'rgba(22,163,74,.3)' : '#bfe6cd' }
+      : variant === 'risk' ? { background: isDark ? 'rgba(199,58,47,.12)' : 'linear-gradient(140deg,#fdf3f1,#fdf8f6)', borderColor: isDark ? 'rgba(199,58,47,.3)' : '#f7ddd6' }
+      : { background: D.cardBg, borderColor: D.cardBor }),
+  });
+  const kpiLbl   = { fontSize: 11.5, color: D.text2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 };
+  const kpiBig   = (c) => ({ fontSize: 28, fontWeight: 800, lineHeight: 1, marginTop: 8, color: c });
+  const kpiSub   = { fontSize: 10.5, color: D.text3 ?? D.text2, marginTop: 5 };
+  const qbtn     = (green) => ({
+    background: green ? '#16a34a' : D.cardBg, color: green ? '#fff' : D.text2,
+    border: `1px solid ${green ? '#16a34a' : D.cardBor}`, borderRadius: 8, padding: '5px 9px',
+    fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+  });
+
   return (
     <div style={{
       flex: 1,
@@ -284,75 +321,101 @@ export default function DashboardPage() {
       display: 'flex',
       flexDirection: 'column',
       background: D.pageBg,
-      overflow: 'hidden',
+      overflowY: 'auto',
     }}>
 
-      {/* ── 고정 메모 + 주간 일정·자원 위젯 (나란히) ── */}
-      <div style={{
-        flexShrink: 0,
-        padding: '12px 24px 8px',
-        borderBottom: `1px solid ${D.border}`,
-        background: D.stripBg,
-        display: 'flex',
-        gap: 16,
-        alignItems: 'stretch',
-      }}>
-        {/* 좌: 고정 메모 */}
-        {pinnedMemos.length > 0 && (
-          <div style={{ flexShrink: 0, maxWidth: 500, display: 'flex', flexDirection: 'column' }}>
-            <div style={{
-              fontSize: 9.5, fontWeight: 700, color: D.text2,
-              letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8,
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}>
-              📌 고정 메모
-              <span
-                onClick={() => navigate('/memos')}
-                style={{ cursor: 'pointer', color: D.text2, fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}
-              >
-                · 전체 보기
-              </span>
+      {/* ══ 히어로: 오늘의 포커스 (오늘 우선순위 + KPI) ══ */}
+      <div style={{ padding: '16px 24px 4px', flexShrink: 0 }}>
+        <div style={secTitle}>🎯 오늘의 포커스
+          <span style={{ fontSize: 11, fontWeight: 600, color: D.text2 }}>지금 집중해야 할 일</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) minmax(0,1fr)', gap: 14, alignItems: 'stretch' }}>
+
+          {/* ① 오늘 우선순위 체크리스트 */}
+          <div style={heroCard}>
+            <div style={heroHd}>
+              <span style={heroHdT}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} /> 오늘 우선순위</span>
+              <span style={{ background: '#16a34a', color: '#fff', borderRadius: 20, fontSize: 11, fontWeight: 700, padding: '1px 9px' }}>{todayPriorities.length}</span>
             </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', overflowY: 'auto', alignContent: 'flex-start', flex: 1 }}>
-              {pinnedMemos.map((m) => (
-                <div key={m.id} style={{ width: 230, flexShrink: 0 }}>
-                  <MemoCard
-                    memo={m}
-                    mode="compact"
-                    onSave={(id, patch) => updateMemo(id, patch)}
-                    onDelete={(id) => removeMemo(id)}
-                    onTogglePin={(memo) => updateMemo(memo.id, { pinned: !memo.pinned })}
-                    onColor={(memo, color) => { if (memo.color !== color) updateMemo(memo.id, { color }); }}
-                  />
+            {todayPriorities.length === 0 ? (
+              <div style={{ color: D.text2, fontSize: 12.5, padding: '18px 0', textAlign: 'center' }}>오늘 집중할 우선 업무가 없습니다 🎉</div>
+            ) : todayPriorities.map((t) => {
+              const late = isOverdue(t.dueDate, t.status);
+              const prio = t.priority ? PRIO[t.priority] : null;
+              const done = t.status === 'done';
+              return (
+                <div key={t.id} onClick={() => { setSelectedTask(t); setFormOpen(true); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: `1px solid ${D.border}`, cursor: 'pointer' }}>
+                  <span style={{ width: 16, height: 16, borderRadius: 5, flexShrink: 0, border: `1.6px solid ${done ? '#16a34a' : D.text2}`, background: done ? '#16a34a' : 'transparent', color: '#fff', fontSize: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{done ? '✓' : ''}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 12.5, color: D.text1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
+                    <div style={{ color: D.text2, fontSize: 11, marginTop: 2, display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {t.part && <span style={{ background: D.stripBg, border: `1px solid ${D.border}`, borderRadius: 6, padding: '1px 6px', color: D.text2 }}>{t.part.name}</span>}
+                      {prio && <span style={{ background: prio.bg, color: prio.color, borderRadius: 20, padding: '1px 8px', fontWeight: 600 }}>{prio.label}</span>}
+                      <span style={{ color: late ? '#c73a2f' : D.text2, fontWeight: late ? 700 : 400 }}>
+                        {late ? '지연' : isToday(t.dueDate) ? '오늘 마감' : t.dueDate ? dayjs(t.dueDate).format('MM/DD') : ''}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              ))}
+              );
+            })}
+          </div>
+
+          {/* ② KPI 타일 2×2 (오늘 마감 / 지연·초과 / 미확인 메일 / 빠른 실행) */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div style={kpiTile('accent')} onClick={() => navigate('/tasks')}>
+              <div style={kpiLbl}>🔥 오늘 마감</div>
+              <div>
+                <div style={kpiBig('#15803d')}>{dueTodayCount}</div>
+                <div style={kpiSub}>건 · 오늘 처리 권장</div>
+              </div>
+            </div>
+            <div style={kpiTile('risk')} onClick={() => navigate('/tasks?status=overdue')}>
+              <div style={kpiLbl}>⚠ 지연·초과</div>
+              <div>
+                <div style={kpiBig('#c73a2f')}>{overdue.length}</div>
+                <div style={kpiSub}>{atRisk[0] ? `${atRisk[0].title} 외` : '위험 업무 없음'}</div>
+              </div>
+            </div>
+            <div style={kpiTile()} onClick={() => navigate('/mail')}>
+              <div style={kpiLbl}>✉️ 미확인 메일</div>
+              <div>
+                <div style={kpiBig(D.text1)}>{unreadCount}</div>
+                <div style={kpiSub}>통 · 받은편지함</div>
+              </div>
+            </div>
+            <div style={kpiTile()}>
+              <div style={kpiLbl}>⚡ 빠른 실행</div>
+              <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }}>
+                <span style={qbtn(true)} onClick={() => { setSelectedTask(null); setFormStatus('pending'); setFormOpen(true); }}>+ 업무</span>
+                <span style={qbtn()} onClick={() => navigate('/memos')}>메모</span>
+                <span style={qbtn()} onClick={() => navigate('/mail')}>메일</span>
+                <span style={qbtn()} onClick={() => navigate('/approvals/new')}>결재</span>
+              </div>
             </div>
           </div>
-        )}
-
-        {/* 우: 주간 일정 · 자원 위젯 */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          <div style={{
-            fontSize: 9.5, fontWeight: 700, color: D.text2,
-            letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8,
-          }}>📅 일정 · 자원 현황</div>
-          <ScheduleWidget isDark={isDark} D={D} />
         </div>
+      </div>
+
+      {/* ══ 주간 일정 · 자원 현황 ══ */}
+      <div style={{
+        flexShrink: 0,
+        padding: '10px 24px 8px',
+      }}>
+        <div style={secTitle}>📅 이번 주 일정 · 자원 현황</div>
+        <ScheduleWidget isDark={isDark} D={D} />
       </div>
 
       {/* ── 업무 칸반 보드 섹션 ── */}
       <div style={{
-        flex: 1, minHeight: 0,
+        flexShrink: 0,
         display: 'flex', flexDirection: 'column',
         padding: '12px 24px 0',
         boxSizing: 'border-box',
       }}>
-      <div style={{
-        fontSize: 9.5, fontWeight: 700, color: D.text2,
-        letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8, flexShrink: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <span>🗂 업무 보드</span>
+      <div style={{ ...secTitle, justifyContent: 'space-between' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>🗂 업무 보드</span>
         <span style={{ display: 'inline-flex', gap: 6 }}>
           <AiAsk compact />
           <AiWeeklySummary compact />
@@ -363,16 +426,13 @@ export default function DashboardPage() {
         flexDirection: 'row',
         alignItems: 'flex-start',
         gap: 12,
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden',
         boxSizing: 'border-box',
       }}>
         {COLUMNS.map((col) => (
           <div key={col.key} style={{
             flex: 1,
             minWidth: 0,
-            maxHeight: '100%',
+            maxHeight: 380,
             background: col.colBg,
             borderRadius: 12,
             display: 'flex',
@@ -548,19 +608,14 @@ export default function DashboardPage() {
 
       {/* ── 받은 항목 · 게시판 · 결재 위젯 섹션 ── */}
       <div style={{
-        flex: 1, minHeight: 0,
+        flexShrink: 0,
         display: 'flex', flexDirection: 'column',
         padding: '12px 24px 16px',
-        borderTop: `1px solid ${D.border}`,
-        background: D.stripBg,
         boxSizing: 'border-box',
       }}>
-        <div style={{
-          fontSize: 9.5, fontWeight: 700, color: D.text2,
-          letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8, flexShrink: 0,
-        }}>📥 받은 항목 · 게시판 · 결재</div>
+        <div style={{ ...secTitle, marginTop: 4 }}>📥 받은 항목 · 게시판 · 결재</div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14, flex: 1, minHeight: 0 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14, minHeight: 320 }}>
 
           {/* ① 받은 메일 */}
           <div style={wCard}>
@@ -749,6 +804,29 @@ export default function DashboardPage() {
 
         </div>
       </div>
+
+      {/* ══ 고정 메모 스트립 ══ */}
+      {pinnedMemos.length > 0 && (
+        <div style={{ flexShrink: 0, padding: '0 24px 20px' }}>
+          <div style={secTitle}>📌 고정 메모
+            <span onClick={() => navigate('/memos')} style={{ fontSize: 11, fontWeight: 500, color: D.text2, cursor: 'pointer' }}>· 전체 보기</span>
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            {pinnedMemos.map((m) => (
+              <div key={m.id} style={{ width: 230, flexShrink: 0 }}>
+                <MemoCard
+                  memo={m}
+                  mode="compact"
+                  onSave={(id, patch) => updateMemo(id, patch)}
+                  onDelete={(id) => removeMemo(id)}
+                  onTogglePin={(memo) => updateMemo(memo.id, { pinned: !memo.pinned })}
+                  onColor={(memo, color) => { if (memo.color !== color) updateMemo(memo.id, { color }); }}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── 업무 등록 폼 ── */}
       <TaskForm
