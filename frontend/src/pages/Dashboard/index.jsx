@@ -60,11 +60,11 @@ const DASH_BLOCKS = [
   { id: 'memo',     title: '📌 고정 메모' },
 ];
 const DASH_DEFAULT_LAYOUT = [
-  { i: 'focus',    x: 0, y: 0,  w: 12, h: 9 },
-  { i: 'schedule', x: 0, y: 9,  w: 12, h: 6 },
-  { i: 'board',    x: 0, y: 15, w: 12, h: 11 },
-  { i: 'widgets',  x: 0, y: 26, w: 12, h: 9 },
-  { i: 'memo',     x: 0, y: 35, w: 12, h: 4 },
+  { i: 'focus',    x: 0, y: 0,  w: 12, h: 6 },
+  { i: 'schedule', x: 0, y: 6,  w: 12, h: 5 },
+  { i: 'board',    x: 0, y: 11, w: 12, h: 10 },
+  { i: 'widgets',  x: 0, y: 21, w: 12, h: 8 },
+  { i: 'memo',     x: 0, y: 29, w: 12, h: 3 },
 ];
 const DASH_DEFAULT_ENABLED = { focus: true, schedule: true, board: true, widgets: true, memo: true };
 
@@ -479,11 +479,11 @@ export default function DashboardPage() {
       <div key="focus">
       <DashBlock editing={dashEditing} onHide={() => toggleDashBlock('focus')} D={D}>
       {/* ══ 히어로: 오늘의 포커스 (오늘 우선순위 + KPI) ══ */}
-      <div style={{ padding: '14px 16px', flexShrink: 0 }}>
+      <div style={{ padding: '14px 16px', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={secTitle}>🎯 오늘의 포커스
           <span style={{ fontSize: 11, fontWeight: 600, color: D.text2 }}>지금 집중해야 할 일</span>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) minmax(0,1fr)', gap: 14, alignItems: 'stretch' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) minmax(0,1fr)', gap: 14, alignItems: 'stretch', flex: 1, minHeight: 0 }}>
 
           {/* ① 오늘 우선순위 체크리스트 */}
           <div style={heroCard}>
@@ -492,7 +492,7 @@ export default function DashboardPage() {
               <span style={{ background: '#16a34a', color: '#fff', borderRadius: 20, fontSize: 11, fontWeight: 700, padding: '1px 9px' }}>{todayPriorities.length}</span>
             </div>
             {todayPriorities.length === 0 ? (
-              <div style={{ color: D.text2, fontSize: 12.5, padding: '18px 0', textAlign: 'center' }}>오늘 집중할 우선 업무가 없습니다 🎉</div>
+              <div style={{ flex: 1, minHeight: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', color: D.text2, fontSize: 12.5 }}>오늘 집중할 우선 업무가 없습니다 🎉</div>
             ) : todayPriorities.map((t) => {
               const late = isOverdue(t.dueDate, t.status);
               const prio = t.priority ? PRIO[t.priority] : null;
@@ -517,7 +517,7 @@ export default function DashboardPage() {
           </div>
 
           {/* ② KPI 타일 2×2 (오늘 마감 / 지연·초과 / 미확인 메일 / 빠른 실행) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 14, minHeight: 0 }}>
             <div style={kpiTile('accent')} onClick={() => navigate('/tasks')}>
               <div style={kpiLbl}>🔥 오늘 마감</div>
               <div>
