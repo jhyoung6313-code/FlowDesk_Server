@@ -12,7 +12,7 @@ import {
   CopyOutlined, FireOutlined,
 } from '@ant-design/icons';
 import {
-  getApproval, approveApproval, rejectApproval, cancelApproval, resubmitApproval, resumeApproval,
+  getApproval, getApprovals, approveApproval, rejectApproval, cancelApproval, resubmitApproval, resumeApproval,
   getApprovalComments, createApprovalComment, deleteApprovalComment,
   deleteApprovalAttachment, downloadApprovalAttachmentUrl,
 } from '../../api/approval';
@@ -210,7 +210,7 @@ function FormDataView({ template, formData, token }) {
   return <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{blocks}</div>;
 }
 
-export default function DocumentDetail({ embedded = false, docId = null, onClose, onEdit, onCopy, onChanged } = {}) {
+export default function DocumentDetail({ embedded = false, docId = null, onClose, onEdit, onCopy, onNext, onChanged } = {}) {
   const params = useParams();
   const navigate = useNavigate();
   const id = embedded ? docId : params.id;
@@ -224,12 +224,19 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
   const goEdit = () => { if (embedded) onEdit?.(id); else navigate(`/approvals/${id}/edit`); };
   // 이 문서를 복제해 새 결재 작성
   const goCopy = () => { if (embedded) onCopy?.(id); else navigate(`/approvals/new?copyFrom=${id}`); };
+  // 다음 대기 문서로 이동 (연속 결재)
+  const goNext = (nid) => {
+    const target = nid || nextPendingId;
+    if (!target) return;
+    if (embedded) onNext?.(target); else navigate(`/approvals/${target}`);
+  };
   // 결재/취소 등 변경 후 목록 갱신 알림
   const notifyChanged = () => onChanged?.();
 
   const [doc, setDoc] = useState(null);
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [nextPendingId, setNextPendingId] = useState(null);
   const [newComment, setNewComment] = useState('');
   const [actionModal, setActionModal] = useState(null);
   const [actionComment, setActionComment] = useState('');
@@ -249,6 +256,15 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
 
   useEffect(() => { load(); loadComments(); }, [id]);
 
+  // 내 결재 대기 큐 — 현재 문서 외 다음 대기 문서 id
+  useEffect(() => {
+    getApprovals({ tab: 'pending', limit: 100 })
+      .then(r => {
+        const ids = (r.documents || []).map(d => d.id).filter(x => x !== Number(id));
+        setNextPendingId(ids[0] || null);
+      }).catch(() => {});
+  }, [id]);
+
   const handleAction = async () => {
     setActioning(true);
     try {
@@ -260,7 +276,10 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
         await rejectApproval(id, actionComment);
         message.success('반려되었습니다.');
       }
-      setActionModal(null); setActionComment(''); load(); notifyChanged();
+      setActionModal(null); setActionComment(''); notifyChanged();
+      // 연속 결재: 다음 대기 문서가 있으면 이어서 처리
+      if (nextPendingId) { message.info('다음 결재 문서로 이동합니다.'); goNext(); }
+      else load();
     } catch (e) { message.error(e.response?.data?.error || '처리 실패'); }
     finally { setActioning(false); }
   };
@@ -393,6 +412,11 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                 <Button size="small" danger icon={<CloseCircleOutlined />}
                   onClick={() => { setActionModal('reject'); setActionComment(''); }}>반려</Button>
               </>
+            )}
+            {isCurrentApprover && nextPendingId && (
+              <Tooltip title="이 문서를 건너뛰고 다음 대기 문서로">
+                <Button size="small" onClick={() => goNext()}>다음 결재 →</Button>
+              </Tooltip>
             )}
             <Button size="small" icon={<CopyOutlined />} onClick={goCopy}>복제</Button>
             <Button size="small" icon={<ArrowLeftOutlined />} onClick={goList}>{embedded ? '닫기' : '목록'}</Button>

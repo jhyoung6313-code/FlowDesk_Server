@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Tabs, Button, Space, Typography, Tag, Select, message, Popconfirm,
-  theme as antTheme, Badge, Tooltip, Avatar, Pagination, Empty, Spin, Drawer, Grid, Input,
+  theme as antTheme, Badge, Tooltip, Avatar, Pagination, Empty, Spin, Drawer, Grid, Input, Modal,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined, CloseCircleOutlined, FileDoneOutlined, ClockCircleOutlined, CopyOutlined, FireOutlined } from '@ant-design/icons';
-import { getApprovals, deleteApproval, cancelApproval, getApprovalFormTypes } from '../../api/approval';
+import { PlusOutlined, DeleteOutlined, CloseCircleOutlined, FileDoneOutlined, ClockCircleOutlined, CopyOutlined, FireOutlined, CheckCircleOutlined, CheckOutlined } from '@ant-design/icons';
+import { getApprovals, deleteApproval, cancelApproval, getApprovalFormTypes, approveApproval, rejectApproval } from '../../api/approval';
 import DocumentForm from './DocumentForm';
 import DocumentDetail from './DocumentDetail';
 import useAuthStore from '../../store/authStore';
@@ -47,8 +47,15 @@ export default function ApprovalPage() {
   const [qInput, setQInput] = useState('');
   const [formTypeId, setFormTypeId] = useState(undefined);
   const [formTypes, setFormTypes] = useState([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [rejectModal, setRejectModal] = useState(null); // { id } | null
+  const [rejectReason, setRejectReason] = useState('');
 
   useEffect(() => { getApprovalFormTypes().then(setFormTypes).catch(() => {}); }, []);
+
+  // 내 차례(승인 대기) 여부
+  const isMyPendingTurn = (d) => d.status === 'pending'
+    && (d.steps || []).some(s => s.stepOrder === d.currentStep && s.approverId === user?.id && s.status === 'pending' && s.type !== 'reference');
 
   const tabs = isAdmin ? [...TAB_ITEMS, { key: 'all', label: '전체' }] : TAB_ITEMS;
 
@@ -73,6 +80,30 @@ export default function ApprovalPage() {
     try { await cancelApproval(id); message.success('취소되었습니다.'); load(); }
     catch (e) { message.error(e.response?.data?.error || '취소 실패'); }
   };
+
+  // 인라인 승인 / 반려 / 일괄 승인 (결재자)
+  const handleApproveOne = async (id) => {
+    try { await approveApproval(id, ''); message.success('승인되었습니다.'); load(); }
+    catch (e) { message.error(e.response?.data?.error || '승인 실패'); }
+  };
+  const doReject = async () => {
+    if (!rejectReason.trim()) { message.warning('반려 사유를 입력하세요.'); return; }
+    try {
+      await rejectApproval(rejectModal.id, rejectReason);
+      message.success('반려되었습니다.'); setRejectModal(null); setRejectReason(''); load();
+    } catch (e) { message.error(e.response?.data?.error || '반려 실패'); }
+  };
+  const handleBulkApprove = async () => {
+    const targets = documents.filter(isMyPendingTurn);
+    if (targets.length === 0) return;
+    setBulkLoading(true);
+    let ok = 0;
+    for (const d of targets) { try { await approveApproval(d.id, ''); ok++; } catch {} }
+    setBulkLoading(false);
+    message.success(`${ok}건 승인되었습니다.`);
+    load();
+  };
+  const myTurnCount = documents.filter(isMyPendingTurn).length;
 
   const pendingCount = documents.filter(d => d.status === 'pending' && d.steps?.some(s => s.approverId === user?.id && s.stepOrder === d.currentStep)).length;
 
@@ -108,7 +139,7 @@ export default function ApprovalPage() {
         key={doc.id}
         onClick={(e) => { if (e.target.closest('button')) return; setDetailId(doc.id); }}
         style={{
-          display: 'grid', gridTemplateColumns: '84px 1fr 190px 88px 96px', gap: 14, alignItems: 'center',
+          display: 'grid', gridTemplateColumns: '84px 1fr 176px 82px 132px', gap: 14, alignItems: 'center',
           padding: '13px 16px', borderBottom: `1px solid ${token.colorBorderSecondary}`, cursor: 'pointer',
           background: isMyTurn ? token.colorPrimaryBg : 'transparent',
         }}
@@ -175,6 +206,18 @@ export default function ApprovalPage() {
 
         {/* 액션 */}
         <div style={{ textAlign: 'right' }}>
+          {tab === 'pending' && isMyTurn && (
+            <>
+              <Tooltip title="승인">
+                <Button size="small" type="text" icon={<CheckCircleOutlined style={{ color: token.colorSuccess }} />}
+                  onClick={() => handleApproveOne(doc.id)} />
+              </Tooltip>
+              <Tooltip title="반려">
+                <Button size="small" type="text" danger icon={<CloseCircleOutlined />}
+                  onClick={() => { setRejectModal({ id: doc.id }); setRejectReason(''); }} />
+              </Tooltip>
+            </>
+          )}
           <Tooltip title="이 문서로 복제">
             <Button size="small" type="text" icon={<CopyOutlined />}
               onClick={() => setFormState({ open: true, docId: null, copyFromId: doc.id })} />
@@ -253,6 +296,21 @@ export default function ApprovalPage() {
         style={{ marginBottom: 12 }}
       />
 
+      {tab === 'pending' && myTurnCount > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '8px 14px', marginBottom: 10, borderRadius: token.borderRadius,
+          background: token.colorPrimaryBg, border: `1px solid ${token.colorPrimaryBorder}`,
+        }}>
+          <Text style={{ fontSize: 13, color: token.colorPrimary, fontWeight: 600 }}>
+            <ClockCircleOutlined style={{ marginRight: 6 }} />내 차례 결재 대기 {myTurnCount}건 (이 페이지)
+          </Text>
+          <Popconfirm title={`표시된 ${myTurnCount}건을 모두 승인하시겠습니까?`} onConfirm={handleBulkApprove} okText="일괄 승인" cancelText="취소">
+            <Button type="primary" size="small" icon={<CheckOutlined />} loading={bulkLoading}>일괄 승인</Button>
+          </Popconfirm>
+        </div>
+      )}
+
       <div style={{ background: token.colorBgContainer, borderRadius: token.borderRadiusLG, border: `1px solid ${token.colorBorderSecondary}`, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: 60, textAlign: 'center' }}><Spin /></div>
@@ -307,9 +365,24 @@ export default function ApprovalPage() {
             onChanged={load}
             onEdit={(eid) => { setDetailId(null); setFormState({ open: true, docId: eid, copyFromId: null }); }}
             onCopy={(cid) => { setDetailId(null); setFormState({ open: true, docId: null, copyFromId: cid }); }}
+            onNext={(nid) => setDetailId(nid)}
           />
         )}
       </Drawer>
+
+      {/* 인라인 반려 사유 입력 */}
+      <Modal
+        title={<Space><CloseCircleOutlined style={{ color: token.colorError }} />반려</Space>}
+        open={!!rejectModal}
+        onOk={doReject}
+        onCancel={() => { setRejectModal(null); setRejectReason(''); }}
+        okText="반려" okButtonProps={{ danger: true }} cancelText="취소"
+      >
+        <div style={{ marginBottom: 8 }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>반려 사유를 입력하세요 (필수).</Text>
+        </div>
+        <Input.TextArea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={3} placeholder="반려 사유를 반드시 입력하세요." />
+      </Modal>
     </div>
   );
 }
