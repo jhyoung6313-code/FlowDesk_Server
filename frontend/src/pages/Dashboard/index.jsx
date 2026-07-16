@@ -412,15 +412,15 @@ export default function DashboardPage() {
   const heroHdT  = { fontSize: 13, fontWeight: 700, color: D.text1, display: 'flex', alignItems: 'center', gap: 7 };
   const secTitle = { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: D.text1, marginBottom: 10 };
   const kpiTile  = (variant) => ({
-    borderRadius: 12, padding: 14, border: '1px solid',
-    display: 'flex', flexDirection: 'column', justifyContent: 'space-between', minHeight: 92,
+    borderRadius: 12, padding: 12, border: '1px solid',
+    display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 3, minWidth: 0,
     ...(variant === 'accent' ? { background: isDark ? 'rgba(22,163,74,.12)' : 'linear-gradient(140deg,#e7f5ec,#f2fbf5)', borderColor: isDark ? 'rgba(22,163,74,.3)' : '#bfe6cd' }
       : variant === 'risk' ? { background: isDark ? 'rgba(199,58,47,.12)' : 'linear-gradient(140deg,#fdf3f1,#fdf8f6)', borderColor: isDark ? 'rgba(199,58,47,.3)' : '#f7ddd6' }
       : { background: D.cardBg, borderColor: D.cardBor }),
   });
-  const kpiLbl   = { fontSize: 11.5, color: D.text2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 };
-  const kpiBig   = (c) => ({ fontSize: 28, fontWeight: 800, lineHeight: 1, marginTop: 8, color: c });
-  const kpiSub   = { fontSize: 10.5, color: D.text3 ?? D.text2, marginTop: 5 };
+  const kpiLbl   = { fontSize: 11.5, color: D.text2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+  const kpiBig   = (c) => ({ fontSize: 26, fontWeight: 800, lineHeight: 1, marginTop: 6, color: c });
+  const kpiSub   = { fontSize: 10.5, color: D.text3 ?? D.text2, marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
   const qbtn     = (green) => ({
     background: green ? '#16a34a' : D.cardBg, color: green ? '#fff' : D.text2,
     border: `1px solid ${green ? '#16a34a' : D.cardBor}`, borderRadius: 8, padding: '6px 8px',
@@ -522,27 +522,27 @@ export default function DashboardPage() {
             })}
           </div>
 
-          {/* ② KPI 타일 2×2 (오늘 마감 / 지연·초과 / 미확인 메일 / 빠른 실행) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr', gap: 14, minHeight: 0 }}>
+          {/* ② KPI 타일 — 좁으면 세로 1열로 리플로우, 넓으면 2열 (상단 정렬·넘치면 스크롤) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))', gridAutoRows: 'min-content', gap: 12, minHeight: 0, alignContent: 'start', overflowY: 'auto' }}>
             <div style={kpiTile('accent')} onClick={() => navigate('/tasks')}>
               <div style={kpiLbl}>🔥 오늘 마감</div>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <div style={kpiBig('#15803d')}>{dueTodayCount}</div>
-                <div style={kpiSub}>건 · 오늘 처리 권장</div>
+                <div style={kpiSub}>오늘 처리 권장</div>
               </div>
             </div>
             <div style={kpiTile('risk')} onClick={() => navigate('/tasks?status=overdue')}>
               <div style={kpiLbl}>⚠ 지연·초과</div>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <div style={kpiBig('#c73a2f')}>{overdue.length}</div>
-                <div style={kpiSub}>{atRisk[0] ? `${atRisk[0].title} 외` : '위험 업무 없음'}</div>
+                <div style={kpiSub}>{atRisk[0] ? `${atRisk[0].title}` : '위험 업무 없음'}</div>
               </div>
             </div>
             <div style={kpiTile()} onClick={() => navigate('/mail')}>
               <div style={kpiLbl}>✉️ 미확인 메일</div>
-              <div>
+              <div style={{ minWidth: 0 }}>
                 <div style={kpiBig(D.text1)}>{unreadCount}</div>
-                <div style={kpiSub}>통 · 받은편지함</div>
+                <div style={kpiSub}>받은편지함</div>
               </div>
             </div>
             <div style={kpiTile()}>
@@ -789,7 +789,7 @@ export default function DashboardPage() {
       }}>
         <div style={{ ...secTitle, marginTop: 0 }}>📥 받은 항목 · 게시판 · 결재</div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 14, minHeight: 300 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 14, minHeight: 300 }}>
 
           {/* ① 받은 메일 */}
           <div style={wCard}>
