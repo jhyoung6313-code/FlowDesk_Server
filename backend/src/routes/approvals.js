@@ -71,6 +71,7 @@ router.post('/approvals/:id/submit', authenticate, approvalController.submit);
 router.post('/approvals/:id/approve', authenticate, approvalController.approve);
 router.post('/approvals/:id/reject', authenticate, approvalController.reject);
 router.post('/approvals/:id/cancel', authenticate, approvalController.cancel);
+router.post('/approvals/:id/delegate', authenticate, approvalController.delegate);
 router.post('/approvals/:id/resubmit', authenticate, approvalController.resubmit);
 router.post('/approvals/:id/resume', authenticate, approvalController.resume);
 router.delete('/approvals/:id', authenticate, approvalController.remove);

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Breadcrumb, Button, Space, Typography, Tag, Divider,
-  Avatar, Modal, Input, message, Spin, Popconfirm, Card, Descriptions,
+  Avatar, Modal, Input, message, Spin, Popconfirm, Card, Descriptions, Select,
   theme as antTheme,
 } from 'antd';
 import {
@@ -12,10 +12,11 @@ import {
   CopyOutlined, FireOutlined,
 } from '@ant-design/icons';
 import {
-  getApproval, getApprovals, approveApproval, rejectApproval, cancelApproval, resubmitApproval, resumeApproval,
+  getApproval, getApprovals, approveApproval, rejectApproval, cancelApproval, delegateApproval, resubmitApproval, resumeApproval,
   getApprovalComments, createApprovalComment, deleteApprovalComment,
   deleteApprovalAttachment, downloadApprovalAttachmentUrl,
 } from '../../api/approval';
+import { getUsers } from '../../api/users';
 import useAuthStore from '../../store/authStore';
 import dayjs from 'dayjs';
 
@@ -242,6 +243,26 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
   const [actionComment, setActionComment] = useState('');
   const [actioning, setActioning] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [delegateOpen, setDelegateOpen] = useState(false);
+  const [delegateTo, setDelegateTo] = useState(null);
+  const [delegateComment, setDelegateComment] = useState('');
+  const [delegating, setDelegating] = useState(false);
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => { getUsers().then(u => setUsers((u || []).filter(x => x.isActive !== false))).catch(() => {}); }, []);
+
+  const handleDelegate = async () => {
+    if (!delegateTo) { message.warning('위임할 대상을 선택하세요.'); return; }
+    setDelegating(true);
+    try {
+      await delegateApproval(id, delegateTo, delegateComment);
+      message.success('위임되었습니다.');
+      setDelegateOpen(false); setDelegateTo(null); setDelegateComment('');
+      notifyChanged();
+      if (nextPendingId) goNext(); else load();
+    } catch (e) { message.error(e.response?.data?.error || '위임 실패'); }
+    finally { setDelegating(false); }
+  };
 
   const load = async () => {
     try { const data = await getApproval(id); setDoc(data); }
@@ -411,6 +432,8 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                   onClick={() => { setActionModal('approve'); setActionComment(''); }}>승인</Button>
                 <Button size="small" danger icon={<CloseCircleOutlined />}
                   onClick={() => { setActionModal('reject'); setActionComment(''); }}>반려</Button>
+                <Button size="small" icon={<UserOutlined />}
+                  onClick={() => { setDelegateOpen(true); setDelegateTo(null); setDelegateComment(''); }}>위임</Button>
               </>
             )}
             {isCurrentApprover && nextPendingId && (
@@ -632,6 +655,31 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
           rows={3}
           placeholder={actionModal === 'reject' ? '반려 사유를 반드시 입력하세요.' : '의견 (선택)'}
         />
+      </Modal>
+
+      {/* 위임(대결) 모달 */}
+      <Modal
+        title={<Space><UserOutlined />결재 위임 (대결)</Space>}
+        open={delegateOpen}
+        onOk={handleDelegate}
+        confirmLoading={delegating}
+        onCancel={() => setDelegateOpen(false)}
+        okText="위임" cancelText="취소"
+      >
+        <div style={{ marginBottom: 8 }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>현재 내 결재 차례를 다른 사용자에게 위임합니다.</Text>
+        </div>
+        <Select
+          showSearch optionFilterProp="children" style={{ width: '100%', marginBottom: 10 }}
+          placeholder="위임 대상 선택" value={delegateTo} onChange={setDelegateTo}
+        >
+          {users.filter(u => u.id !== user?.id).map(u => (
+            <Select.Option key={u.id} value={u.id}>
+              {u.displayName}{u.position ? ` · ${u.position}` : ''} ({u.username})
+            </Select.Option>
+          ))}
+        </Select>
+        <TextArea value={delegateComment} onChange={e => setDelegateComment(e.target.value)} rows={2} placeholder="위임 사유 (선택)" />
       </Modal>
     </div>
   );

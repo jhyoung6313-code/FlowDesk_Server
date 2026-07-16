@@ -475,6 +475,57 @@ const cancel = async (req, res, next) => {
   }
 };
 
+// POST /api/approvals/:id/delegate — 현재 결재 단계를 다른 사용자에게 위임(대결)
+const delegate = async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const { toUserId, comment } = req.body;
+    if (!toUserId) return res.status(400).json({ error: '위임할 대상을 선택하세요.' });
+
+    const doc = await prisma.approvalDocument.findFirst({
+      where: { id, delYn: '0' },
+      include: { steps: true },
+    });
+    if (!doc) return res.status(404).json({ error: '결재 문서를 찾을 수 없습니다.' });
+    if (doc.status !== 'pending') return res.status(400).json({ error: '결재 진행 중인 문서만 위임할 수 있습니다.' });
+
+    // 현재 차수에서 내게 배정된 미처리 단계
+    const myStep = doc.steps.find(s =>
+      s.stepOrder === doc.currentStep && s.approverId === req.user.id &&
+      s.status === 'pending' && s.type !== 'reference');
+    if (!myStep) return res.status(403).json({ error: '현재 결재 차례가 아닙니다.' });
+
+    const toId = Number(toUserId);
+    if (toId === req.user.id) return res.status(400).json({ error: '본인에게는 위임할 수 없습니다.' });
+    const to = await prisma.user.findFirst({ where: { id: toId, isActive: true } });
+    if (!to) return res.status(404).json({ error: '위임 대상 사용자를 찾을 수 없습니다.' });
+    if (doc.steps.some(s => s.approverId === toId && s.type !== 'reference')) {
+      return res.status(400).json({ error: '이미 결재선에 포함된 사용자입니다.' });
+    }
+
+    const me = await prisma.user.findUnique({ where: { id: req.user.id }, select: { displayName: true } });
+
+    await prisma.approvalStep.update({
+      where: { id: myStep.id },
+      data: { approverId: toId, actingType: `위임(${me?.displayName || ''})` },
+    });
+
+    await sendApprovalNotification(
+      toId, 'approval_requested', id,
+      `${me?.displayName || ''}님이 "${doc.title}" 결재를 위임했습니다.${comment ? ` — ${comment}` : ''}`,
+      req.user.id,
+    );
+
+    const updated = await prisma.approvalDocument.findUnique({
+      where: { id },
+      include: { steps: { include: { approver: { select: { id: true, displayName: true } } }, orderBy: { stepOrder: 'asc' } } },
+    });
+    res.json({ message: '위임되었습니다.', document: updated });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // DELETE /api/approvals/:id  — draft 상태만 삭제
 const remove = async (req, res, next) => {
   try {
@@ -742,7 +793,7 @@ const pendingCount = async (req, res, next) => {
 };
 
 module.exports = {
-  list, get, create, update, submit, approve, reject, cancel, resubmit, resume, remove, pendingCount,
+  list, get, create, update, submit, approve, reject, cancel, delegate, resubmit, resume, remove, pendingCount,
   uploadAttachment, downloadAttachment, removeAttachment,
   listComments, createComment, updateComment, removeComment,
 };
