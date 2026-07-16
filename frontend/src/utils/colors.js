@@ -23,6 +23,10 @@ export const NOTIFICATION_LABELS = {
   security_alert: '보안 알림',
   mention: '멘션',
   schedule_shared: '일정 공유',
+  approval_requested: '결재 요청',
+  approval_reminder: '결재 독촉',
+  approval_approved: '결재 승인',
+  approval_rejected: '결재 반려',
 };
 
 // 사용자 아바타 배경색 (id 기반 순환)

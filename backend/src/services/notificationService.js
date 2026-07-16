@@ -217,6 +217,52 @@ const checkAndRunSchedules = async () => {
   }
 };
 
+// ── 전자결재 리마인더 (마감 초과 · 3일 이상 미처리) ────────────────────────
+const checkApprovalReminders = async () => {
+  const now = new Date();
+  const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 3600 * 1000);
+  const dedupSince = new Date(now.getTime() - 20 * 3600 * 1000); // 20h 내 중복 발송 방지
+
+  const docs = await prisma.approvalDocument.findMany({
+    where: {
+      status: 'pending',
+      delYn: '0',
+      OR: [
+        { dueDate: { lt: now } },       // 마감기한 초과
+        { updatedAt: { lt: threeDaysAgo } }, // 3일 이상 진행 없음
+      ],
+    },
+    include: {
+      steps: { where: { type: { not: 'reference' } } },
+      creator: { select: { displayName: true } },
+    },
+  });
+
+  let sent = 0;
+  for (const doc of docs) {
+    const overdue = doc.dueDate && new Date(doc.dueDate) < now;
+    const current = doc.steps.filter(s => s.stepOrder === doc.currentStep && s.status === 'pending');
+    for (const s of current) {
+      const existing = await prisma.notification.findFirst({
+        where: {
+          userId: s.approverId, type: 'approval_requested',
+          link: `/approvals/${doc.id}`, createdAt: { gte: dedupSince },
+        },
+      });
+      if (existing) continue;
+      const msg = overdue
+        ? `[결재 지연] "${doc.title}" 결재 마감기한이 지났습니다. 처리 부탁드립니다.`
+        : `[결재 대기] "${doc.title}" 결재가 3일 이상 대기 중입니다.`;
+      const notif = await prisma.notification.create({
+        data: { userId: s.approverId, type: 'approval_requested', link: `/approvals/${doc.id}`, message: msg },
+      });
+      pushNotification(s.approverId, notif);
+      sent++;
+    }
+  }
+  console.log(`[결재 리마인더] ${new Date().toLocaleString()} 확인 완료 — ${sent}건 발송`);
+};
+
 const scheduleNotifications = () => {
   // 매일 오전 9시: 마감 알림 생성 + 반복 업무 자동 생성
   cron.schedule('0 9 * * *', async () => {
@@ -227,6 +273,8 @@ const scheduleNotifications = () => {
   cron.schedule('*/15 * * * *', () => checkSlaBreaches().catch(console.error));
   // 1시간마다: 스텝 리마인더
   cron.schedule('0 * * * *', () => checkStepReminders().catch(console.error));
+  // 매일 09:05: 전자결재 리마인더(마감초과·미처리)
+  cron.schedule('5 9 * * *', () => checkApprovalReminders().catch(console.error));
   // 매분: 플레이북 스케줄 자동 실행 체크
   cron.schedule('* * * * *', () => checkAndRunSchedules().catch(console.error));
 
@@ -239,4 +287,4 @@ const scheduleNotifications = () => {
   console.log('[플레이북 스케줄러] 등록 완료 (매분 실행)');
 };
 
-module.exports = { scheduleNotifications, generateNotifications, checkSlaBreaches, checkStepReminders };
+module.exports = { scheduleNotifications, generateNotifications, checkSlaBreaches, checkStepReminders, checkApprovalReminders };
