@@ -54,11 +54,29 @@ async function sendApprovalNotification(userId, type, documentId, message, actor
 // GET /api/approvals  (query: tab=mine|pending|all, status, page, limit)
 const list = async (req, res, next) => {
   try {
-    const { tab = 'mine', status, page = 1, limit = 20 } = req.query;
+    const { tab = 'mine', status, page = 1, limit = 20, q, formTypeId, from, to } = req.query;
     const userId = req.user.id;
 
     let where = { delYn: '0' };
     if (status) where.status = status;
+
+    // 키워드 검색: 제목 · 문서번호 · 기안자명
+    if (q && String(q).trim()) {
+      const kw = String(q).trim();
+      where.OR = [
+        { title: { contains: kw, mode: 'insensitive' } },
+        { docNo: { contains: kw, mode: 'insensitive' } },
+        { creator: { displayName: { contains: kw, mode: 'insensitive' } } },
+      ];
+    }
+    // 양식종류 필터
+    if (formTypeId) where.template = { formTypeId: Number(formTypeId) };
+    // 기안일 기간 필터
+    if (from || to) {
+      where.createdAt = {};
+      if (from) where.createdAt.gte = new Date(from);
+      if (to) { const d = new Date(to); d.setHours(23, 59, 59, 999); where.createdAt.lte = d; }
+    }
 
     if (tab === 'mine') {
       where.createdBy = userId;
@@ -146,7 +164,7 @@ const get = async (req, res, next) => {
 // POST /api/approvals  — 임시저장(draft)
 const create = async (req, res, next) => {
   try {
-    const { templateId, title, formData, steps } = req.body;
+    const { templateId, title, formData, steps, isUrgent, dueDate } = req.body;
     if (!templateId || !title) {
       return res.status(400).json({ error: '템플릿과 제목은 필수입니다.' });
     }
@@ -164,6 +182,8 @@ const create = async (req, res, next) => {
         status: 'draft',
         totalSteps: countFlowGroups(stepsArr),
         currentStep: 0,
+        isUrgent: !!isUrgent,
+        dueDate: dueDate ? new Date(dueDate) : null,
         createdBy: req.user.id,
         steps: { create: stepsArr },
       },
@@ -192,7 +212,7 @@ const update = async (req, res, next) => {
       return res.status(400).json({ error: '임시저장 상태의 문서만 수정할 수 있습니다.' });
     }
 
-    const { title, formData, steps } = req.body;
+    const { title, formData, steps, isUrgent, dueDate } = req.body;
 
     await prisma.$transaction(async (tx) => {
       const normalized = steps !== undefined ? normalizeSteps(steps) : undefined;
@@ -205,6 +225,8 @@ const update = async (req, res, next) => {
             formData: typeof formData === 'string' ? formData : JSON.stringify(formData),
           }),
           ...(normalized !== undefined && { totalSteps: countFlowGroups(normalized) }),
+          ...(isUrgent !== undefined && { isUrgent: !!isUrgent }),
+          ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
         },
       });
 

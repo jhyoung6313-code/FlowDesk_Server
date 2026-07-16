@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Tabs, Button, Space, Typography, Tag, Select, message, Popconfirm,
-  theme as antTheme, Badge, Tooltip, Avatar, Pagination, Empty, Spin, Drawer, Grid,
+  theme as antTheme, Badge, Tooltip, Avatar, Pagination, Empty, Spin, Drawer, Grid, Input,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined, CloseCircleOutlined, FileDoneOutlined, ClockCircleOutlined } from '@ant-design/icons';
-import { getApprovals, deleteApproval, cancelApproval } from '../../api/approval';
+import { PlusOutlined, DeleteOutlined, CloseCircleOutlined, FileDoneOutlined, ClockCircleOutlined, CopyOutlined, FireOutlined } from '@ant-design/icons';
+import { getApprovals, deleteApproval, cancelApproval, getApprovalFormTypes } from '../../api/approval';
 import DocumentForm from './DocumentForm';
 import DocumentDetail from './DocumentDetail';
 import useAuthStore from '../../store/authStore';
@@ -40,21 +40,27 @@ export default function ApprovalPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [formState, setFormState] = useState({ open: false, docId: null });
+  const [formState, setFormState] = useState({ open: false, docId: null, copyFromId: null });
   const [detailId, setDetailId] = useState(null);
   const screens = Grid.useBreakpoint();
+  const [q, setQ] = useState('');
+  const [qInput, setQInput] = useState('');
+  const [formTypeId, setFormTypeId] = useState(undefined);
+  const [formTypes, setFormTypes] = useState([]);
+
+  useEffect(() => { getApprovalFormTypes().then(setFormTypes).catch(() => {}); }, []);
 
   const tabs = isAdmin ? [...TAB_ITEMS, { key: 'all', label: '전체' }] : TAB_ITEMS;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getApprovals({ tab, status: statusFilter, page, limit: 20 });
+      const data = await getApprovals({ tab, status: statusFilter, page, limit: 20, q: q || undefined, formTypeId });
       setDocuments(data.documents || []);
       setTotal(data.total || 0);
     } catch { message.error('목록을 불러오지 못했습니다.'); }
     finally { setLoading(false); }
-  }, [tab, statusFilter, page]);
+  }, [tab, statusFilter, page, q, formTypeId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -102,7 +108,7 @@ export default function ApprovalPage() {
         key={doc.id}
         onClick={(e) => { if (e.target.closest('button')) return; setDetailId(doc.id); }}
         style={{
-          display: 'grid', gridTemplateColumns: '84px 1fr 200px 92px 34px', gap: 14, alignItems: 'center',
+          display: 'grid', gridTemplateColumns: '84px 1fr 190px 88px 96px', gap: 14, alignItems: 'center',
           padding: '13px 16px', borderBottom: `1px solid ${token.colorBorderSecondary}`, cursor: 'pointer',
           background: isMyTurn ? token.colorPrimaryBg : 'transparent',
         }}
@@ -121,8 +127,19 @@ export default function ApprovalPage() {
 
         {/* 제목 + 양식 */}
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, color: token.colorText, marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {doc.title}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, minWidth: 0 }}>
+            {doc.isUrgent && <FireOutlined style={{ color: '#e0483d', flexShrink: 0 }} />}
+            <span style={{ fontWeight: 700, fontSize: 14, color: token.colorText, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {doc.title}
+            </span>
+            {doc.dueDate && (() => {
+              const over = doc.status === 'pending' && dayjs(doc.dueDate).endOf('day').isBefore(dayjs());
+              return (
+                <Tag color={over ? 'error' : 'orange'} style={{ margin: 0, fontSize: 10, lineHeight: '16px', flexShrink: 0 }}>
+                  ~{dayjs(doc.dueDate).format('MM.DD')}{over ? ' 초과' : ''}
+                </Tag>
+              );
+            })()}
           </div>
           <Text type="secondary" style={{ fontSize: 12 }}>
             {doc.template?.formType?.name && `${doc.template.formType.name} / `}{doc.template?.name}
@@ -158,6 +175,10 @@ export default function ApprovalPage() {
 
         {/* 액션 */}
         <div style={{ textAlign: 'right' }}>
+          <Tooltip title="이 문서로 복제">
+            <Button size="small" type="text" icon={<CopyOutlined />}
+              onClick={() => setFormState({ open: true, docId: null, copyFromId: doc.id })} />
+          </Tooltip>
           {isOwner && ['draft', 'pending'].includes(doc.status) && (
             <Popconfirm title="취소하시겠습니까?" onConfirm={() => handleCancel(doc.id)} okText="취소" cancelText="아니요">
               <Tooltip title="취소"><Button size="small" type="text" icon={<CloseCircleOutlined />} /></Tooltip>
@@ -184,7 +205,24 @@ export default function ApprovalPage() {
             <Tag color="red" icon={<ClockCircleOutlined />}>{pendingCount}건 결재 대기</Tag>
           )}
         </Space>
-        <Space size={8}>
+        <Space size={8} wrap>
+          <Input.Search
+            allowClear placeholder="제목·문서번호·기안자"
+            style={{ width: 200 }} size="small"
+            value={qInput}
+            onChange={e => setQInput(e.target.value)}
+            onSearch={v => { setQ((v || '').trim()); setPage(1); }}
+          />
+          <Select
+            allowClear placeholder="양식종류"
+            style={{ width: 130 }} size="small"
+            value={formTypeId}
+            onChange={v => { setFormTypeId(v); setPage(1); }}
+          >
+            {formTypes.map(t => (
+              <Select.Option key={t.id} value={t.id}>{t.icon} {t.name}</Select.Option>
+            ))}
+          </Select>
           <Select
             allowClear placeholder="상태 필터"
             style={{ width: 120 }}
@@ -196,7 +234,7 @@ export default function ApprovalPage() {
               <Select.Option key={k} value={k}>{v.label}</Select.Option>
             ))}
           </Select>
-          <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => setFormState({ open: true, docId: null })}>
+          <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => setFormState({ open: true, docId: null, copyFromId: null })}>
             결재 요청
           </Button>
         </Space>
@@ -232,11 +270,11 @@ export default function ApprovalPage() {
 
       {/* 결재 기안/수정 Drawer */}
       <Drawer
-        title={formState.docId ? '결재 문서 수정' : '결재 요청'}
+        title={formState.docId ? '결재 문서 수정' : (formState.copyFromId ? '결재 요청 (복제)' : '결재 요청')}
         placement="right"
         width={screens.md ? 720 : '100%'}
         open={formState.open}
-        onClose={() => setFormState({ open: false, docId: null })}
+        onClose={() => setFormState({ open: false, docId: null, copyFromId: null })}
         destroyOnClose
         styles={{ body: { padding: 20 } }}
       >
@@ -244,8 +282,9 @@ export default function ApprovalPage() {
           <DocumentForm
             embedded
             initialDocId={formState.docId}
-            onClose={() => setFormState({ open: false, docId: null })}
-            onSaved={() => { setFormState({ open: false, docId: null }); load(); }}
+            copyFromId={formState.copyFromId}
+            onClose={() => setFormState({ open: false, docId: null, copyFromId: null })}
+            onSaved={() => { setFormState({ open: false, docId: null, copyFromId: null }); load(); }}
           />
         )}
       </Drawer>
@@ -266,7 +305,8 @@ export default function ApprovalPage() {
             docId={detailId}
             onClose={() => setDetailId(null)}
             onChanged={load}
-            onEdit={(eid) => { setDetailId(null); setFormState({ open: true, docId: eid }); }}
+            onEdit={(eid) => { setDetailId(null); setFormState({ open: true, docId: eid, copyFromId: null }); }}
+            onCopy={(cid) => { setDetailId(null); setFormState({ open: true, docId: null, copyFromId: cid }); }}
           />
         )}
       </Drawer>

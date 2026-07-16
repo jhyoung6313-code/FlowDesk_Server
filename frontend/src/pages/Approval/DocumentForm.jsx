@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Form, Input, Select, Button, Space, Upload, message, Typography, Divider,
   Card, DatePicker, InputNumber, Avatar, Radio, Checkbox,
@@ -124,11 +124,13 @@ function DynamicField({ field, form, users = [] }) {
   }
 }
 
-export default function DocumentForm({ embedded = false, initialDocId = null, onClose, onSaved } = {}) {
+export default function DocumentForm({ embedded = false, initialDocId = null, copyFromId = null, onClose, onSaved } = {}) {
   const params = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const id = embedded ? initialDocId : params.id;
   const isEdit = !!id;
+  const copyId = embedded ? copyFromId : searchParams.get('copyFrom');
 
   // 저장/상신 후 이동: 페이지 모드는 라우팅, 임베드(Drawer) 모드는 콜백
   const afterSave = (savedId) => {
@@ -151,6 +153,8 @@ export default function DocumentForm({ embedded = false, initialDocId = null, on
   const [docId, setDocId] = useState(id ? Number(id) : null);
   const [existingAttachments, setExistingAttachments] = useState([]);
   const [selectedTypeId, setSelectedTypeId] = useState(null);
+  const [isUrgent, setIsUrgent] = useState(false);
+  const [dueDate, setDueDate] = useState(null);
 
   useEffect(() => {
     Promise.all([getApprovalFormTypes(), getUsers()]).then(([types, userList]) => {
@@ -180,6 +184,8 @@ export default function DocumentForm({ embedded = false, initialDocId = null, on
       }));
       setApprovalLine(line);
       setExistingAttachments(doc.attachments || []);
+      setIsUrgent(!!doc.isUrgent);
+      setDueDate(doc.dueDate ? dayjs(doc.dueDate) : null);
       // 템플릿 로드
       getApprovalTemplate(doc.templateId).then(tpl => {
         setSelectedTemplate(tpl);
@@ -187,6 +193,29 @@ export default function DocumentForm({ embedded = false, initialDocId = null, on
       }).catch(() => {});
     }).catch(() => message.error('문서를 불러오지 못했습니다.'));
   }, [id, isEdit]);
+
+  // 문서 복제: 기존 문서 내용·결재선을 새 초안으로 프리필 (docId는 설정하지 않아 새 문서로 저장)
+  useEffect(() => {
+    if (isEdit || !copyId) return;
+    getApproval(copyId).then(doc => {
+      setSelectedTypeId(doc.template?.formType?.id);
+      form.setFieldsValue({ templateId: doc.templateId, title: `[사본] ${doc.title}` });
+      const fd = doc.formData ? JSON.parse(doc.formData) : {};
+      form.setFieldsValue({ formData: fd });
+      setApprovalLine((doc.steps || []).map(s => ({
+        approverId: s.approverId, approverName: s.approver?.displayName,
+        type: s.type || 'approval', stepOrder: s.stepOrder || 0,
+      })));
+      setIsUrgent(!!doc.isUrgent);
+      setDueDate(doc.dueDate ? dayjs(doc.dueDate) : null);
+      getApprovalTemplate(doc.templateId).then(tpl => {
+        setSelectedTemplate(tpl);
+        setFields(tpl.fieldsJson ? JSON.parse(tpl.fieldsJson) : []);
+        form.setFieldsValue({ formData: fd });
+      }).catch(() => {});
+      message.info('기존 문서를 복제했습니다. 내용을 확인 후 상신하세요.');
+    }).catch(() => message.error('원본 문서를 불러오지 못했습니다.'));
+  }, [copyId, isEdit]);
 
   const handleTemplateChange = async (tplId) => {
     if (!tplId) { setSelectedTemplate(null); setFields([]); setApprovalLine([]); return; }
@@ -278,6 +307,8 @@ export default function DocumentForm({ embedded = false, initialDocId = null, on
       templateId: values.templateId,
       title: values.title,
       formData: JSON.stringify(formData),
+      isUrgent,
+      dueDate: dueDate ? dueDate.format('YYYY-MM-DD') : null,
       steps: approvalLine.map(s => ({
         approverId: s.approverId,
         type: s.type || 'approval',
@@ -378,6 +409,20 @@ export default function DocumentForm({ embedded = false, initialDocId = null, on
           <Form.Item name="title" label="제목" rules={[{ required: true, message: '제목을 입력하세요.' }]}>
             <Input placeholder="결재 문서 제목" maxLength={200} />
           </Form.Item>
+          <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Checkbox checked={isUrgent} onChange={e => setIsUrgent(e.target.checked)}>
+              <span style={{ color: isUrgent ? '#e0483d' : undefined, fontWeight: isUrgent ? 700 : 400 }}>🔴 긴급</span>
+            </Checkbox>
+            <Space size={8}>
+              <Text style={{ fontSize: 13, color: '#888' }}>결재 마감기한</Text>
+              <DatePicker
+                value={dueDate}
+                onChange={setDueDate}
+                placeholder="선택 (선택사항)"
+                disabledDate={(d) => d && d < dayjs().startOf('day')}
+              />
+            </Space>
+          </div>
         </Card>
 
         {/* 동적 폼 필드 */}

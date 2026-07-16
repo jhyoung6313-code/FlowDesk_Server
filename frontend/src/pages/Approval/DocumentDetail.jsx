@@ -9,6 +9,7 @@ import {
   ArrowLeftOutlined, EditOutlined, CheckCircleOutlined, CloseCircleOutlined,
   StopOutlined, PaperClipOutlined, SendOutlined, DeleteOutlined,
   RedoOutlined, ClockCircleOutlined, FileDoneOutlined, UserOutlined,
+  CopyOutlined, FireOutlined,
 } from '@ant-design/icons';
 import {
   getApproval, approveApproval, rejectApproval, cancelApproval, resubmitApproval, resumeApproval,
@@ -209,7 +210,7 @@ function FormDataView({ template, formData, token }) {
   return <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{blocks}</div>;
 }
 
-export default function DocumentDetail({ embedded = false, docId = null, onClose, onEdit, onChanged } = {}) {
+export default function DocumentDetail({ embedded = false, docId = null, onClose, onEdit, onCopy, onChanged } = {}) {
   const params = useParams();
   const navigate = useNavigate();
   const id = embedded ? docId : params.id;
@@ -221,6 +222,8 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
   const goList = () => { if (embedded) onClose?.(); else navigate('/approvals'); };
   // 수정 화면 열기
   const goEdit = () => { if (embedded) onEdit?.(id); else navigate(`/approvals/${id}/edit`); };
+  // 이 문서를 복제해 새 결재 작성
+  const goCopy = () => { if (embedded) onCopy?.(id); else navigate(`/approvals/new?copyFrom=${id}`); };
   // 결재/취소 등 변경 후 목록 갱신 알림
   const notifyChanged = () => onChanged?.();
 
@@ -334,6 +337,15 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
               {doc.docNo && (
                 <Tag style={{ fontFamily: 'monospace', fontSize: 12 }} color="blue">{doc.docNo}</Tag>
               )}
+              {doc.isUrgent && <Tag color="red" icon={<FireOutlined />}>긴급</Tag>}
+              {doc.dueDate && (() => {
+                const over = doc.status === 'pending' && dayjs(doc.dueDate).endOf('day').isBefore(dayjs());
+                return (
+                  <Tag color={over ? 'error' : 'orange'} icon={<ClockCircleOutlined />}>
+                    마감 {dayjs(doc.dueDate).format('YYYY.MM.DD')}{over ? ' · 초과' : ''}
+                  </Tag>
+                );
+              })()}
               <Text type="secondary" style={{ fontSize: 12 }}>
                 {doc.template?.formType?.name} / {doc.template?.name}
               </Text>
@@ -382,6 +394,7 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                   onClick={() => { setActionModal('reject'); setActionComment(''); }}>반려</Button>
               </>
             )}
+            <Button size="small" icon={<CopyOutlined />} onClick={goCopy}>복제</Button>
             <Button size="small" icon={<ArrowLeftOutlined />} onClick={goList}>{embedded ? '닫기' : '목록'}</Button>
           </Space>
         </div>

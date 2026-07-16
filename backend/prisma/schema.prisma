@@ -1548,6 +1548,8 @@ model ApprovalDocument {
   totalSteps  Int                  @default(0) @map("total_steps")
   docNo        String?             @map("doc_no") @db.VarChar(30)
   rejectedStep Int?                @map("rejected_step")
+  isUrgent    Boolean              @default(false) @map("is_urgent")
+  dueDate     DateTime?            @map("due_date")
   createdBy   Int                  @map("created_by")
   createdAt   DateTime             @default(now()) @map("created_at")
   updatedAt   DateTime             @updatedAt @map("updated_at")
