@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Tabs, Table, Button, Space, Typography, Popconfirm, message, Modal,
-  Form, Input, Select, Switch, Card, Divider, Tag, InputNumber, Radio, Checkbox,
+  Form, Input, Select, Switch, Card, Divider, Tag, InputNumber, Radio, Checkbox, Row, Col,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, PlusCircleOutlined, MinusCircleOutlined,
-  ArrowUpOutlined, ArrowDownOutlined, CopyOutlined, EyeOutlined,
+  ArrowUpOutlined, ArrowDownOutlined, CopyOutlined, EyeOutlined, HolderOutlined,
 } from '@ant-design/icons';
 import {
   getApprovalFormTypes, createApprovalFormType, updateApprovalFormType, deleteApprovalFormType,
@@ -61,23 +61,25 @@ function PreviewFields({ fieldsJson }) {
   const parseOpts = (o) => (Array.isArray(o) ? o : (o ? o.split('\n').map(s => s.trim()).filter(Boolean) : []));
   return (
     <Form layout="vertical">
-      {fields.map((f, i) => {
-        if (f.type === 'divider') return <Divider key={i} orientation="left" style={{ fontSize: 13, color: '#888' }}>{f.label}</Divider>;
-        const lbl = <>{f.label}{f.required && <span style={{ color: '#ff4d4f' }}> *</span>}</>;
-        let ctrl;
-        switch (f.type) {
-          case 'textarea': ctrl = <Input.TextArea rows={2} disabled placeholder={f.placeholder} />; break;
-          case 'number': ctrl = <InputNumber style={{ width: '100%' }} disabled placeholder={f.placeholder} />; break;
-          case 'money': ctrl = <InputNumber style={{ width: '100%' }} disabled addonAfter="원" placeholder={f.placeholder} />; break;
-          case 'date': ctrl = <Input disabled placeholder="YYYY-MM-DD" />; break;
-          case 'select': ctrl = <Select disabled placeholder={f.placeholder || '선택'} options={parseOpts(f.options).map(o => ({ label: o, value: o }))} />; break;
-          case 'radio': ctrl = <Radio.Group disabled options={parseOpts(f.options)} />; break;
-          case 'checkbox': ctrl = <Checkbox.Group disabled options={parseOpts(f.options)} />; break;
-          case 'user': ctrl = <Select disabled placeholder={f.placeholder || '사용자 선택'} />; break;
-          default: ctrl = <Input disabled placeholder={f.placeholder} />;
-        }
-        return <Form.Item key={i} label={lbl} style={{ marginBottom: 12 }}>{ctrl}</Form.Item>;
-      })}
+      <Row gutter={16}>
+        {fields.map((f, i) => {
+          if (f.type === 'divider') return <Col span={24} key={i}><Divider orientation="left" style={{ fontSize: 13, color: '#888' }}>{f.label}</Divider></Col>;
+          const lbl = <>{f.label}{f.required && <span style={{ color: '#ff4d4f' }}> *</span>}</>;
+          let ctrl;
+          switch (f.type) {
+            case 'textarea': ctrl = <Input.TextArea rows={2} disabled placeholder={f.placeholder} />; break;
+            case 'number': ctrl = <InputNumber style={{ width: '100%' }} disabled placeholder={f.placeholder} />; break;
+            case 'money': ctrl = <InputNumber style={{ width: '100%' }} disabled addonAfter="원" placeholder={f.placeholder} />; break;
+            case 'date': ctrl = <Input disabled placeholder="YYYY-MM-DD" />; break;
+            case 'select': ctrl = <Select disabled placeholder={f.placeholder || '선택'} options={parseOpts(f.options).map(o => ({ label: o, value: o }))} />; break;
+            case 'radio': ctrl = <Radio.Group disabled options={parseOpts(f.options)} />; break;
+            case 'checkbox': ctrl = <Checkbox.Group disabled options={parseOpts(f.options)} />; break;
+            case 'user': ctrl = <Select disabled placeholder={f.placeholder || '사용자 선택'} />; break;
+            default: ctrl = <Input disabled placeholder={f.placeholder} />;
+          }
+          return <Col key={i} xs={24} sm={f.width === 'half' ? 12 : 24}><Form.Item label={lbl} style={{ marginBottom: 12 }}>{ctrl}</Form.Item></Col>;
+        })}
+      </Row>
     </Form>
   );
 }
@@ -339,6 +341,11 @@ function TemplateTab() {
     [arr[idx], arr[t]] = [arr[t], arr[idx]];
     setFields(arr);
   };
+  const [dragField, setDragField] = useState(null);
+  const moveFieldTo = (from, to) => {
+    if (from == null || to == null || from === to) return;
+    setFields(prev => { const a = [...prev]; const [m] = a.splice(from, 1); a.splice(to, 0, m); return a; });
+  };
 
   // 기본 결재라인 (프리셋)
   const nextGroupNo = (line) => {
@@ -446,10 +453,16 @@ function TemplateTab() {
           <Card
             key={field.id}
             size="small"
-            style={{ marginBottom: 8, background: '#fafafa' }}
+            draggable
+            onDragStart={() => setDragField(idx)}
+            onDragOver={e => e.preventDefault()}
+            onDrop={() => { moveFieldTo(dragField, idx); setDragField(null); }}
+            onDragEnd={() => setDragField(null)}
+            style={{ marginBottom: 8, background: '#fafafa', opacity: dragField === idx ? 0.4 : 1 }}
             bodyStyle={{ padding: '8px 12px' }}
           >
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+              <HolderOutlined style={{ color: '#bbb', cursor: 'grab', marginTop: 6 }} />
               <Select
                 size="small" style={{ width: 100 }}
                 value={field.type}
@@ -479,6 +492,11 @@ function TemplateTab() {
                 />
               )}
               <Space size={4}>
+                {field.type !== 'divider' && (
+                  <Button size="small" onClick={() => updateField(field.id, 'width', field.width === 'half' ? 'full' : 'half')} title="필드 폭">
+                    {field.width === 'half' ? '반칸' : '전체'}
+                  </Button>
+                )}
                 <Button size="small" type={field.required ? 'primary' : 'default'}
                   onClick={() => updateField(field.id, 'required', !field.required)}>
                   {field.required ? '필수' : '선택'}

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Form, Input, Select, Button, Space, Upload, message, Typography, Divider,
-  Card, DatePicker, InputNumber, Avatar, Radio, Checkbox, Modal, Tooltip, Popconfirm,
+  Card, DatePicker, InputNumber, Avatar, Radio, Checkbox, Modal, Tooltip, Popconfirm, Row, Col,
 } from 'antd';
 import {
   DeleteOutlined, PaperClipOutlined, SaveOutlined,
@@ -476,10 +476,16 @@ export default function DocumentForm({ embedded = false, initialDocId = null, co
           </div>
         </Card>
 
-        {/* 동적 폼 필드 */}
+        {/* 동적 폼 필드 (필드 폭 반영: 반칸=12, 전체=24) */}
         {fields.length > 0 && (
           <Card size="small" title="결재 내용" style={{ marginBottom: 12 }}>
-            {fields.map(f => <DynamicField key={f.id} field={f} form={form} users={users} />)}
+            <Row gutter={16}>
+              {fields.map(f => (
+                <Col key={f.id} xs={24} sm={f.type === 'divider' ? 24 : (f.width === 'half' ? 12 : 24)}>
+                  <DynamicField field={f} form={form} users={users} />
+                </Col>
+              ))}
+            </Row>
           </Card>
         )}
 
