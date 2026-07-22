@@ -9,6 +9,8 @@ import {
   BookOutlined,
   ApartmentOutlined,
   MessageOutlined,
+  ReadOutlined,
+  FileDoneOutlined,
 } from '@ant-design/icons';
 import { globalSearch } from '../../api/search';
 
@@ -19,6 +21,8 @@ const GROUP_ICONS = {
   playbook: <BookOutlined />,
   wbs: <ApartmentOutlined />,
   chat: <MessageOutlined />,
+  bbs: <ReadOutlined />,
+  approval: <FileDoneOutlined />,
 };
 
 const GROUP_COLORS = {
@@ -28,7 +32,21 @@ const GROUP_COLORS = {
   playbook: 'purple',
   wbs: 'cyan',
   chat: 'green',
+  bbs: 'magenta',
+  approval: 'orange',
 };
+
+// 종류 필터 칩 목록
+const CATEGORIES = [
+  { key: 'task', label: '업무' },
+  { key: 'card', label: '보드' },
+  { key: 'memo', label: '메모' },
+  { key: 'playbook', label: '플레이북' },
+  { key: 'wbs', label: '프로젝트' },
+  { key: 'chat', label: '채팅' },
+  { key: 'bbs', label: '게시판' },
+  { key: 'approval', label: '전자결재' },
+];
 
 export default function CommandPalette() {
   const [open, setOpen] = useState(false);
@@ -36,15 +54,37 @@ export default function CommandPalette() {
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(false);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [selectedCats, setSelectedCats] = useState([]); // [] = 전체
+  const [refine, setRefine] = useState('');
   const navigate = useNavigate();
   const debounceRef = useRef(null);
   const inputRef = useRef(null);
 
+  // 종류 필터 + 결과 내 재검색 적용
+  const displayGroups = useMemo(() => {
+    const rf = refine.trim().toLowerCase();
+    return groups
+      .filter((g) => selectedCats.length === 0 || selectedCats.includes(g.key))
+      .map((g) => ({
+        ...g,
+        items: rf
+          ? g.items.filter((it) => `${it.title} ${it.subtitle || ''}`.toLowerCase().includes(rf))
+          : g.items,
+      }))
+      .filter((g) => g.items.length > 0);
+  }, [groups, selectedCats, refine]);
+
   // 평탄화된 항목 리스트 (키보드 네비게이션용)
   const flatItems = useMemo(() => {
     const out = [];
-    groups.forEach((g) => g.items.forEach((it) => out.push({ ...it, _group: g.key, _label: g.label })));
+    displayGroups.forEach((g) => g.items.forEach((it) => out.push({ ...it, _group: g.key, _label: g.label })));
     return out;
+  }, [displayGroups]);
+
+  // 결과에 실제로 존재하는 종류만 칩으로 노출
+  const availableCats = useMemo(() => {
+    const keys = new Set(groups.map((g) => g.key));
+    return CATEGORIES.filter((c) => keys.has(c.key));
   }, [groups]);
 
   // 전역 단축키: Ctrl+F / Cmd+F
@@ -72,6 +112,8 @@ export default function CommandPalette() {
     } else {
       setQ('');
       setGroups([]);
+      setSelectedCats([]);
+      setRefine('');
     }
   }, [open]);
 
@@ -145,6 +187,38 @@ export default function CommandPalette() {
         />
       </div>
 
+      {/* 종류 필터 칩 + 결과 내 재검색 */}
+      {groups.length > 0 && (
+        <div style={{ padding: '8px 14px', borderBottom: '1px solid var(--fd-border, #f0f0f0)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <Tag.CheckableTag
+            checked={selectedCats.length === 0}
+            onChange={() => setSelectedCats([])}
+            style={{ fontSize: 12, borderRadius: 20, padding: '2px 12px' }}
+          >
+            전체
+          </Tag.CheckableTag>
+          {availableCats.map((c) => (
+            <Tag.CheckableTag
+              key={c.key}
+              checked={selectedCats.includes(c.key)}
+              onChange={(chk) => setSelectedCats((prev) => chk ? [...prev, c.key] : prev.filter((k) => k !== c.key))}
+              style={{ fontSize: 12, borderRadius: 20, padding: '2px 12px' }}
+            >
+              {c.label}
+            </Tag.CheckableTag>
+          ))}
+          <Input
+            size="small"
+            allowClear
+            prefix={<SearchOutlined style={{ color: '#bbb', fontSize: 12 }} />}
+            placeholder="결과 내 재검색"
+            value={refine}
+            onChange={(e) => setRefine(e.target.value)}
+            style={{ width: 150, marginLeft: 'auto' }}
+          />
+        </div>
+      )}
+
       <div style={{ maxHeight: 460, overflowY: 'auto', padding: '8px 8px 12px' }}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}><Spin /></div>
@@ -157,7 +231,7 @@ export default function CommandPalette() {
             <Tag style={{ margin: '0 4px' }}>Enter</Tag> 이동 · <Tag style={{ marginLeft: 4 }}>Esc</Tag> 닫기
           </div>
         ) : (
-          groups.map((g) => (
+          displayGroups.map((g) => (
             <div key={g.key} style={{ marginBottom: 6 }}>
               <div style={{
                 fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase',
