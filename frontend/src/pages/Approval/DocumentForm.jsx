@@ -2,17 +2,18 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Form, Input, Select, Button, Space, Upload, message, Typography, Divider,
-  Card, DatePicker, InputNumber, Avatar, Radio, Checkbox,
+  Card, DatePicker, InputNumber, Avatar, Radio, Checkbox, Modal, Tooltip, Popconfirm,
 } from 'antd';
 import {
   DeleteOutlined, PaperClipOutlined, SaveOutlined,
-  SendOutlined, ArrowLeftOutlined,
+  SendOutlined, ArrowLeftOutlined, HolderOutlined, StarOutlined,
 } from '@ant-design/icons';
 import {
   getApprovalFormTypes, getApprovalTemplates, getApprovalTemplate, getApproval,
   resolveApprovalLine, createApproval, updateApproval, submitApproval,
   uploadApprovalAttachment,
 } from '../../api/approval';
+import { getApprovalLinePresets, updateApprovalLinePresets } from '../../api/settings';
 import { getUsers } from '../../api/users';
 import dayjs from 'dayjs';
 
@@ -155,6 +156,56 @@ export default function DocumentForm({ embedded = false, initialDocId = null, co
   const [selectedTypeId, setSelectedTypeId] = useState(null);
   const [isUrgent, setIsUrgent] = useState(false);
   const [dueDate, setDueDate] = useState(null);
+  const [presets, setPresets] = useState([]);
+  const [draggingIdx, setDraggingIdx] = useState(null);
+  const [saveOpen, setSaveOpen] = useState(false);
+  const [presetName, setPresetName] = useState('');
+
+  useEffect(() => { getApprovalLinePresets().then(setPresets).catch(() => {}); }, []);
+
+  // 프리셋 불러오기
+  const loadPreset = (pid) => {
+    const p = presets.find(x => x.id === pid);
+    if (!p) return;
+    setApprovalLine((p.steps || []).map(s => ({
+      approverId: s.approverId, approverName: s.approverName,
+      type: s.type || 'approval', stepOrder: s.stepOrder || 0,
+    })));
+    message.success(`결재선 '${p.name}'을 불러왔습니다.`);
+  };
+  // 현재 결재선을 프리셋으로 저장
+  const savePreset = async () => {
+    if (!presetName.trim()) { message.warning('프리셋 이름을 입력하세요.'); return; }
+    if (approvalLine.length === 0) { message.warning('저장할 결재선이 없습니다.'); return; }
+    const next = [
+      ...presets,
+      {
+        id: Date.now(),
+        name: presetName.trim(),
+        steps: approvalLine.map(s => ({ approverId: s.approverId, approverName: s.approverName, type: s.type, stepOrder: s.stepOrder })),
+      },
+    ];
+    setPresets(next);
+    try { await updateApprovalLinePresets(next); message.success('결재선 프리셋을 저장했습니다.'); }
+    catch { message.error('프리셋 저장 실패'); }
+    setSaveOpen(false); setPresetName('');
+  };
+  const deletePreset = async (pid) => {
+    const next = presets.filter(p => p.id !== pid);
+    setPresets(next);
+    try { await updateApprovalLinePresets(next); } catch {}
+  };
+  // 드래그로 결재자 순서 변경 — 비참조는 순차 차수로 재설정(참조는 0)
+  const moveApprover = (from, to) => {
+    setApprovalLine(prev => {
+      if (from == null || to == null || from === to) return prev;
+      const arr = [...prev];
+      const [m] = arr.splice(from, 1);
+      arr.splice(to, 0, m);
+      let c = 0;
+      return arr.map(s => (s.type === 'reference' ? { ...s, stepOrder: 0 } : { ...s, stepOrder: ++c }));
+    });
+  };
 
   useEffect(() => {
     Promise.all([getApprovalFormTypes(), getUsers()]).then(([types, userList]) => {
@@ -438,11 +489,25 @@ export default function DocumentForm({ embedded = false, initialDocId = null, co
           title="결재 라인"
           style={{ marginBottom: 12 }}
           extra={
-            <Space size={4}>
+            <Space size={4} wrap>
+              {presets.length > 0 && (
+                <Select
+                  placeholder="프리셋 불러오기" style={{ width: 140 }} size="small"
+                  value={null} onChange={loadPreset} popupMatchSelectWidth={false}
+                >
+                  {presets.map(p => (
+                    <Select.Option key={p.id} value={p.id}>{p.name}</Select.Option>
+                  ))}
+                </Select>
+              )}
+              <Tooltip title="현재 결재선을 프리셋으로 저장/관리">
+                <Button size="small" icon={<StarOutlined />}
+                  onClick={() => { setSaveOpen(true); setPresetName(''); }} />
+              </Tooltip>
               <Select
                 id={approverSelectId}
                 placeholder="결재자 추가"
-                style={{ width: 160 }}
+                style={{ width: 180 }}
                 showSearch
                 optionFilterProp="children"
                 onChange={addApprover}
@@ -451,7 +516,7 @@ export default function DocumentForm({ embedded = false, initialDocId = null, co
               >
                 {users.map(u => (
                   <Select.Option key={u.id} value={u.id}>
-                    {u.displayName} ({u.username})
+                    {u.displayName}{u.position ? ` · ${u.position}` : ''} ({u.username})
                   </Select.Option>
                 ))}
               </Select>
@@ -463,13 +528,22 @@ export default function DocumentForm({ embedded = false, initialDocId = null, co
           ) : (
             <div>
               <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
-                같은 <b>차수</b>는 동시(병렬) 결재입니다. 참조는 결재 없이 열람 통보만 받습니다.
+                <HolderOutlined /> 드래그로 순서 변경(차수 순차 재설정) · 같은 <b>차수</b>는 병렬 결재 · 참조는 열람 통보.
               </Text>
               {approvalLine.map((step, i) => (
-                <div key={step.approverId} style={{
-                  display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px',
-                  borderRadius: 6, marginBottom: 6, background: 'var(--fd-bg-layout, #fafafa)',
-                }}>
+                <div key={step.approverId}
+                  draggable
+                  onDragStart={() => setDraggingIdx(i)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={() => { moveApprover(draggingIdx, i); setDraggingIdx(null); }}
+                  onDragEnd={() => setDraggingIdx(null)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px',
+                    borderRadius: 6, marginBottom: 6, background: 'var(--fd-bg-layout, #fafafa)',
+                    opacity: draggingIdx === i ? 0.4 : 1, cursor: 'grab',
+                    border: '1px solid var(--fd-border, #f0f0f0)',
+                  }}>
+                  <HolderOutlined style={{ color: '#bbb', flexShrink: 0 }} />
                   <Avatar size={26} style={{ background: '#1677ff', fontSize: 12, flexShrink: 0 }}>
                     {step.approverName?.[0] || '?'}
                   </Avatar>
@@ -542,6 +616,41 @@ export default function DocumentForm({ embedded = false, initialDocId = null, co
         <Button type="primary" icon={<SendOutlined />} loading={submitting} onClick={handleSubmit}>상신</Button>
         <Button onClick={goBack}>취소</Button>
       </Space>
+
+      {/* 결재선 프리셋 저장/관리 */}
+      <Modal
+        title={<Space><StarOutlined />결재선 프리셋</Space>}
+        open={saveOpen}
+        onCancel={() => { setSaveOpen(false); setPresetName(''); }}
+        footer={null}
+      >
+        <div style={{ marginBottom: 12 }}>
+          <Text style={{ fontSize: 13, fontWeight: 600 }}>현재 결재선 저장</Text>
+          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+            <Input placeholder="프리셋 이름 (예: 지출결재 표준선)" value={presetName}
+              onChange={e => setPresetName(e.target.value)} onPressEnter={savePreset} />
+            <Button type="primary" onClick={savePreset} disabled={approvalLine.length === 0}>저장</Button>
+          </div>
+          {approvalLine.length === 0 && <Text type="secondary" style={{ fontSize: 11 }}>먼저 결재자를 추가하세요.</Text>}
+        </div>
+        <Divider style={{ margin: '12px 0' }} />
+        <Text style={{ fontSize: 13, fontWeight: 600 }}>저장된 프리셋</Text>
+        {presets.length === 0 ? (
+          <div style={{ color: '#999', fontSize: 12, padding: '8px 0' }}>저장된 프리셋이 없습니다.</div>
+        ) : (
+          <div style={{ marginTop: 6 }}>
+            {presets.map(p => (
+              <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #f5f5f5' }}>
+                <span style={{ flex: 1, fontSize: 13 }}>{p.name} <Text type="secondary" style={{ fontSize: 11 }}>({(p.steps || []).length}명)</Text></span>
+                <Button size="small" onClick={() => { loadPreset(p.id); setSaveOpen(false); }}>불러오기</Button>
+                <Popconfirm title="삭제하시겠습니까?" onConfirm={() => deletePreset(p.id)} okText="삭제" cancelText="취소">
+                  <Button size="small" danger type="text" icon={<DeleteOutlined />} />
+                </Popconfirm>
+              </div>
+            ))}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
