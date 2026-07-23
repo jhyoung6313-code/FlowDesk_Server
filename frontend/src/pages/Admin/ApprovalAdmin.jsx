@@ -39,6 +39,28 @@ const OP_OPTIONS = [
   { value: 'contains', label: '포함' },
 ];
 
+// 조건 평가 (미리보기용 — 백엔드 resolvePresetLine 로직 근사)
+function evalCondition(cond, raw) {
+  if (!cond?.field) return true;
+  const v = raw;
+  const cv = cond.value;
+  switch (cond.op || 'truthy') {
+    case 'truthy': {
+      if (Array.isArray(v)) return v.length > 0;
+      const s = String(v ?? '').trim().toLowerCase();
+      return !(s === '' || s === '아니오' || s === 'false' || s === 'no' || s === '0');
+    }
+    case 'eq': return String(v ?? '') === String(cv ?? '');
+    case 'ne': return String(v ?? '') !== String(cv ?? '');
+    case 'gt': return Number(v) > Number(cv);
+    case 'gte': return Number(v) >= Number(cv);
+    case 'lt': return Number(v) < Number(cv);
+    case 'lte': return Number(v) <= Number(cv);
+    case 'contains': return String(v ?? '').includes(String(cv ?? ''));
+    default: return true;
+  }
+}
+
 const FIELD_TYPES = [
   { value: 'text', label: '텍스트' },
   { value: 'textarea', label: '장문 텍스트' },
@@ -214,6 +236,7 @@ function TemplateTab() {
   const [fields, setFields] = useState([]);
   const [defaultLine, setDefaultLine] = useState([]);
   const [previewTpl, setPreviewTpl] = useState(null);
+  const [sampleValues, setSampleValues] = useState({});
 
   const openPreview = async (rec) => {
     try {
@@ -571,6 +594,59 @@ function TemplateTab() {
             )}
           </div>
         ))}
+
+        {/* 조건 결재선 미리보기 — 샘플 값에 따라 최종 결재선 시뮬레이션 */}
+        {(() => {
+          const condFields = [...new Set(defaultLine.filter(s => s.condition?.field).map(s => s.condition.field))];
+          if (condFields.length === 0) return null;
+          const resolved = defaultLine.filter(s => !s.condition || evalCondition(s.condition, sampleValues[s.condition.field]));
+          const renderSampleInput = (fid) => {
+            const f = fields.find(x => x.id === fid);
+            const type = f?.type;
+            const opts = f ? (Array.isArray(f.options) ? f.options : (f.options ? f.options.split('\n').map(s => s.trim()).filter(Boolean) : [])) : [];
+            const set = (v) => setSampleValues(prev => ({ ...prev, [fid]: v }));
+            if (type === 'select' || type === 'radio') {
+              return <Select size="small" allowClear style={{ width: 130 }} value={sampleValues[fid]} onChange={set} options={opts.map(o => ({ label: o, value: o }))} />;
+            }
+            if (type === 'checkbox') {
+              return <Select size="small" mode="multiple" allowClear style={{ minWidth: 130 }} value={sampleValues[fid] || []} onChange={set} options={opts.map(o => ({ label: o, value: o }))} />;
+            }
+            return <Input size="small" style={{ width: 130 }} value={sampleValues[fid] ?? ''} onChange={e => set(e.target.value)} placeholder="샘플 값" />;
+          };
+          return (
+            <>
+              <Divider style={{ margin: '12px 0' }}>조건 결재선 미리보기</Divider>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+                샘플 값을 입력하면 조건에 따라 상신 시 최종 결재선이 어떻게 구성되는지 시뮬레이션합니다.
+              </Text>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+                {condFields.map(fid => {
+                  const f = fields.find(x => x.id === fid);
+                  return (
+                    <div key={fid} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <Text style={{ fontSize: 11, color: '#888' }}>{f?.label || fid}</Text>
+                      {renderSampleInput(fid)}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6, padding: '8px 10px' }}>
+                <Text style={{ fontSize: 12, fontWeight: 600, color: '#389e0d', display: 'block', marginBottom: 6 }}>최종 결재선</Text>
+                {resolved.length === 0 ? (
+                  <Text type="secondary" style={{ fontSize: 12 }}>포함될 결재자가 없습니다.</Text>
+                ) : (
+                  <Space size={[4, 4]} wrap>
+                    {resolved.map((s, i) => (
+                      <Tag key={i} color={s.condition ? 'gold' : 'blue'} style={{ margin: 0 }}>
+                        {s.type === 'reference' ? '참조' : `${s.stepOrder}차`} · {s.kind === 'rule' ? `규칙:${s.position}` : s.approverName} · {ROLE_OPTIONS.find(o => o.value === s.type)?.label}{s.condition ? ' (조건)' : ''}
+                      </Tag>
+                    ))}
+                  </Space>
+                )}
+              </div>
+            </>
+          );
+        })()}
       </Modal>
 
       <Modal
