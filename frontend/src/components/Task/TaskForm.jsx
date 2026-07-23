@@ -18,6 +18,7 @@ import {
   Upload,
   Mentions,
 } from 'antd';
+import SpellTextArea from '../common/SpellTextArea';
 import {
   SaveOutlined, FileTextOutlined, DownOutlined, SendOutlined,
   PaperClipOutlined, DeleteOutlined, DownloadOutlined, MessageOutlined,
@@ -344,7 +345,7 @@ export default function TaskForm({ open, task, onClose, onSubmit, initialStatus 
         </Form.Item>
 
         <Form.Item name="description" label="설명">
-          <TextArea rows={3} placeholder="업무 내용을 입력하세요" />
+          <SpellTextArea rows={3} placeholder="업무 내용을 입력하세요 (오타는 물결 밑줄로 표시됩니다)" />
         </Form.Item>
 
         <Form.Item name="partId" label="담당팀">
