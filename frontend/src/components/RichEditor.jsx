@@ -11,6 +11,8 @@ import { FontColorsOutlined, TableOutlined, PictureOutlined } from '@ant-design/
 import {
   btn, Separator, UndoRedoButtons, TextFormatButtons, AlignButtons, ListButtons, LinkButton, editorContentCss,
 } from './common/editorShared';
+import { applySpellHighlight, clearSpellHighlight } from '../utils/spellHighlight';
+import { addIgnore } from '../utils/koSpell';
 
 const FONT_SIZES = ['10px','12px','13px','14px','16px','18px','20px','24px','28px','32px'];
 const FONT_FAMILIES = [
@@ -53,6 +55,7 @@ export default function RichEditor({
   placeholder = '내용을 입력하세요',
   minHeight = 120,
   style = {},
+  spell = true,
 }) {
   const [tableOpen, setTableOpen] = useState(false);
   const [fontColor, setFontColor] = useState('#000000');
@@ -60,6 +63,17 @@ export default function RichEditor({
   const [fontSize, setFontSize] = useState('14px');
   const [fontFamily, setFontFamily] = useState(null);
   const imgInputRef = useRef(null);
+  const spellTimer = useRef(null);
+  const [spellMatches, setSpellMatches] = useState([]);
+
+  // 오타 검사(디바운스) — DOM 변형 없이 CSS Highlight로 밑줄
+  const scheduleSpell = (ed) => {
+    if (!spell || !ed) return;
+    clearTimeout(spellTimer.current);
+    spellTimer.current = setTimeout(() => {
+      try { setSpellMatches(applySpellHighlight(ed.view.dom)); } catch { /* ignore */ }
+    }, 400);
+  };
 
   const editor = useEditor({
     extensions: [
@@ -81,6 +95,7 @@ export default function RichEditor({
     content: defaultValue,
     onUpdate: ({ editor }) => {
       onChange?.(editor.getHTML());
+      scheduleSpell(editor);
     },
   });
 
@@ -88,8 +103,15 @@ export default function RichEditor({
   useEffect(() => {
     if (editor && defaultValue !== undefined && editor.getHTML() !== defaultValue) {
       editor.commands.setContent(defaultValue || '', false);
+      scheduleSpell(editor);
     }
   }, [defaultValue]);
+
+  // 최초 생성 시 1회 검사 + 언마운트 시 하이라이트 정리
+  useEffect(() => {
+    if (editor && spell) scheduleSpell(editor);
+    return () => { clearTimeout(spellTimer.current); clearSpellHighlight(); };
+  }, [editor]);
 
   const insertImage = (e) => {
     const file = e.target.files?.[0];
@@ -214,7 +236,31 @@ export default function RichEditor({
         style={{ minHeight, background: 'var(--fd-surface)' }}
       />
 
+      {/* 오타 검출 요약 (표시 전용) */}
+      {spell && spellMatches.length > 0 && (
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6,
+          padding: '6px 10px', borderTop: '1px solid var(--fd-border)',
+          background: 'var(--fd-surface-sunken)', fontSize: 12,
+        }}>
+          <span style={{ color: '#e0483d', fontWeight: 600 }}>오타 의심 {spellMatches.length}건</span>
+          {spellMatches.slice(0, 8).map((m, i) => (
+            <span key={i} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              background: m.dict ? '#fbf0dd' : '#fbe9e6', color: m.dict ? '#b0741c' : '#c73a2f',
+              borderRadius: 6, padding: '1px 8px',
+            }}>
+              {m.suggestion ? <>{m.wrong} → <b>{m.suggestion}</b></> : m.wrong}
+              <span title="이 표기 무시" onClick={() => { addIgnore(m.wrong); if (editor) setSpellMatches(applySpellHighlight(editor.view.dom)); }}
+                style={{ cursor: 'pointer', color: '#999', marginLeft: 2, fontWeight: 700 }}>×</span>
+            </span>
+          ))}
+          {spellMatches.length > 8 && <span style={{ color: '#999' }}>외 {spellMatches.length - 8}건</span>}
+        </div>
+      )}
+
       <style>{editorContentCss('rich-editor-tiptap', minHeight)}</style>
+      <style>{`::highlight(ko-spell){ text-decoration: underline wavy #e0483d; text-decoration-skip-ink: none; }`}</style>
     </div>
   );
 }
