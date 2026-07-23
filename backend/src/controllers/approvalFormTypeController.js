@@ -17,8 +17,9 @@ const list = async (req, res, next) => {
 // POST /api/approval-types  (admin only)
 const create = async (req, res, next) => {
   try {
-    const { name, description, parentId, icon, color } = req.body;
+    const { name, description, parentId, icon, color, lineJson } = req.body;
     if (!name) return res.status(400).json({ error: '이름은 필수입니다.' });
+    if (lineJson) { try { JSON.parse(lineJson); } catch { return res.status(400).json({ error: 'lineJson 형식 오류' }); } }
 
     const siblings = await prisma.approvalFormType.findMany({
       where: { parentId: parentId ? Number(parentId) : null },
@@ -35,6 +36,7 @@ const create = async (req, res, next) => {
         icon: icon ?? null,
         color: color ?? null,
         order,
+        lineJson: lineJson ?? null,
         createdBy: req.user.id,
       },
     });
@@ -48,7 +50,8 @@ const create = async (req, res, next) => {
 const update = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    const { name, description, parentId, icon, color, isActive } = req.body;
+    const { name, description, parentId, icon, color, isActive, lineJson } = req.body;
+    if (lineJson) { try { JSON.parse(lineJson); } catch { return res.status(400).json({ error: 'lineJson 형식 오류' }); } }
 
     const formType = await prisma.approvalFormType.findUnique({ where: { id } });
     if (!formType) return res.status(404).json({ error: '결재 양식 종류를 찾을 수 없습니다.' });
@@ -62,6 +65,7 @@ const update = async (req, res, next) => {
         ...(icon !== undefined && { icon }),
         ...(color !== undefined && { color }),
         ...(isActive !== undefined && { isActive }),
+        ...(lineJson !== undefined && { lineJson }),
       },
     });
     res.json(updated);

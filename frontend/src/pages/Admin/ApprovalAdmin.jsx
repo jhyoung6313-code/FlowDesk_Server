@@ -116,6 +116,47 @@ function FormTypeTab() {
   const [editing, setEditing] = useState(null);
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+  const [ftUsers, setFtUsers] = useState([]);
+  const [ftLine, setFtLine] = useState([]);
+  const [ftRulePos, setFtRulePos] = useState('');
+  const [ftRuleScope, setFtRuleScope] = useState('team');
+
+  useEffect(() => { getUsers().then(setFtUsers).catch(() => {}); }, []);
+
+  const ftNextGroup = (line) => { const gs = line.filter(s => s.type !== 'reference').map(s => s.stepOrder); return gs.length ? Math.max(...gs) + 1 : 1; };
+  const ftParse = (lineJson) => {
+    if (!lineJson) return [];
+    let l = []; try { l = JSON.parse(lineJson); } catch { return []; }
+    return l.map((s, i) => {
+      const type = s.type || 'approval';
+      const stepOrder = type === 'reference' ? 0 : (s.stepOrder || i + 1);
+      if (s.rule?.by === 'position') return { key: `r${i}`, kind: 'rule', position: s.rule.value || '', scope: s.rule.scope || 'all', type, stepOrder };
+      const u = ftUsers.find(x => x.id === s.approverId);
+      return { key: `u${s.approverId}`, kind: 'user', approverId: s.approverId, approverName: u?.displayName || `사용자 ${s.approverId}`, type, stepOrder };
+    });
+  };
+  const ftAddUser = (uid) => {
+    if (!uid || ftLine.some(s => s.kind === 'user' && s.approverId === uid)) return;
+    const u = ftUsers.find(x => x.id === uid);
+    setFtLine(p => [...p, { key: `u${uid}`, kind: 'user', approverId: uid, approverName: u?.displayName || '', type: 'approval', stepOrder: ftNextGroup(p) }]);
+  };
+  const ftAddRule = () => {
+    const pos = ftRulePos.trim();
+    if (!pos) { message.warning('직급/직책을 입력하세요.'); return; }
+    setFtLine(p => [...p, { key: `r${Date.now()}`, kind: 'rule', position: pos, scope: ftRuleScope, type: 'approval', stepOrder: ftNextGroup(p) }]);
+    setFtRulePos('');
+  };
+  const ftRemove = (i) => setFtLine(p => p.filter((_, idx) => idx !== i));
+  const ftSetRole = (i, type) => setFtLine(p => p.map((s, idx) => idx !== i ? s : { ...s, type, stepOrder: type === 'reference' ? 0 : (s.stepOrder || ftNextGroup(p)) }));
+  const ftSetGroup = (i, v) => setFtLine(p => p.map((s, idx) => idx === i ? { ...s, stepOrder: Math.max(1, Number(v) || 1) } : s));
+  const ftLineToJson = () => ftLine.length > 0
+    ? JSON.stringify(ftLine.map(s => {
+        const stepOrder = s.type === 'reference' ? 0 : s.stepOrder;
+        return s.kind === 'rule'
+          ? { stepOrder, type: s.type, rule: { by: 'position', value: s.position, scope: s.scope } }
+          : { stepOrder, type: s.type, approverId: s.approverId };
+      }))
+    : null;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -126,10 +167,11 @@ function FormTypeTab() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openCreate = () => { setEditing(null); form.resetFields(); setModalOpen(true); };
+  const openCreate = () => { setEditing(null); form.resetFields(); setFtLine([]); setModalOpen(true); };
   const openEdit = (rec) => {
     setEditing(rec);
     form.setFieldsValue({ name: rec.name, description: rec.description, parentId: rec.parentId || undefined, icon: rec.icon || undefined, isActive: rec.isActive });
+    setFtLine(ftParse(rec.lineJson));
     setModalOpen(true);
   };
 
@@ -137,11 +179,12 @@ function FormTypeTab() {
     try {
       const values = await form.validateFields();
       setSaving(true);
+      const payload = { ...values, lineJson: ftLineToJson() };
       if (editing) {
-        await updateApprovalFormType(editing.id, values);
+        await updateApprovalFormType(editing.id, payload);
         message.success('수정되었습니다.');
       } else {
-        await createApprovalFormType(values);
+        await createApprovalFormType(payload);
         message.success('생성되었습니다.');
       }
       setModalOpen(false);
@@ -218,6 +261,44 @@ function FormTypeTab() {
             <Switch />
           </Form.Item>
         </Form>
+
+        <Divider style={{ margin: '12px 0' }}>기본 결재 라인 (이 종류 공통, 선택)</Divider>
+        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+          이 종류의 <b>공통 기본 결재선</b>입니다. 하위 양식(템플릿)에 자체 결재선이 없으면 이 결재선이 상속됩니다.
+        </Text>
+        <Space size={6} wrap style={{ marginBottom: 8 }}>
+          <Select
+            placeholder="지정 사용자 추가" style={{ width: 190 }} size="small"
+            showSearch optionFilterProp="children" onChange={ftAddUser} value={null}
+          >
+            {ftUsers.map(u => <Select.Option key={u.id} value={u.id}>{u.displayName} ({u.username})</Select.Option>)}
+          </Select>
+          <Input.Group compact>
+            <Input size="small" placeholder="직급/직책 (예: 팀장)" style={{ width: 130 }}
+              value={ftRulePos} onChange={e => setFtRulePos(e.target.value)} onPressEnter={ftAddRule} />
+            <Select size="small" value={ftRuleScope} onChange={setFtRuleScope} options={SCOPE_OPTIONS} style={{ width: 90 }} />
+            <Button size="small" icon={<PlusCircleOutlined />} onClick={ftAddRule}>규칙 추가</Button>
+          </Input.Group>
+        </Space>
+        {ftLine.length === 0 ? (
+          <Text type="secondary" style={{ fontSize: 12 }}>지정된 기본 결재선이 없습니다.</Text>
+        ) : ftLine.map((step, i) => (
+          <div key={step.key || i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px dashed #f0f0f0' }}>
+            {step.kind === 'rule'
+              ? <Tag color="geekblue" style={{ margin: 0 }}>규칙: {step.position} · {SCOPE_OPTIONS.find(o => o.value === step.scope)?.label}</Tag>
+              : <Text style={{ fontSize: 13, minWidth: 90 }}>{step.approverName}</Text>}
+            <Select size="small" value={step.type} style={{ width: 78 }} onChange={v => ftSetRole(i, v)} options={ROLE_OPTIONS} />
+            {step.type === 'reference'
+              ? <Text type="secondary" style={{ fontSize: 12, width: 56 }}>열람</Text>
+              : (
+                <Space size={2} style={{ width: 56 }}>
+                  <InputNumber size="small" min={1} value={step.stepOrder} controls={false} onChange={v => ftSetGroup(i, v)} style={{ width: 42 }} />
+                  <Text type="secondary" style={{ fontSize: 12 }}>차</Text>
+                </Space>
+              )}
+            <Button size="small" danger icon={<MinusCircleOutlined />} onClick={() => ftRemove(i)} />
+          </div>
+        ))}
       </Modal>
     </>
   );

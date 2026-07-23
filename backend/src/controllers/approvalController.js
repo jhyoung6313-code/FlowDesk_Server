@@ -260,7 +260,7 @@ const submit = async (req, res, next) => {
     const id = Number(req.params.id);
     const doc = await prisma.approvalDocument.findFirst({
       where: { id, delYn: '0' },
-      include: { steps: { orderBy: { stepOrder: 'asc' } }, creator: true, template: { select: { code: true, lineJson: true } } },
+      include: { steps: { orderBy: { stepOrder: 'asc' } }, creator: true, template: { select: { code: true, lineJson: true, formTypeId: true } } },
     });
     if (!doc) return res.status(404).json({ error: '결재 문서를 찾을 수 없습니다.' });
     if (doc.createdBy !== req.user.id) return res.status(403).json({ error: '상신 권한이 없습니다.' });

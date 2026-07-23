@@ -1508,6 +1508,7 @@ model ApprovalFormType {
   color       String?           @db.VarChar(30)
   order       Int               @default(0)
   isActive    Boolean           @default(true) @map("is_active")
+  lineJson    String?           @map("line_json") @db.Text
   createdBy   Int               @map("created_by")
   createdAt   DateTime          @default(now()) @map("created_at")
   updatedAt   DateTime          @updatedAt @map("updated_at")
