@@ -7,6 +7,7 @@ import { PlusOutlined, DeleteOutlined, CloseCircleOutlined, FileDoneOutlined, Cl
 import { getApprovals, deleteApproval, cancelApproval, getApprovalFormTypes, approveApproval, rejectApproval } from '../../api/approval';
 import DocumentForm from './DocumentForm';
 import DocumentDetail from './DocumentDetail';
+import SpellTextArea from '../../components/common/SpellTextArea';
 import useAuthStore from '../../store/authStore';
 import dayjs from 'dayjs';
 
@@ -381,7 +382,7 @@ export default function ApprovalPage() {
         <div style={{ marginBottom: 8 }}>
           <Text type="secondary" style={{ fontSize: 13 }}>반려 사유를 입력하세요 (필수).</Text>
         </div>
-        <Input.TextArea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={3} placeholder="반려 사유를 반드시 입력하세요." />
+        <SpellTextArea value={rejectReason} onChange={setRejectReason} rows={3} placeholder="반려 사유를 반드시 입력하세요." />
       </Modal>
     </div>
   );

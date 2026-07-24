@@ -17,6 +17,7 @@ import {
   deleteApprovalAttachment, downloadApprovalAttachmentUrl,
 } from '../../api/approval';
 import { getUsers } from '../../api/users';
+import SpellTextArea from '../../components/common/SpellTextArea';
 import useAuthStore from '../../store/authStore';
 import dayjs from 'dayjs';
 
@@ -553,11 +554,11 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                 {getInitial(user?.displayName)}
               </Avatar>
               <div style={{ flex: 1 }}>
-                <TextArea
+                <SpellTextArea
                   value={newComment}
-                  onChange={e => setNewComment(e.target.value)}
+                  onChange={setNewComment}
                   placeholder="의견을 입력하세요"
-                  autoSize={{ minRows: 2, maxRows: 5 }}
+                  rows={2}
                   style={{ marginBottom: 6 }}
                 />
                 <div style={{ textAlign: 'right' }}>
@@ -649,9 +650,9 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
             {actionModal === 'approve' ? '승인 의견을 입력하세요 (선택).' : '반려 사유를 입력하세요 (필수).'}
           </Text>
         </div>
-        <TextArea
+        <SpellTextArea
           value={actionComment}
-          onChange={e => setActionComment(e.target.value)}
+          onChange={setActionComment}
           rows={3}
           placeholder={actionModal === 'reject' ? '반려 사유를 반드시 입력하세요.' : '의견 (선택)'}
         />
