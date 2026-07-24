@@ -24,6 +24,10 @@
 - 환경변수: `backend/.env`
 - 서버 시작: `bash restart.sh` (또는 `restart.bat`)
 - 기능정의서: `FEATURES.md`
+- **새 PC/다른 환경 세팅 가이드: `SETUP.md`**
+
+## 새 PC에서 이어서 작업 (중요)
+사용자가 "다른 PC에서 이어서 작업", "새 컴퓨터에서 세팅", "환경 옮기기", "이어받기" 등을 물으면 **`SETUP.md`를 읽고 그 내용으로 안내**한다. 핵심: 코드는 git으로 전부 공유되지만 ① `node_modules`(npm install) ② `backend/.env`(git 제외, `backend/.env.example` 복사 후 값 입력 — 특히 `DATA_ENCRYPTION_KEY`는 기존 DB 데이터를 옮기면 기존 PC와 **동일** 값 필요) ③ PostgreSQL 로컬 DB(`prisma migrate deploy` + 새 DB면 `npm run seed`, 기존 데이터면 `pg_dump`/복원)는 각 PC에서 새로 준비해야 한다. 현재 작업 브랜치는 `feat/m365-gap-features`.
 
 ## 디렉토리 구조
 ```
