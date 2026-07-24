@@ -79,7 +79,7 @@ export default function DocumentsPage() {
       <Typography.Paragraph type="secondary">
         업무·보드·게시판·결재·메일에 첨부된 파일을 한 곳에서 검색합니다. (메일·결재는 본인 관련만 표시)
       </Typography.Paragraph>
-      <Space style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }} wrap>
+      <Space className="fd-toolbar" style={{ marginBottom: 16, width: '100%', justifyContent: 'space-between' }} wrap>
         <Segmented options={opts} value={source} onChange={setSource} />
         <Input.Search allowClear placeholder="파일명 검색" style={{ width: 260 }} value={q} onChange={(e) => setQ(e.target.value)} />
       </Space>

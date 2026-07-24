@@ -38,7 +38,7 @@ export default function NotificationsPage() {
 
   return (
     <div>
-      <Row align="middle" justify="space-between" style={{ marginBottom: 16 }}>
+      <Row align="middle" justify="space-between" className="fd-toolbar" style={{ marginBottom: 16 }}>
         <Space align="center">
           <Typography.Title level={4} style={{ margin: 0 }}>알림</Typography.Title>
           {unreadCount > 0 && (

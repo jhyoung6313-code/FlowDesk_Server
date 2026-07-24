@@ -198,7 +198,7 @@ export default function FormsPage() {
 
   return (
     <div style={{ padding: 20, maxWidth: 1000, margin: '0 auto' }}>
-      <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: 16 }}>
+      <Space className="fd-toolbar" style={{ width: '100%', justifyContent: 'space-between', marginBottom: 16 }}>
         <Typography.Title level={3} style={{ margin: 0 }}><FormOutlined /> 설문 · 투표</Typography.Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditing(null); setBuilderOpen(true); }}>새 설문</Button>
       </Space>

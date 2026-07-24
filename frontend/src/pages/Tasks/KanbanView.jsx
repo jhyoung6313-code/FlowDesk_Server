@@ -133,7 +133,7 @@ export default function KanbanView() {
   return (
     <div>
       {/* 액션 버튼 영역 */}
-      <Row justify="end" style={{ marginBottom: 16 }}>
+      <Row justify="end" className="fd-toolbar" style={{ marginBottom: 16 }}>
         <Button type="primary" icon={<PlusOutlined />}
           onClick={() => { setCurrentTask(null); setFormOpen(true); }}>
           업무 등록

@@ -3,13 +3,13 @@ import { useSearchParams } from 'react-router-dom';
 import {
   Layout, Tree, Table, Button, Space, Typography, Tag, Input, message,
   Form, Select, Tooltip, Popconfirm, Badge, theme as antTheme, Empty, Switch,
-  DatePicker,
+  DatePicker, Segmented,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, PushpinOutlined,
   EyeOutlined, CommentOutlined, PaperClipOutlined, SearchOutlined,
   FolderOutlined, FileTextOutlined, SettingOutlined, LockOutlined,
-  UnlockOutlined,
+  UnlockOutlined, ProfileOutlined, ContainerOutlined,
 } from '@ant-design/icons';
 import {
   getBbsCategories, createBbsCategory, updateBbsCategory, deleteBbsCategory,
@@ -76,6 +76,15 @@ export default function BbsPage() {
   const searchTimer = useRef(null);
 
   const [selectedPostId, setSelectedPostId] = useState(null);
+  // 미리보기 패널 토글 (B: 사이드 프리뷰 / C: 전체화면 상세) — 사용자별 기억
+  const [previewMode, setPreviewMode] = useState(() => {
+    const v = localStorage.getItem('bbs_preview_mode');
+    return v === null ? true : v === '1';
+  });
+  const togglePreviewMode = (v) => {
+    setPreviewMode(v);
+    localStorage.setItem('bbs_preview_mode', v ? '1' : '0');
+  };
 
   const [catModalOpen, setCatModalOpen] = useState(false);
   const [editingCat, setEditingCat] = useState(null);
@@ -337,7 +346,9 @@ export default function BbsPage() {
     children: node.children ? treeDataWithRender(node.children, false) : [],
   }));
 
-  const compact = !!selectedPostId;
+  // 사이드 프리뷰(B) 모드에서만 목록을 좁게(compact) 표시. 전체화면(C) 모드는 목록을 숨기고 상세만 노출
+  const sidePreview = !!selectedPostId && previewMode;
+  const compact = sidePreview;
 
   const titleColumn = {
     title: '제목',
@@ -459,8 +470,6 @@ export default function BbsPage() {
       <style>{`
         .cat-actions { opacity: 0; transition: opacity 0.15s; }
         .ant-tree-node-content-wrapper:hover .cat-actions { opacity: 1; }
-        .bbs-search .ant-input-affix-wrapper,
-        .bbs-search .ant-input-search-button { height: 32px; }
       `}</style>
 
       {/* 카테고리 사이드바 */}
@@ -516,12 +525,12 @@ export default function BbsPage() {
 
       {/* 게시글 목록 / 상세 */}
       <Content style={{ display: 'flex', overflow: 'hidden', background: token.colorBgLayout, padding: 0 }}>
-        {/* 목록 패널 */}
+        {/* 목록 패널 (전체화면 모드에서 문서 선택 시 숨김) */}
         <div style={{
-          width: selectedPostId ? 400 : '100%',
+          width: sidePreview ? 400 : '100%',
           flexShrink: 0,
-          borderRight: selectedPostId ? `1px solid ${token.colorBorderSecondary}` : 'none',
-          display: 'flex',
+          borderRight: sidePreview ? `1px solid ${token.colorBorderSecondary}` : 'none',
+          display: (selectedPostId && !previewMode) ? 'none' : 'flex',
           flexDirection: 'column',
           background: token.colorBgContainer,
           transition: 'width 0.2s',
@@ -550,13 +559,13 @@ export default function BbsPage() {
                     <Tag icon={<LockOutlined />} color="warning" style={{ fontSize: 11 }}>관리자 전용</Tag>
                   )}
                 </Space>
-                <Space size={8} align="center" wrap>
+                <Space size={6} align="center" wrap className="fd-toolbar">
                   {!compact && (
                     <Space size={4} align="center">
                       <Select
                         value={dateField}
                         onChange={setDateField}
-                        style={{ width: 96 }}
+                        style={{ width: 92 }}
                         options={[
                           { value: 'createdAt', label: '작성일' },
                           { value: 'officialDueDate', label: '처리기한' },
@@ -567,15 +576,14 @@ export default function BbsPage() {
                         onChange={(v) => { setDateRange(v); setPage(1); }}
                         format="YYYY-MM-DD"
                         allowEmpty={[true, true]}
-                        style={{ width: 240 }}
+                        style={{ width: 226 }}
                       />
                     </Space>
                   )}
                   <Select
                     value={searchField}
                     onChange={setSearchField}
-                    size="middle"
-                    style={{ width: 96 }}
+                    style={{ width: 92 }}
                     options={[
                       { value: 'title', label: '제목' },
                       { value: 'senderOrg', label: '발신처' },
@@ -590,15 +598,25 @@ export default function BbsPage() {
                     value={searchInput}
                     onChange={(e) => handleSearchChange(e.target.value)}
                     onSearch={handleSearchNow}
-                    style={{ width: compact ? 130 : 180, height: 32 }}
-                    className="bbs-search"
+                    style={{ width: compact ? 130 : 170 }}
                   />
+                  {!compact && (
+                    <Tooltip title={previewMode ? '미리보기 패널: 켜짐 (목록 옆에서 바로 열람)' : '미리보기 패널: 꺼짐 (전체화면으로 열람)'}>
+                      <Segmented
+                        value={previewMode ? 'preview' : 'full'}
+                        onChange={(v) => togglePreviewMode(v === 'preview')}
+                        options={[
+                          { value: 'preview', icon: <ProfileOutlined /> },
+                          { value: 'full', icon: <ContainerOutlined /> },
+                        ]}
+                      />
+                    </Tooltip>
+                  )}
                   {canWrite && (
                     <Button
                       type="primary"
                       icon={<PlusOutlined />}
                       onClick={() => { setEditingPostId(null); setPostDrawerOpen(true); }}
-                      style={{ height: 32 }}
                     >
                       글쓰기
                     </Button>

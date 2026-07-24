@@ -44,7 +44,7 @@ export default function WorkloadPage() {
 
   return (
     <div>
-      <Row align="middle" justify="space-between" style={{ marginBottom: 16 }}>
+      <Row align="middle" justify="space-between" className="fd-toolbar" style={{ marginBottom: 16 }}>
         <Space align="center">
           <TeamOutlined style={{ fontSize: 20, color: '#1677ff' }} />
           <Typography.Title level={4} style={{ margin: 0 }}>워크로드 밸런싱</Typography.Title>

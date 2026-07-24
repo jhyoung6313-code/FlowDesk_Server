@@ -88,7 +88,7 @@ export default function PlaybookListPage({ onNew } = {}) {
           <BookOutlined style={{ marginRight: 8, color: '#1677ff' }} />
           Playbook
         </Title>
-        <Space>
+        <Space className="fd-toolbar">
           <Space.Compact>
             <Button
               icon={<AppstoreOutlined />}
@@ -112,7 +112,7 @@ export default function PlaybookListPage({ onNew } = {}) {
       </div>
 
       {/* 필터 바 */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+      <div className="fd-toolbar" style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         <Search
           placeholder="Playbook 검색..."
           value={search}

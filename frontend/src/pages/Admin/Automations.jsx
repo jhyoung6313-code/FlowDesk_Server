@@ -167,7 +167,7 @@ export default function AutomationsPage() {
 
   return (
     <div>
-      <Space style={{ marginBottom: 8, justifyContent: 'space-between', width: '100%' }} wrap>
+      <Space className="fd-toolbar" style={{ marginBottom: 8, justifyContent: 'space-between', width: '100%' }} wrap>
         <Typography.Title level={4} style={{ margin: 0 }}>
           <ThunderboltOutlined style={{ color: '#faad14', marginRight: 8 }} />자동화 규칙
         </Typography.Title>

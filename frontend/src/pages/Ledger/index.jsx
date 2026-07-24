@@ -370,7 +370,7 @@ export default function LedgerPage() {
   return (
     <div>
       {/* ── 헤더 ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+      <div className="fd-toolbar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <Title level={4} style={{ margin: 0 }}>
           <WalletOutlined style={{ marginRight: 8, color: '#52c41a' }} />가계부
         </Title>

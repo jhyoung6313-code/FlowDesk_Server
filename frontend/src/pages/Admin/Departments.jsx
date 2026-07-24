@@ -178,7 +178,7 @@ export default function DepartmentsAdminPage() {
 
   return (
     <div>
-      <Row align="middle" justify="space-between" style={{ marginBottom: 16 }}>
+      <Row align="middle" justify="space-between" className="fd-toolbar" style={{ marginBottom: 16 }}>
         <Typography.Title level={4} style={{ margin: 0 }}>부서 · 팀 관리</Typography.Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => openDept()}>부서 추가</Button>
       </Row>

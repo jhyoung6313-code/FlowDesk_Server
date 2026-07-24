@@ -180,7 +180,7 @@ export default function RecurringTasksPage() {
 
   return (
     <div>
-      <Space style={{ marginBottom: 16, justifyContent: 'space-between', width: '100%' }} wrap>
+      <Space className="fd-toolbar" style={{ marginBottom: 16, justifyContent: 'space-between', width: '100%' }} wrap>
         <Typography.Title level={4} style={{ margin: 0 }}>반복 업무 관리</Typography.Title>
         <Space>
           <Tooltip title="오늘 날짜 기준으로 반복 업무를 즉시 생성합니다">

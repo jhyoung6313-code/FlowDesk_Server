@@ -402,7 +402,7 @@ export default function ListView() {
     <div>
       {/* 액션 버튼 영역 */}
       <Row justify="end" style={{ marginBottom: 16 }}>
-        <Space>
+        <Space className="fd-toolbar">
           <Button
             icon={<FileExcelOutlined />}
             loading={excelExporting}

@@ -197,7 +197,7 @@ export default function OkrPage() {
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div className="fd-toolbar" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
         <Typography.Title level={4} style={{ margin: 0 }}>🎯 OKR / 목표 관리</Typography.Title>
         <Select
           value={cycleId} onChange={setCycleId} style={{ minWidth: 180 }} placeholder="주기 선택"

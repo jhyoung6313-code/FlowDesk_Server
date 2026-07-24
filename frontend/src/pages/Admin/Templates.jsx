@@ -185,7 +185,7 @@ export default function TemplatesPage() {
 
   return (
     <div>
-      <Space style={{ marginBottom: 16, justifyContent: 'space-between', width: '100%' }} wrap>
+      <Space className="fd-toolbar" style={{ marginBottom: 16, justifyContent: 'space-between', width: '100%' }} wrap>
         <Typography.Title level={4} style={{ margin: 0 }}>업무 템플릿 관리</Typography.Title>
         <Typography.Text type="secondary">
           업무 폼에서 "템플릿으로 저장" 버튼으로 등록된 템플릿을 관리합니다.

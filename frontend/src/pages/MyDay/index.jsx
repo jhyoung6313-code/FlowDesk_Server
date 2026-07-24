@@ -42,7 +42,7 @@ export default function MyDayPage() {
 
   return (
     <div style={{ padding: 20, maxWidth: 1100, margin: '0 auto' }}>
-      <Space style={{ width: '100%', justifyContent: 'space-between', marginBottom: 16 }}>
+      <Space className="fd-toolbar" style={{ width: '100%', justifyContent: 'space-between', marginBottom: 16 }}>
         <Typography.Title level={3} style={{ margin: 0 }}>
           ☀️ 내 하루 <Typography.Text type="secondary" style={{ fontSize: 14 }}>{dayjs(data.date).format('YYYY-MM-DD (ddd)')}</Typography.Text>
         </Typography.Title>

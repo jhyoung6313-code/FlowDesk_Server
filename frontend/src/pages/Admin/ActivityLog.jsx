@@ -130,7 +130,7 @@ export default function ActivityLogPage() {
 
       {/* 필터 + 테이블 */}
       <Card style={{ borderRadius: 8 }}>
-        <Space style={{ marginBottom: 12 }} wrap>
+        <Space className="fd-toolbar" style={{ marginBottom: 12 }} wrap>
           <Select
             placeholder="사용자 필터"
             allowClear

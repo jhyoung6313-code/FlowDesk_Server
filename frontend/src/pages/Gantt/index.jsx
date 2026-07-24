@@ -264,7 +264,7 @@ export default function GanttPage({ embedded = false }) {
   return (
     <div>
       {/* 상단 제목 + 뷰 전환 + 마일스톤 버튼 */}
-      <Space style={{ marginBottom: 12, justifyContent: 'space-between', width: '100%' }} wrap>
+      <Space className="fd-toolbar" style={{ marginBottom: 12, justifyContent: 'space-between', width: '100%' }} wrap>
         <Typography.Title level={4} style={{ margin: 0 }}>
           {!embedded && '간트 차트'}
           {hasFilter && (
@@ -294,7 +294,7 @@ export default function GanttPage({ embedded = false }) {
       </Space>
 
       {/* 필터 행 */}
-      <Space style={{ marginBottom: 12, flexWrap: 'wrap' }} size={[8, 8]} wrap>
+      <Space className="fd-toolbar" style={{ marginBottom: 12, flexWrap: 'wrap' }} size={[8, 8]} wrap>
         <FilterOutlined style={{ color: '#8c8c8c' }} />
         <Input.Search
           placeholder="업무명 검색"

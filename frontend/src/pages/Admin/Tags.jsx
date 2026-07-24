@@ -126,7 +126,7 @@ export default function TagsPage() {
 
   return (
     <div>
-      <Space style={{ marginBottom: 16, justifyContent: 'space-between', width: '100%' }} wrap>
+      <Space className="fd-toolbar" style={{ marginBottom: 16, justifyContent: 'space-between', width: '100%' }} wrap>
         <Typography.Title level={4} style={{ margin: 0 }}>태그 관리</Typography.Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>태그 추가</Button>
       </Space>
