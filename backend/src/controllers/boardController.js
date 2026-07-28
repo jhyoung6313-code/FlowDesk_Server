@@ -1329,6 +1329,27 @@ const listDependencies = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// 의존성 그래프에서 dependent → blocking 간선을 추가하면 순환이 생기는지 검사.
+// 간선 의미: dependent가 blocking에 의존(blocking이 먼저 끝나야 함). blockingId에서
+// 그 의존 대상을 따라가다 dependentId에 도달하면 순환이다.
+async function dependencyCreatesCycle(dependentId, blockingId) {
+  const visited = new Set();
+  let frontier = [blockingId];
+  while (frontier.length) {
+    const rows = await prisma.boardCardDependency.findMany({
+      where: { dependentId: { in: frontier } },
+      select: { blockingId: true },
+    });
+    const next = [];
+    for (const r of rows) {
+      if (r.blockingId === dependentId) return true; // 되돌아옴 → 순환
+      if (!visited.has(r.blockingId)) { visited.add(r.blockingId); next.push(r.blockingId); }
+    }
+    frontier = next;
+  }
+  return false;
+}
+
 const addDependency = async (req, res, next) => {
   try {
     const boardId = Number(req.params.id);
@@ -1337,11 +1358,16 @@ const addDependency = async (req, res, next) => {
       return res.status(403).json({ error: '권한이 없습니다.' });
     }
     const { blockingId } = req.body;
-    if (!blockingId || blockingId === dependentId) {
+    const blockId = Number(blockingId);
+    if (!blockId || blockId === dependentId) {
       return res.status(400).json({ error: '유효하지 않은 의존성입니다.' });
     }
+    // 순환 의존성 방지 (A→B, B→A 또는 더 긴 사이클 차단)
+    if (await dependencyCreatesCycle(dependentId, blockId)) {
+      return res.status(400).json({ error: '순환 의존성은 만들 수 없습니다.' });
+    }
     const dep = await prisma.boardCardDependency.create({
-      data: { dependentId, blockingId: Number(blockingId) },
+      data: { dependentId, blockingId: blockId },
       include: { blocking: { select: { id: true, cardNumber: true, title: true, status: true } } },
     });
     res.status(201).json(dep);

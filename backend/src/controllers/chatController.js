@@ -602,8 +602,14 @@ const searchMessages = async (req, res) => {
     .findMany({ where: { userId }, select: { roomId: true } })
     .then((ms) => ms.map((m) => m.roomId));
 
+  // 특정 방 검색 시에도 내가 멤버인 방만 허용 (비멤버가 임의 roomId로 메시지 열람 방지)
+  const targetRoomId = roomId ? Number(roomId) : null;
+  if (targetRoomId && !myRoomIds.includes(targetRoomId)) {
+    return res.status(403).json({ error: '채팅방 멤버가 아닙니다.' });
+  }
+
   const where = {
-    roomId: roomId ? Number(roomId) : { in: myRoomIds },
+    roomId: targetRoomId || { in: myRoomIds },
     isDeleted: false,
     content: { contains: q.trim(), mode: 'insensitive' },
   };

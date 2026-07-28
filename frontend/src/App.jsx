@@ -200,7 +200,7 @@ export default function App() {
 
       <Suspense
         fallback={
-          <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--fd-content-bg-light, #f4f4f2)' }}>
             <Spin size="large" tip="로딩 중..." />
           </div>
         }

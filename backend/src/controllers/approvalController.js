@@ -578,8 +578,17 @@ const downloadAttachment = async (req, res, next) => {
   try {
     const attachment = await prisma.approvalAttachment.findUnique({
       where: { id: Number(req.params.aid) },
+      include: { document: { select: { createdBy: true, delYn: true, steps: { select: { approverId: true } } } } },
     });
     if (!attachment) return res.status(404).json({ error: '파일을 찾을 수 없습니다.' });
+
+    // 접근 권한: 작성자·결재자·admin만 (get과 동일 규칙)
+    const doc = attachment.document;
+    if (!doc || doc.delYn !== '0') return res.status(404).json({ error: '결재 문서를 찾을 수 없습니다.' });
+    const isApprover = doc.steps.some(s => s.approverId === req.user.id);
+    if (req.user.role !== 'admin' && doc.createdBy !== req.user.id && !isApprover) {
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
+    }
 
     const filePath = path.join(UPLOAD_DIR, attachment.storedName);
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: '파일이 서버에 존재하지 않습니다.' });

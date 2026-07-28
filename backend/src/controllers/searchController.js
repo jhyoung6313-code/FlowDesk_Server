@@ -57,9 +57,15 @@ const search = async (req, res, next) => {
         orderBy: { createdAt: 'desc' },
         take: perGroup,
       }),
-      // 게시판 글 (제목·내용)
+      // 게시판 글 (제목·내용) — F-67 기밀 게이트: 비관리자는 기밀 글 제외(본인 작성 제외)
       prisma.bbsPost.findMany({
-        where: { delYn: '0', OR: [{ title: contains }, { content: contains }] },
+        where: {
+          delYn: '0',
+          AND: [
+            { OR: [{ title: contains }, { content: contains }] },
+            ...(isAdmin ? [] : [{ OR: [{ NOT: { sensitivity: 'confidential' } }, { createdBy: userId }] }]),
+          ],
+        },
         select: { id: true, title: true, categoryId: true, category: { select: { name: true } } },
         orderBy: { updatedAt: 'desc' },
         take: perGroup,

@@ -8,6 +8,7 @@ import { getApprovals, deleteApproval, cancelApproval, getApprovalFormTypes, app
 import DocumentForm from './DocumentForm';
 import DocumentDetail from './DocumentDetail';
 import SpellTextArea from '../../components/common/SpellTextArea';
+import { avatarColor } from '../../utils/listkit';
 import useAuthStore from '../../store/authStore';
 import dayjs from 'dayjs';
 
@@ -187,7 +188,7 @@ export default function ApprovalPage() {
         {/* 기안자 */}
         <div style={{ textAlign: 'center' }}>
           <Tooltip title={doc.creator?.displayName}>
-            <Avatar size={26} style={{ background: token.colorPrimary, fontSize: 11 }}>
+            <Avatar size={26} style={{ background: avatarColor(doc.creator?.displayName), fontSize: 11 }}>
               {getInitial(doc.creator?.displayName)}
             </Avatar>
           </Tooltip>

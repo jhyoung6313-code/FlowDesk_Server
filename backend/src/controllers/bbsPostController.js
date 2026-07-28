@@ -344,8 +344,16 @@ const downloadAttachment = async (req, res, next) => {
   try {
     const attachment = await prisma.bbsAttachment.findUnique({
       where: { id: Number(req.params.aid) },
+      include: { post: { select: { sensitivity: true, createdBy: true, delYn: true } } },
     });
     if (!attachment) return res.status(404).json({ error: '파일을 찾을 수 없습니다.' });
+
+    // 기밀 게시글 게이트(F-67): 목록/상세와 동일하게 다운로드도 작성자·관리자만 허용
+    const post = attachment.post;
+    if (!post || post.delYn !== '0') return res.status(404).json({ error: '게시글을 찾을 수 없습니다.' });
+    if (post.sensitivity === 'confidential' && req.user.role !== 'admin' && post.createdBy !== req.user.id) {
+      return res.status(403).json({ error: '열람 권한이 없습니다.' });
+    }
 
     const filePath = path.join(UPLOAD_DIR, attachment.storedName);
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: '파일이 서버에 존재하지 않습니다.' });

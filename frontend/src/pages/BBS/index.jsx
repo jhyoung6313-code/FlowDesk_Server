@@ -17,6 +17,7 @@ import {
   getBbsPosts, pinBbsPost, deleteBbsPost,
 } from '../../api/bbs';
 import ResizableDrawer from '../../components/common/ResizableDrawer';
+import { CommandBar, DetailEmpty } from '../../components/listkit';
 import PostFormDrawer from './PostFormDrawer';
 import PostDetail from './PostDetail';
 import useAuthStore from '../../store/authStore';
@@ -537,29 +538,27 @@ export default function BbsPage() {
           overflow: 'hidden',
         }}>
           {!selectedCatId ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-              <Empty
-                image={<FileTextOutlined style={{ fontSize: 56, color: token.colorTextQuaternary }} />}
-                imageStyle={{ height: 'auto', marginBottom: 12 }}
-                description={<Text type="secondary">왼쪽에서 게시판을 선택하세요.</Text>}
-              />
-            </div>
+            <DetailEmpty
+              icon={<FileTextOutlined />}
+              title="게시판을 선택하세요"
+              hint="왼쪽에서 게시판을 선택하면 게시글 목록이 표시됩니다."
+            />
           ) : (
             <>
-              {/* 헤더 */}
-              <div style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                gap: 8, flexWrap: 'wrap', padding: '14px 16px',
-                borderBottom: `1px solid ${token.colorBorderSecondary}`, flexShrink: 0,
-              }}>
-                <Space size={8} align="center">
-                  {selectedCat?.icon && <span style={{ fontSize: 18 }}>{selectedCat.icon}</span>}
-                  <Title level={5} style={{ margin: 0 }}>{selectedCat?.name}</Title>
-                  {selectedCat?.writeRole === 'admin' && (
-                    <Tag icon={<LockOutlined />} color="warning" style={{ fontSize: 11 }}>관리자 전용</Tag>
-                  )}
-                </Space>
-                <Space size={6} align="center" wrap className="fd-toolbar">
+              {/* 헤더 (CommandBar) */}
+              <CommandBar
+                style={{ padding: '11px 16px' }}
+                left={
+                  <Space size={8} align="center">
+                    {selectedCat?.icon && <span style={{ fontSize: 18 }}>{selectedCat.icon}</span>}
+                    <Title level={5} style={{ margin: 0 }}>{selectedCat?.name}</Title>
+                    {selectedCat?.writeRole === 'admin' && (
+                      <Tag icon={<LockOutlined />} color="warning" style={{ fontSize: 11 }}>관리자 전용</Tag>
+                    )}
+                  </Space>
+                }
+                right={
+                  <Space size={6} align="center" wrap className="fd-toolbar">
                   {!compact && (
                     <Space size={4} align="center">
                       <Select
@@ -612,17 +611,18 @@ export default function BbsPage() {
                       />
                     </Tooltip>
                   )}
-                  {canWrite && (
-                    <Button
-                      type="primary"
-                      icon={<PlusOutlined />}
-                      onClick={() => { setEditingPostId(null); setPostDrawerOpen(true); }}
-                    >
-                      글쓰기
-                    </Button>
-                  )}
-                </Space>
-              </div>
+                    {canWrite && (
+                      <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={() => { setEditingPostId(null); setPostDrawerOpen(true); }}
+                      >
+                        글쓰기
+                      </Button>
+                    )}
+                  </Space>
+                }
+              />
 
               {/* 목록 */}
               <div style={{ flex: 1, overflowY: 'auto' }}>

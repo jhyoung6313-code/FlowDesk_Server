@@ -83,6 +83,37 @@ function normalizeShares({ visibility, shareIds, shareDeptIds, shareTeamIds }, a
   return { userIds, deptIds, teamIds };
 }
 
+/* 자원(회의실·차량) 이중 예약 검사 — 겹치는 예약이 있으면 그 일정을, 없으면 null 반환.
+   판정: 동일 resourceId + 날짜 구간이 겹치고, (한쪽이라도 종일이면 충돌 / 둘 다 시간지정이면 시간대 겹침).
+   NOTE: 여러 날에 걸친 시간 지정 일정은 단순화하여 시간대 비교만 수행한다(소규모 팀 로컬 전제). */
+async function findResourceConflict({ resourceId, startDate, endDate, allDay, startTime, endTime, excludeId }) {
+  if (!resourceId) return null;
+  const candidates = await prisma.scheduleEvent.findMany({
+    where: {
+      resourceId: Number(resourceId),
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+      startDate: { lte: endDate },
+      endDate: { gte: startDate },
+    },
+    include: { resource: { select: { name: true } }, creator: { select: { displayName: true } } },
+  });
+  for (const ev of candidates) {
+    if (allDay || ev.allDay) return ev; // 한쪽이라도 종일 → 날짜 구간 전체 충돌
+    // 둘 다 시간 지정: HH:MM 문자열 비교(zero-padded)로 시간대 겹침 판정
+    const aS = startTime || '00:00', aE = endTime || '23:59';
+    const bS = ev.startTime || '00:00', bE = ev.endTime || '23:59';
+    if (aS < bE && bS < aE) return ev;
+  }
+  return null;
+}
+
+function resourceConflictMessage(conflict) {
+  const label = conflict.title || conflict.resource?.name || '기존 예약';
+  const who = conflict.creator?.displayName ? ` · ${conflict.creator.displayName}` : '';
+  const time = conflict.allDay ? '종일' : `${conflict.startTime || ''}~${conflict.endTime || ''}`;
+  return `해당 자원은 이미 예약되어 있습니다: "${label}" (${time}${who})`;
+}
+
 /** GET /api/schedules?start=YYYY-MM-DD&end=YYYY-MM-DD&type=...
  *  기간이 겹치는(걸쳐 있는) 모든 일정 반환 */
 const listEvents = async (req, res, next) => {
@@ -137,6 +168,19 @@ const createEvent = async (req, res, next) => {
       return res.status(400).json({ error: '종료일은 시작일보다 빠를 수 없습니다.' });
     }
     const vis = VISIBILITIES.includes(visibility) ? visibility : 'public';
+
+    // 자원(회의실·차량) 이중 예약 방지
+    if (resourceId) {
+      const effAllDay = allDay !== false;
+      const conflict = await findResourceConflict({
+        resourceId, startDate: sDate, endDate: eDate,
+        allDay: effAllDay,
+        startTime: effAllDay ? null : (startTime || null),
+        endTime: effAllDay ? null : (endTime || null),
+      });
+      if (conflict) return res.status(409).json({ error: resourceConflictMessage(conflict) });
+    }
+
     const ids = Array.isArray(assigneeIds) ? [...new Set(assigneeIds.map(Number).filter(Boolean))] : [];
     const sh = normalizeShares({ visibility: vis, shareIds, shareDeptIds, shareTeamIds }, ids);
     const scopeRows = [
@@ -211,6 +255,21 @@ const updateEvent = async (req, res, next) => {
     } else if (startTime !== undefined || endTime !== undefined) {
       data.startTime = startTime ?? existing.startTime;
       data.endTime = endTime ?? existing.endTime;
+    }
+
+    // 자원 이중 예약 방지 (본인 일정은 제외) — 대상자/공유 변경보다 먼저 검사
+    if (data.resourceId) {
+      // 시간이 이번 요청에 없으면 기존 값으로 폴백
+      const effStart = data.startTime !== undefined ? data.startTime : existing.startTime;
+      const effEnd = data.endTime !== undefined ? data.endTime : existing.endTime;
+      const conflict = await findResourceConflict({
+        resourceId: data.resourceId, startDate: data.startDate, endDate: data.endDate,
+        allDay: data.allDay,
+        startTime: data.allDay ? null : effStart,
+        endTime: data.allDay ? null : effEnd,
+        excludeId: id,
+      });
+      if (conflict) return res.status(409).json({ error: resourceConflictMessage(conflict) });
     }
 
     // 대상자 재설정 (전달된 경우에만)

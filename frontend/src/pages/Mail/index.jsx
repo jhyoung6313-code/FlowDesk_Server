@@ -1,20 +1,22 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  Table, Button, Space, Typography, Tag, Tooltip, Badge, Popconfirm, Empty,
-  theme as antTheme, message, Input, Dropdown,
+  Button, Space, Typography, Tag, Tooltip, Badge, Popconfirm, Empty,
+  theme as antTheme, message, Input, Dropdown, Checkbox, Pagination, Spin,
 } from 'antd';
 import {
   InboxOutlined, SendOutlined, FileTextOutlined, StarOutlined, StarFilled,
   DeleteOutlined, PlusOutlined, ReloadOutlined, PaperClipOutlined, MailOutlined,
-  SearchOutlined, TagOutlined, TagsOutlined, SettingOutlined, ThunderboltFilled,
-  CheckOutlined, MailFilled, EyeInvisibleOutlined, RollbackOutlined,
+  SearchOutlined, TagOutlined, TagsOutlined, SettingOutlined,
+  MailFilled, EyeInvisibleOutlined, RollbackOutlined,
 } from '@ant-design/icons';
 import {
   getMailList, toggleStar, trashMail, emptyTrash, getUnreadCount,
   getMailLabels, bulkMailAction, setMailLabels,
 } from '../../api/mail';
 import useAuthStore from '../../store/authStore';
+import { CommandBar, DetailEmpty, AvatarListRow } from '../../components/listkit';
+import { bodyPreview } from '../../utils/listkit';
 import ComposeModal from './ComposeModal';
 import MailDetail from './MailDetail';
 import LabelManager from './LabelManager';
@@ -128,12 +130,14 @@ export default function MailPage() {
     e.stopPropagation();
     await trashMail(id).catch(() => {});
     message.success('휴지통으로 이동했습니다.');
+    if (selectedId === id) setSelectedId(null);
     load();
   };
 
   const handleEmptyTrash = async () => {
     await emptyTrash();
     message.success('휴지통을 비웠습니다.');
+    setSelectedId(null);
     load();
   };
 
@@ -166,92 +170,14 @@ export default function MailPage() {
   };
 
   const isRecipientFolder = folder === 'inbox' || folder === 'starred' || folder === 'trash';
+  const allSelected = mails.length > 0 && selectedKeys.length === mails.length;
 
-  const columns = [
-    {
-      dataIndex: 'isRead',
-      width: 12,
-      align: 'center',
-      render: (isRead) => (
-        <div style={{
-          width: 7, height: 7, borderRadius: '50%', margin: '0 auto',
-          background: isRead ? 'transparent' : token.colorPrimary,
-        }} />
-      ),
-    },
-    {
-      title: folder === 'sent' ? '받는 사람' : '보낸 사람',
-      width: 110,
-      render: (_, row) => {
-        if (folder === 'sent') {
-          const tos = row.recipients?.filter(r => r.type === 'to') || [];
-          const name = tos[0]?.user?.displayName || '-';
-          return <Text style={{ fontSize: 12, fontWeight: row.isRead ? 400 : 600 }}>{name}{tos.length > 1 ? ` 외 ${tos.length - 1}` : ''}</Text>;
-        }
-        return <Text style={{ fontSize: 12, fontWeight: row.isRead ? 400 : 600 }}>{row.from?.displayName || '-'}</Text>;
-      },
-    },
-    {
-      title: '제목',
-      ellipsis: true,
-      render: (_, row) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          {row.priority === 'urgent' && (
-            <Tag color="red" style={{ fontSize: 10, margin: 0, padding: '0 4px', lineHeight: '16px', flexShrink: 0 }}>긴급</Tag>
-          )}
-          <Text
-            ellipsis={{ tooltip: row.subject || '(제목 없음)' }}
-            style={{ fontSize: 13, fontWeight: row.isRead ? 400 : 600, flex: 1, minWidth: 0 }}
-          >
-            {row.subject || '(제목 없음)'}
-          </Text>
-          {row.attachments?.length > 0 && (
-            <PaperClipOutlined style={{ fontSize: 11, color: token.colorTextSecondary, flexShrink: 0 }} />
-          )}
-          {/* 라벨 표시 (최대 2개) */}
-          {row.labels?.slice(0, 2).map(lb => (
-            <Tag key={lb.id} color={lb.color} style={{ fontSize: 10, margin: 0, padding: '0 5px', lineHeight: '16px', border: 'none', flexShrink: 0 }}>
-              {lb.name}
-            </Tag>
-          ))}
-        </div>
-      ),
-    },
-    {
-      dataIndex: 'createdAt',
-      width: 80,
-      render: (v) => {
-        const d = dayjs(v);
-        const isToday = d.isSame(dayjs(), 'day');
-        return (
-          <Text type="secondary" style={{ fontSize: 11 }}>
-            {isToday ? d.format('HH:mm') : d.format('MM.DD')}
-          </Text>
-        );
-      },
-    },
-    {
-      width: 60,
-      render: (_, row) => (
-        <Space size={2} onClick={e => e.stopPropagation()}>
-          {folder !== 'sent' && folder !== 'drafts' && (
-            <Tooltip title={row.isStarred ? '별표 해제' : '별표'}>
-              <Button
-                size="small" type="text"
-                icon={row.isStarred ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />}
-                onClick={e => handleStar(e, row.id)}
-              />
-            </Tooltip>
-          )}
-          {folder !== 'trash' && folder !== 'drafts' && (
-            <Tooltip title="휴지통">
-              <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={e => handleTrash(e, row.id)} />
-            </Tooltip>
-          )}
-        </Space>
-      ),
-    },
-  ];
+  const toggleSelect = (id) => {
+    setSelectedKeys(keys => keys.includes(id) ? keys.filter(k => k !== id) : [...keys, id]);
+  };
+  const toggleSelectAll = () => {
+    setSelectedKeys(allSelected ? [] : mails.map(m => m.id));
+  };
 
   // 라벨 지정 드롭다운 메뉴
   const labelMenuItems = labels.length
@@ -267,26 +193,72 @@ export default function MailPage() {
       }))
     : [{ key: 'none', label: '라벨이 없습니다', disabled: true }];
 
+  const folderTitle = activeLabelId
+    ? labels.find(l => l.id === activeLabelId)?.name
+    : FOLDERS.find(f => f.key === folder)?.label;
+
+  /* ── M365 스타일 목록 행 (listkit AvatarListRow 사용) ── */
+  const renderRow = (row) => {
+    // 표시 이름: 보낸편지함은 받는 사람, 그 외는 보낸 사람
+    let name = '-';
+    if (folder === 'sent') {
+      const tos = row.recipients?.filter(r => r.type === 'to') || [];
+      name = (tos[0]?.user?.displayName || '-') + (tos.length > 1 ? ` 외 ${tos.length - 1}` : '');
+    } else {
+      name = row.from?.displayName || '-';
+    }
+    const d = dayjs(row.createdAt);
+    const timeStr = d.isSame(dayjs(), 'day') ? d.format('HH:mm') : d.isSame(dayjs(), 'year') ? d.format('MM.DD') : d.format('YY.MM.DD');
+    const preview = bodyPreview(row.body);
+
+    return (
+      <AvatarListRow
+        key={row.id}
+        onClick={() => handleSelectMail(row)}
+        active={row.id === selectedId}
+        unread={!row.isRead}
+        selectable={isRecipientFolder}
+        selected={selectedKeys.includes(row.id)}
+        onSelectToggle={() => toggleSelect(row.id)}
+        name={name}
+        time={timeStr}
+        subject={row.subject || '(제목 없음)'}
+        subjectPrefix={row.priority === 'urgent'
+          ? <Tag color="red" style={{ fontSize: 10, margin: 0, padding: '0 4px', lineHeight: '16px', flexShrink: 0 }}>긴급</Tag>
+          : null}
+        subjectSuffix={row.attachments?.length > 0
+          ? <PaperClipOutlined style={{ fontSize: 11, color: token.colorTextTertiary, flexShrink: 0 }} />
+          : null}
+        preview={preview || <span style={{ fontStyle: 'italic', opacity: 0.6 }}>(내용 없음)</span>}
+        labelDots={(row.labels || []).slice(0, 2).map(lb => lb.color)}
+        actions={
+          <>
+            {folder !== 'sent' && folder !== 'drafts' && (
+              <Tooltip title={row.isStarred ? '별표 해제' : '별표'}>
+                <Button size="small" type="text" icon={row.isStarred ? <StarFilled style={{ color: '#faad14' }} /> : <StarOutlined />} onClick={e => handleStar(e, row.id)} style={{ height: 22, width: 22, minWidth: 22 }} />
+              </Tooltip>
+            )}
+            {folder !== 'trash' && folder !== 'drafts' && (
+              <Tooltip title="휴지통">
+                <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={e => handleTrash(e, row.id)} style={{ height: 22, width: 22, minWidth: 22 }} />
+              </Tooltip>
+            )}
+          </>
+        }
+      />
+    );
+  };
+
   return (
     <div style={{ display: 'flex', height: 'calc(100vh - 52px)', background: token.colorBgLayout }}>
-      {/* 폴더 사이드바 */}
+      {/* ── 폴더 사이드바 ── */}
       <div style={{
-        width: 200,
-        background: token.colorBgContainer,
+        width: 200, background: token.colorBgContainer,
         borderRight: `1px solid ${token.colorBorderSecondary}`,
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '16px 0',
-        flexShrink: 0,
-        overflowY: 'auto',
+        display: 'flex', flexDirection: 'column', padding: '16px 0', flexShrink: 0, overflowY: 'auto',
       }}>
         <div style={{ padding: '0 12px 16px' }}>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            block
-            onClick={() => { setEditDraft(null); setComposeMode(null); setComposeOpen(true); }}
-          >
+          <Button type="primary" icon={<PlusOutlined />} block onClick={() => { setEditDraft(null); setComposeMode(null); setComposeOpen(true); }}>
             메일 쓰기
           </Button>
         </div>
@@ -298,31 +270,22 @@ export default function MailPage() {
               key={f.key}
               onClick={() => handleFolderChange(f.key)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '8px 16px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', cursor: 'pointer',
                 background: active ? token.colorPrimaryBg : 'transparent',
                 color: active ? token.colorPrimary : token.colorText,
-                fontWeight: active ? 600 : 400, fontSize: 13,
-                transition: 'all 0.14s',
+                fontWeight: active ? 600 : 400, fontSize: 13, transition: 'all 0.14s',
                 borderRight: active ? `2px solid ${token.colorPrimary}` : '2px solid transparent',
               }}
             >
-              <span style={{ fontSize: 15, color: active ? token.colorPrimary : token.colorTextSecondary }}>
-                {f.icon}
-              </span>
+              <span style={{ fontSize: 15, color: active ? token.colorPrimary : token.colorTextSecondary }}>{f.icon}</span>
               <span style={{ flex: 1 }}>{f.label}</span>
-              {f.key === 'inbox' && unread > 0 && (
-                <Badge count={unread} size="small" style={{ backgroundColor: token.colorPrimary }} />
-              )}
+              {f.key === 'inbox' && unread > 0 && <Badge count={unread} size="small" style={{ backgroundColor: token.colorPrimary }} />}
             </div>
           );
         })}
 
         {/* 라벨 섹션 */}
-        <div style={{
-          marginTop: 16, padding: '8px 16px 4px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        }}>
+        <div style={{ marginTop: 16, padding: '8px 16px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Text type="secondary" style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.5 }}>라벨</Text>
           <Tooltip title="라벨 관리">
             <Button size="small" type="text" icon={<SettingOutlined />} onClick={() => setLabelMgrOpen(true)} style={{ height: 20, width: 20, minWidth: 20 }} />
@@ -339,8 +302,7 @@ export default function MailPage() {
               key={lb.id}
               onClick={() => handleLabelClick(lb.id)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 8,
-                padding: '6px 16px', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 8, padding: '6px 16px', cursor: 'pointer',
                 background: active ? token.colorPrimaryBg : 'transparent',
                 fontWeight: active ? 600 : 400, fontSize: 13,
                 borderRight: active ? `2px solid ${token.colorPrimary}` : '2px solid transparent',
@@ -353,18 +315,24 @@ export default function MailPage() {
         })}
       </div>
 
-      {/* 메일 목록 / 상세 */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* 목록 패널 */}
-        <div style={{
-          width: selectedId ? 420 : '100%',
-          borderRight: selectedId ? `1px solid ${token.colorBorderSecondary}` : 'none',
-          display: 'flex', flexDirection: 'column',
-          background: token.colorBgContainer,
-          transition: 'width 0.2s', flexShrink: 0, overflow: 'hidden',
-        }}>
-          {/* 검색바 */}
-          <div style={{ padding: '10px 16px 0' }}>
+      {/* ── 메인 영역 (명령바 + 목록/읽기) ── */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* 명령바 */}
+        <CommandBar
+          left={
+            <>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => { setEditDraft(null); setComposeMode(null); setComposeOpen(true); }}>
+                새 메일
+              </Button>
+              <Button type="text" icon={<ReloadOutlined />} onClick={load} loading={loading}>새로고침</Button>
+              {folder === 'trash' && mails.length > 0 && (
+                <Popconfirm title="휴지통을 비우시겠습니까?" onConfirm={handleEmptyTrash} okText="비우기" cancelText="취소">
+                  <Button danger type="text" icon={<DeleteOutlined />}>휴지통 비우기</Button>
+                </Popconfirm>
+              )}
+            </>
+          }
+          right={
             <Input
               value={searchInput}
               onChange={e => setSearchInput(e.target.value)}
@@ -373,133 +341,100 @@ export default function MailPage() {
               prefix={<SearchOutlined style={{ color: token.colorTextSecondary }} />}
               allowClear
               onClear={clearSearch}
-              size="small"
-              suffix={
-                <Button type="text" size="small" onClick={handleSearch} style={{ height: 20, fontSize: 11 }}>검색</Button>
-              }
+              style={{ width: 260 }}
             />
-          </div>
+          }
+        />
 
-          {/* 목록 헤더 */}
+        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+          {/* ── 목록 패널 ── */}
           <div style={{
-            padding: '12px 16px',
-            borderBottom: `1px solid ${token.colorBorderSecondary}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            width: 380, borderRight: `1px solid ${token.colorBorderSecondary}`,
+            display: 'flex', flexDirection: 'column', background: token.colorBgContainer, flexShrink: 0, overflow: 'hidden',
           }}>
-            <Space size={6}>
-              {activeLabelId ? (
-                <>
-                  <TagOutlined style={{ color: labels.find(l => l.id === activeLabelId)?.color }} />
-                  <Text strong style={{ fontSize: 14 }}>{labels.find(l => l.id === activeLabelId)?.name}</Text>
-                </>
-              ) : (
-                <>
-                  <MailOutlined style={{ color: token.colorPrimary }} />
-                  <Text strong style={{ fontSize: 14 }}>{FOLDERS.find(f => f.key === folder)?.label}</Text>
-                </>
+            {/* 목록 헤더 */}
+            <div style={{
+              padding: '10px 14px', borderBottom: `1px solid ${token.colorBorderSecondary}`,
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              {isRecipientFolder && mails.length > 0 && (
+                <Checkbox checked={allSelected} indeterminate={selectedKeys.length > 0 && !allSelected} onChange={toggleSelectAll} />
               )}
-              {searchQuery && (
-                <Tag closable onClose={clearSearch} style={{ fontSize: 11 }}>"{searchQuery}"</Tag>
-              )}
+              {activeLabelId
+                ? <TagOutlined style={{ color: labels.find(l => l.id === activeLabelId)?.color }} />
+                : <MailOutlined style={{ color: token.colorPrimary }} />}
+              <Text strong style={{ fontSize: 14 }}>{folderTitle}</Text>
+              {searchQuery && <Tag closable onClose={clearSearch} style={{ fontSize: 11 }}>"{searchQuery}"</Tag>}
+              <div style={{ flex: 1 }} />
               {total > 0 && (
-                <Space size={4}>
-                  <Text type="secondary" style={{ fontSize: 12 }}>전체 {total}</Text>
-                  {folder === 'inbox' && !activeLabelId && !searchQuery && (
-                    unread > 0
-                      ? <Tag color="red" style={{ fontSize: 11, margin: 0, padding: '0 6px', lineHeight: '18px' }}>미열람 {unread}</Tag>
-                      : <Tag color="green" style={{ fontSize: 11, margin: 0, padding: '0 6px', lineHeight: '18px' }}>모두 읽음</Tag>
-                  )}
-                </Space>
+                folder === 'inbox' && !activeLabelId && !searchQuery && unread > 0
+                  ? <Tag color="red" style={{ fontSize: 11, margin: 0, padding: '0 6px', lineHeight: '18px' }}>미열람 {unread}</Tag>
+                  : <Text type="secondary" style={{ fontSize: 12 }}>{total}</Text>
               )}
-            </Space>
-            <Space>
-              {folder === 'trash' && mails.length > 0 && (
-                <Popconfirm title="휴지통을 비우시겠습니까?" onConfirm={handleEmptyTrash} okText="비우기" cancelText="취소">
-                  <Button size="small" danger>비우기</Button>
-                </Popconfirm>
+            </div>
+
+            {/* 일괄 처리 툴바 */}
+            {selectedKeys.length > 0 && (
+              <div style={{
+                padding: '8px 14px', borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                background: token.colorPrimaryBg, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
+              }}>
+                <Text strong style={{ fontSize: 12, color: token.colorPrimary }}>{selectedKeys.length}건</Text>
+                <Button size="small" icon={<MailFilled />} onClick={() => doBulk('read')}>읽음</Button>
+                <Button size="small" icon={<EyeInvisibleOutlined />} onClick={() => doBulk('unread')}>안읽음</Button>
+                <Button size="small" icon={<StarOutlined />} onClick={() => doBulk('star')}>별표</Button>
+                <Dropdown menu={{ items: labelMenuItems }} trigger={['click']}>
+                  <Button size="small" icon={<TagsOutlined />}>라벨</Button>
+                </Dropdown>
+                {folder === 'trash' ? (
+                  <>
+                    <Button size="small" icon={<RollbackOutlined />} onClick={() => doBulk('restore')}>복원</Button>
+                    <Popconfirm title={`${selectedKeys.length}건을 영구 삭제하시겠습니까?`} onConfirm={() => doBulk('delete')} okText="삭제" cancelText="취소">
+                      <Button size="small" danger icon={<DeleteOutlined />}>영구삭제</Button>
+                    </Popconfirm>
+                  </>
+                ) : (
+                  <Button size="small" danger icon={<DeleteOutlined />} onClick={() => doBulk('trash')}>휴지통</Button>
+                )}
+                <Button size="small" type="text" onClick={() => setSelectedKeys([])}>해제</Button>
+              </div>
+            )}
+
+            {/* 목록 */}
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {loading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 60 }}><Spin /></div>
+              ) : mails.length === 0 ? (
+                <Empty description={searchQuery ? '검색 결과가 없습니다.' : '메일이 없습니다.'} style={{ marginTop: 60 }} />
+              ) : (
+                mails.map(renderRow)
               )}
-              <Button size="small" type="text" icon={<ReloadOutlined />} onClick={load} loading={loading} />
-            </Space>
+            </div>
+
+            {/* 페이지네이션 */}
+            {total > 30 && (
+              <div style={{ padding: '8px 14px', borderTop: `1px solid ${token.colorBorderSecondary}`, textAlign: 'center' }}>
+                <Pagination current={page} pageSize={30} total={total} onChange={setPage} showSizeChanger={false} size="small" simple />
+              </div>
+            )}
           </div>
 
-          {/* 일괄 처리 툴바 */}
-          {selectedKeys.length > 0 && (
-            <div style={{
-              padding: '8px 16px',
-              borderBottom: `1px solid ${token.colorBorderSecondary}`,
-              background: token.colorPrimaryBg,
-              display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-            }}>
-              <Text strong style={{ fontSize: 12, color: token.colorPrimary }}>{selectedKeys.length}건 선택</Text>
-              <Button size="small" icon={<MailFilled />} onClick={() => doBulk('read')}>읽음</Button>
-              <Button size="small" icon={<EyeInvisibleOutlined />} onClick={() => doBulk('unread')}>안읽음</Button>
-              <Button size="small" icon={<StarOutlined />} onClick={() => doBulk('star')}>별표</Button>
-              <Dropdown menu={{ items: labelMenuItems }} trigger={['click']}>
-                <Button size="small" icon={<TagsOutlined />}>라벨</Button>
-              </Dropdown>
-              {folder === 'trash' ? (
-                <>
-                  <Button size="small" icon={<RollbackOutlined />} onClick={() => doBulk('restore')}>복원</Button>
-                  <Popconfirm title={`${selectedKeys.length}건을 영구 삭제하시겠습니까?`} onConfirm={() => doBulk('delete')} okText="삭제" cancelText="취소">
-                    <Button size="small" danger icon={<DeleteOutlined />}>영구삭제</Button>
-                  </Popconfirm>
-                </>
-              ) : (
-                <Button size="small" danger icon={<DeleteOutlined />} onClick={() => doBulk('trash')}>휴지통</Button>
-              )}
-              <Button size="small" type="text" onClick={() => setSelectedKeys([])}>선택 해제</Button>
-            </div>
-          )}
-
-          {/* 목록 */}
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            {mails.length === 0 && !loading ? (
-              <Empty description={searchQuery ? '검색 결과가 없습니다.' : '메일이 없습니다.'} style={{ marginTop: 60 }} />
-            ) : (
-              <Table
-                dataSource={mails}
-                columns={columns}
-                rowKey="id"
-                loading={loading}
-                size="small"
-                showHeader={false}
-                rowSelection={isRecipientFolder ? {
-                  selectedRowKeys: selectedKeys,
-                  onChange: setSelectedKeys,
-                  columnWidth: 36,
-                } : undefined}
-                pagination={{
-                  current: page, pageSize: 30, total,
-                  onChange: p => setPage(p),
-                  showSizeChanger: false, size: 'small',
-                  style: { padding: '8px 16px' },
-                }}
-                onRow={row => ({
-                  onClick: () => handleSelectMail(row),
-                  style: {
-                    cursor: 'pointer',
-                    background: row.id === selectedId ? token.colorPrimaryBg : undefined,
-                  },
-                })}
-                style={{ border: 'none' }}
+          {/* ── 읽기 패널 (상시 표시) ── */}
+          <div style={{ flex: 1, overflow: 'hidden', background: token.colorBgContainer }}>
+            {selectedId ? (
+              <MailDetail
+                mailId={selectedId}
+                folder={folder}
+                labels={labels}
+                onBack={() => setSelectedId(null)}
+                onRefresh={load}
+                onLabelsChanged={loadLabels}
               />
+            ) : (
+              <DetailEmpty icon={<MailOutlined />} title="읽을 메일을 선택하세요" hint="왼쪽 목록에서 메일을 클릭하면 여기에 표시됩니다." />
             )}
           </div>
         </div>
-
-        {/* 상세 패널 */}
-        {selectedId && (
-          <div style={{ flex: 1, overflow: 'hidden' }}>
-            <MailDetail
-              mailId={selectedId}
-              folder={folder}
-              labels={labels}
-              onBack={() => setSelectedId(null)}
-              onRefresh={load}
-              onLabelsChanged={loadLabels}
-            />
-          </div>
-        )}
       </div>
 
       <ComposeModal

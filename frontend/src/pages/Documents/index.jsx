@@ -1,12 +1,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Table, Input, Segmented, Tag, Typography, Space, message, Tooltip } from 'antd';
+import { Table, Input, Segmented, Tag, Typography, Space, message, Tooltip, Avatar } from 'antd';
 import {
   FileOutlined, FilePdfOutlined, FileImageOutlined, FileExcelOutlined, FileWordOutlined,
   FileZipOutlined, FileTextOutlined, LinkOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getDocuments } from '../../api/documents';
+import { avatarColor, initial } from '../../utils/listkit';
 
 const SOURCE = {
   task: { label: '업무', color: 'blue' }, board: { label: '보드', color: 'cyan' },
@@ -62,7 +63,12 @@ export default function DocumentsPage() {
         </Tooltip>
       ),
     },
-    { title: '올린이', dataIndex: 'uploaderName', key: 'uploaderName', width: 100 },
+    {
+      title: '올린이', dataIndex: 'uploaderName', key: 'uploaderName', width: 120,
+      render: (v) => v
+        ? <Space size={7}><Avatar size={22} style={{ background: avatarColor(v), fontSize: 11 }}>{initial(v)}</Avatar>{v}</Space>
+        : <Typography.Text type="secondary">-</Typography.Text>,
+    },
     { title: '크기', dataIndex: 'size', key: 'size', width: 90, render: fmtSize },
     { title: '등록일', dataIndex: 'createdAt', key: 'createdAt', width: 120, render: (v) => dayjs(v).format('YYYY-MM-DD') },
   ];
