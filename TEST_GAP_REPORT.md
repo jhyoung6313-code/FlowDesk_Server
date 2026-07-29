@@ -56,7 +56,7 @@
 `recurringTasks, taskTemplates(독립) → taskExtraAssignees, taskTags, taskComments, taskAttachments(댓글 이후), taskHistories, timeEntries(tasks 이후) → wbsProjectMembers, wbsTasks(level 오름차순으로 부모 먼저), wbsIssues(wbsProjects 이후)`.
 - 날짜 필드는 `D()` 헬퍼로 ISO 문자열 → `Date` 변환. `wbsTasks`는 자기참조(parentId) 때문에 **level 오름차순 정렬 후 삽입**해 부모가 항상 먼저 생성되게 함. ✔ `backup.test.js` 6건(순서 검증 포함).
 - **의도적 제외**: `users`(backup이 보안상 passwordHash 미포함 → 복원 불가), `notifications`(`runId/runStepId`가 backup 대상이 아닌 PlaybookRun/RunStep을 참조 → FK 위반 위험).
-- ⚠️ 실 DB 통합 검증은 미수행(단위 테스트는 prisma mock). 실제 복원 파일로 스테이징 DB에서 1회 검증 권장.
+- ✔ **실 DB 왕복 검증 완료**: 실행 중 서버에서 실제 백업(51KB, `FLW1`) → 자기 자신에게 복원(additive) → **200 "복원이 완료되었습니다."** 실 스키마·실데이터에서 복원 트랜잭션이 FK/제약/날짜 오류 없이 완료됨(비파괴적). 단 additive 특성상 기존 행은 update no-op이라 **create 경로**(신규 행 삽입)의 FK 순서는 단위 테스트(level 오름차순)로 커버. 완전한 create 검증은 별도 스크래치 DB에서 delete-후-restore로 가능.
 
 ### ✅ P2 — 보드 카드 순환 의존성 → **수정 완료**
 `boardController.addDependency`가 자기참조만 막고 순환(A→B, B→A 또는 더 긴 사이클)을 막지 않아 간트/토폴로지 렌더에서 교착·무한루프 가능. `dependencyCreatesCycle`(BFS) 추가로 순환 시 400 반환. ✔ `board.test.js` 3건.
@@ -74,7 +74,7 @@
 `okrController.createCheckin`에 `canEditObjective` 게이트 추가 — KR CRUD와 동일하게 목표 소유자·관리자만 체크인(KR 현재값 갱신) 가능. ✔ `okr.test.js` 403 케이스 추가.
 
 ### 🟡 P3 — 로버스트니스 관찰 (라이브 버그 아님, 테스트로 현재 동작 고정)
-- **자동화 `changed_to` 조건**: `automationService.evalCondition`은 `cond.field`가 없으면 무조건 `true`로 단락한다. `changed_to`는 `ctx.status/prevStatus`만 쓰므로 `field` 없이 만든 규칙은 상태변경 여부와 무관하게 항상 통과한다. 현재 UI는 `field`(status)를 채워 정상 동작하지만, `changed_to`는 field 유무와 무관하게 평가되도록 예외 처리하는 편이 안전.
+- **자동화 `changed_to` 조건** → **수정 완료**: `evalCondition`이 `changed_to`를 field 유무와 무관하게 `status/prevStatus` 전이로 먼저 평가하도록 변경(field 없는 규칙의 무조건 통과 함정 제거). ✔ `automationEngine.test.js` 전이 케이스.
 - **PII 외국인 주민번호** → **수정 완료**: 주민번호 성별코드를 `[1-4]`→`[1-8]`로 확장(외국인등록번호 5~8 탐지). 0/9는 계속 제외해 오탐 억제. ✔ `pii.test.js` 외국인번호/경계 케이스.
 - **이상탐지 중복 경보** → **수정 완료**: `anomalyService`에 경보 쿨다운(`shouldAlert`, 인메모리 Map) 도입. 동일 (유형+대상) 경보는 윈도우(대량조회/권한오류) 또는 24h(신규IP/업무외) 내 1회만 발송. ✔ `anomaly.test.js` 3건(연속 스캔 시 1회만).
 - **비번 재설정 계정 열거** → **수정 완료**: `requestPasswordReset`이 유효 여부와 무관하게 항상 200+토큰 반환(무효 계정은 `userId=0` 토큰 → OTP 단계에서 401로 차단). 프론트 흐름 무변경. ✔ `authFlow.test.js` 열거방지 케이스.

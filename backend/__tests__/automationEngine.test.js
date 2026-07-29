@@ -52,9 +52,11 @@ describe('evalCondition — 연산자별', () => {
     expect(svc.evalCondition({ field: 'status', op: 'changed_to', value: 'done' }, { status: 'done', prevStatus: 'done' })).toBe(false);
   });
 
-  // 알려진 함정(로버스트니스): field 없이 만든 changed_to 조건은 !cond.field 단락으로 항상 true.
-  test('field 없는 changed_to는 (단락 규칙상) 항상 통과 — 현재 동작 고정', () => {
-    expect(svc.evalCondition({ op: 'changed_to', value: 'done' }, { status: 'done', prevStatus: 'done' })).toBe(true);
+  // field 없이 만든 changed_to도 status 전이로 올바르게 평가된다(단락 함정 제거).
+  test('field 없는 changed_to도 상태 전이로 평가', () => {
+    expect(svc.evalCondition({ op: 'changed_to', value: 'done' }, { status: 'done', prevStatus: 'todo' })).toBe(true);
+    expect(svc.evalCondition({ op: 'changed_to', value: 'done' }, { status: 'done', prevStatus: 'done' })).toBe(false);
+    expect(svc.evalCondition({ op: 'changed_to', value: 'done' }, { status: 'todo', prevStatus: 'todo' })).toBe(false);
   });
 });
 

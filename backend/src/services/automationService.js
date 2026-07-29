@@ -39,7 +39,12 @@ function getField(ctx, field) {
 }
 
 function evalCondition(cond, ctx) {
-  if (!cond || !cond.field) return true;
+  if (!cond) return true;
+  // changed_to는 field가 아니라 status 전이로 평가하므로 field 유무와 무관하게 먼저 처리한다.
+  if (cond.op === 'changed_to') {
+    return String(ctx.status) === String(cond.value) && String(ctx.prevStatus) !== String(cond.value);
+  }
+  if (!cond.field) return true;
   const actual = getField(ctx, cond.field);
   const expected = cond.value;
   switch (cond.op) {
