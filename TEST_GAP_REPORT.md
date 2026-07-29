@@ -10,7 +10,7 @@
 | 항목 | 값 |
 |------|-----|
 | 전체 스위트 | 30 passed (기존 10 + 신규 20) |
-| 전체 테스트 | **299 passed** (기존 103 + 신규 196) |
+| 전체 테스트 | **300 passed** (기존 103 + 신규 197) |
 | 실행 | `cd backend && npm test` (PowerShell은 PATH에 `C:\Program Files\nodejs` 선행 필요) |
 
 ### 신규 작성 테스트
@@ -50,12 +50,12 @@
 - **채팅 메시지 검색** `chatController.searchMessages` — `roomId`를 넘기면 비멤버도 해당 방 메시지를 검색할 수 있던 문제. 내가 멤버인 방인지 확인 후 아니면 403. ✔ `chat.test.js` 회귀 2건.
 - **통합검색 게시판** `searchController.search` — 전역 검색의 게시판 결과가 F-67 기밀 게이트를 무시해 **기밀 게시글 제목/존재가 비작성자에게 노출**되던 문제(목록/상세/다운로드는 이미 차단했으나 통합검색만 누락). 비관리자에게 `sensitivity=confidential` 제외(본인 작성 제외) 조건 추가. ✔ `search.test.js` 4건.
 
-### 🔴 P1(데이터 무결성) — 백업 복원이 대부분의 데이터를 조용히 누락
-`backupController.backup`은 **23개 컬렉션**을 내보내지만 `restore`는 그중 **10개만** 복원한다. 복원되지 않는 것:
-`users`(정책상 제외 가능), `taskExtraAssignees`, `taskComments`, `taskAttachments`, `taskHistories`, `taskTags`, `notifications`, `recurringTasks`, `taskTemplates`, `wbsProjectMembers`, `wbsTasks`, `wbsIssues`, `timeEntries`.
-→ 사용자가 백업으로 복원해도 **WBS 작업·이슈, 업무 댓글, 타임트래킹, 반복업무, 템플릿 등이 되살아나지 않는다.**
-- **왜 즉시 코드로 고치지 않았나**: `wbsTasks`의 자기참조(parentId) 복원 순서, DateTime 필드의 Date 강제 변환, 각 모델 unique 키를 실 DB로 검증하지 않고 upsert 루프를 추가하면 트랜잭션 전체가 중단되어 **복원이 더 위험**해진다. 그래서 현재 동작을 `backup.test.js`로 특성화(고정)하고, 아래 순서로 DB 검증과 함께 보강 권장.
-- **권장 구현 순서**(FK 의존성 고려): tags→taskTemplates/recurringTasks(독립)→tasks→taskTags/taskComments/taskHistories/taskExtraAssignees/timeEntries→wbsProjects→wbsProjectMembers→wbsTasks(**level 오름차순**으로 부모 먼저)→wbsIssues. 각 모델은 backup의 날짜 문자열을 `new Date(...)`로 변환.
+### ✅ P1(데이터 무결성) — 백업 복원 데이터 누락 → **수정 완료**
+기존 `restore`는 backup 23개 중 10개만 복원해 WBS 작업·이슈, 업무 댓글/첨부/히스토리, 타임트래킹, 반복업무, 템플릿, taskTags 등이 되살아나지 않았다. 아래 11개 컬렉션 복원을 FK 순서에 맞춰 추가(additive upsert):
+`recurringTasks, taskTemplates(독립) → taskExtraAssignees, taskTags, taskComments, taskAttachments(댓글 이후), taskHistories, timeEntries(tasks 이후) → wbsProjectMembers, wbsTasks(level 오름차순으로 부모 먼저), wbsIssues(wbsProjects 이후)`.
+- 날짜 필드는 `D()` 헬퍼로 ISO 문자열 → `Date` 변환. `wbsTasks`는 자기참조(parentId) 때문에 **level 오름차순 정렬 후 삽입**해 부모가 항상 먼저 생성되게 함. ✔ `backup.test.js` 6건(순서 검증 포함).
+- **의도적 제외**: `users`(backup이 보안상 passwordHash 미포함 → 복원 불가), `notifications`(`runId/runStepId`가 backup 대상이 아닌 PlaybookRun/RunStep을 참조 → FK 위반 위험).
+- ⚠️ 실 DB 통합 검증은 미수행(단위 테스트는 prisma mock). 실제 복원 파일로 스테이징 DB에서 1회 검증 권장.
 
 ### ✅ P2 — 보드 카드 순환 의존성 → **수정 완료**
 `boardController.addDependency`가 자기참조만 막고 순환(A→B, B→A 또는 더 긴 사이클)을 막지 않아 간트/토폴로지 렌더에서 교착·무한루프 가능. `dependencyCreatesCycle`(BFS) 추가로 순환 시 400 반환. ✔ `board.test.js` 3건.

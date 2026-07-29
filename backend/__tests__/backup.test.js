@@ -1,7 +1,7 @@
 /**
- * backupController (F-44) 테스트 — 복호화 검증 + 복원 범위 특성화(characterization).
- * ⚠️ 현재 restore는 backup이 내보내는 23개 중 10개만 복원한다(나머지 누락은 알려진 결함).
- *    이 테스트는 "현재 복원되는 것/안 되는 것"을 고정해 회귀 및 향후 수정의 기준점으로 둔다.
+ * backupController (F-44) 테스트 — 복호화 검증 + 복원 범위.
+ * restore는 backup 컬렉션을 FK 순서(웹WBS 자기참조는 level 오름차순)로 복원한다.
+ * (users/notifications는 각각 비번해시 부재·run FK 문제로 의도적 제외)
  */
 const crypto = require('crypto');
 const request = require('supertest');
@@ -77,7 +77,7 @@ describe('restore — 복원 범위 특성화', () => {
     taskTags: [{ taskId: 1, tagId: 1 }],
   };
 
-  test('현재 복원되는 모델은 upsert 호출됨', async () => {
+  test('핵심 모델은 upsert 호출됨', async () => {
     const res = await request(app(makeBackupBuffer(payload))).post('/restore');
     expect(res.status).toBe(200);
     expect(prisma.department.upsert).toHaveBeenCalled();
@@ -85,14 +85,29 @@ describe('restore — 복원 범위 특성화', () => {
     expect(prisma.wbsProject.upsert).toHaveBeenCalled();
   });
 
-  test('⚠️ 누락 결함: wbsTasks/wbsIssues/taskComments/timeEntries/recurringTasks/taskTags는 복원 안 됨', async () => {
+  test('보강된 복원: wbsTasks/wbsIssues/taskComments/timeEntries/recurringTasks/taskTags 모두 복원됨', async () => {
     await request(app(makeBackupBuffer(payload))).post('/restore');
-    expect(prisma.wbsTask.upsert).not.toHaveBeenCalled();
-    expect(prisma.wbsIssue.upsert).not.toHaveBeenCalled();
-    expect(prisma.taskComment.upsert).not.toHaveBeenCalled();
-    expect(prisma.timeEntry.upsert).not.toHaveBeenCalled();
-    expect(prisma.recurringTask.upsert).not.toHaveBeenCalled();
-    expect(prisma.taskTag.upsert).not.toHaveBeenCalled();
+    expect(prisma.wbsTask.upsert).toHaveBeenCalled();
+    expect(prisma.wbsIssue.upsert).toHaveBeenCalled();
+    expect(prisma.taskComment.upsert).toHaveBeenCalled();
+    expect(prisma.timeEntry.upsert).toHaveBeenCalled();
+    expect(prisma.recurringTask.upsert).toHaveBeenCalled();
+    expect(prisma.taskTag.upsert).toHaveBeenCalledWith(expect.objectContaining({
+      where: { taskId_tagId: { taskId: 1, tagId: 1 } },
+    }));
+  });
+
+  test('wbsTasks는 level 오름차순(부모 먼저)으로 복원', async () => {
+    const multi = {
+      wbsProjects: [{ id: 1, name: 'P', createdAt: '2026-01-01', updatedAt: '2026-01-01' }],
+      wbsTasks: [
+        { id: 2, projectId: 1, name: '자식', level: 1, order: 0, parentId: 1 },
+        { id: 1, projectId: 1, name: '부모', level: 0, order: 0 },
+      ],
+    };
+    await request(app(makeBackupBuffer(multi))).post('/restore');
+    const order = prisma.wbsTask.upsert.mock.calls.map((c) => c[0].create.id);
+    expect(order).toEqual([1, 2]); // level 0(부모) → level 1(자식)
   });
 
   test('data 없는 페이로드 → 400', async () => {
