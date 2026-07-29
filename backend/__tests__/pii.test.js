@@ -16,6 +16,14 @@ describe('detectPii — 탐지', () => {
     expect(detectPii('제 번호는 900101-1234567 입니다')?.type).toBe('주민등록번호');
     expect(detectPii('9001011234567')?.type).toBe('주민등록번호'); // 구분자 없이도
   });
+  test('외국인등록번호(성별코드 5~8)도 탐지', () => {
+    expect(detectPii('외국인 900101-5234567')?.type).toBe('주민등록번호');
+    expect(detectPii('900101-8234567')?.type).toBe('주민등록번호');
+  });
+  test('성별코드 0/9는 미탐지(오탐 억제)', () => {
+    expect(detectPii('900101-9234567')).toBeNull();
+    expect(detectPii('900101-0234567')).toBeNull();
+  });
   test('신용카드번호', () => {
     expect(detectPii('4123-5678-9012-3456')?.type).toBe('신용카드번호');
   });
