@@ -12,6 +12,18 @@ const { ANOMALY, AUDIT_ACTION } = require('../config/security');
 
 const MINUTE = 60 * 1000;
 
+// 경보 중복 발송 방지 — 동일 (유형+대상) 경보는 쿨다운 내 1회만.
+// 스캔 주기가 탐지 윈도우보다 짧을 때 같은 버스트가 매 스캔마다 재경보되는 문제를 막는다.
+const _alertCooldown = new Map(); // key → 마지막 발송 ms
+const DAY = 24 * 60 * MINUTE;
+function shouldAlert(key, cooldownMs) {
+  const now = Date.now();
+  const last = _alertCooldown.get(key);
+  if (last && now - last < cooldownMs) return false;
+  _alertCooldown.set(key, now);
+  return true;
+}
+
 // 관리자 전원에게 보안 경보 알림 + 감사로그 1건 기록
 async function raiseAlert(message, detail) {
   await audit.record({ action: AUDIT_ACTION.ANOMALY_DETECTED, resource: 'anomaly/scan', success: false, detail: detail || message });
@@ -33,7 +45,8 @@ async function detectBulkRead(since) {
     _count: { _all: true },
   });
   for (const g of grouped) {
-    if (g._count._all >= ANOMALY.BULK_READ_THRESHOLD) {
+    if (g._count._all >= ANOMALY.BULK_READ_THRESHOLD
+        && shouldAlert(`bulk:${g.userId}`, ANOMALY.BULK_READ_WINDOW_MINUTES * MINUTE)) {
       await raiseAlert(
         `${g.username || g.userId} 계정이 ${ANOMALY.BULK_READ_WINDOW_MINUTES}분 내 개인정보 ${g._count._all}건 조회`,
         `bulk_read userId=${g.userId} count=${g._count._all}`,
@@ -51,7 +64,8 @@ async function detectForbiddenFlood(since) {
     _count: { _all: true },
   });
   for (const g of grouped) {
-    if (g._count._all >= ANOMALY.FORBIDDEN_THRESHOLD) {
+    if (g._count._all >= ANOMALY.FORBIDDEN_THRESHOLD
+        && shouldAlert(`forbidden:${g.userId}`, ANOMALY.FORBIDDEN_WINDOW_MINUTES * MINUTE)) {
       await raiseAlert(
         `${g.username || g.userId} 계정이 ${ANOMALY.FORBIDDEN_WINDOW_MINUTES}분 내 권한오류 ${g._count._all}회`,
         `forbidden_flood userId=${g.userId} count=${g._count._all}`,
@@ -78,20 +92,23 @@ async function detectIpAnomaly(since) {
       where: { userId: r.userId, action: AUDIT_ACTION.LOGIN_SUCCESS, ipAddress: r.ipAddress, createdAt: { lt: since } },
       select: { id: true },
     });
-    if (!seen) {
+    if (!seen && shouldAlert(`newip:${r.userId}:${r.ipAddress}`, DAY)) {
       await raiseAlert(`${r.username || r.userId} 계정 신규 IP(${r.ipAddress}) 로그인`, `new_ip userId=${r.userId} ip=${r.ipAddress}`);
     }
-    // 업무외 시간대 로그인
+    // 업무외 시간대 로그인 (같은 날·같은 시간대 중복 억제)
     const hour = new Date(r.createdAt).getHours();
     const off = ANOMALY.OFF_HOURS_START <= ANOMALY.OFF_HOURS_END
       ? hour >= ANOMALY.OFF_HOURS_START && hour < ANOMALY.OFF_HOURS_END
       : hour >= ANOMALY.OFF_HOURS_START || hour < ANOMALY.OFF_HOURS_END;
     if (off) {
-      await raiseAlert(`${r.username || r.userId} 계정 업무외 시간(${hour}시) 로그인`, `off_hours userId=${r.userId} hour=${hour}`);
+      const dayKey = new Date(r.createdAt).toISOString().slice(0, 10);
+      if (shouldAlert(`offhours:${r.userId}:${dayKey}:${hour}`, DAY)) {
+        await raiseAlert(`${r.username || r.userId} 계정 업무외 시간(${hour}시) 로그인`, `off_hours userId=${r.userId} hour=${hour}`);
+      }
     }
   }
   for (const [userId, ips] of byUser) {
-    if (ips.size >= 2) {
+    if (ips.size >= 2 && shouldAlert(`multiip:${userId}`, ANOMALY.BULK_READ_WINDOW_MINUTES * MINUTE)) {
       const sample = recentLogins.find((r) => r.userId === userId);
       await raiseAlert(`${sample?.username || userId} 계정이 ${ips.size}개 IP에서 동시 접속`, `multi_ip userId=${userId} ips=${ips.size}`);
     }

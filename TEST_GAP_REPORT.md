@@ -9,8 +9,8 @@
 
 | 항목 | 값 |
 |------|-----|
-| 전체 스위트 | 30 passed (기존 10 + 신규 20) |
-| 전체 테스트 | **300 passed** (기존 103 + 신규 197) |
+| 전체 스위트 | 31 passed (기존 10 + 신규 21) |
+| 전체 테스트 | **303 passed** (기존 103 + 신규 200) |
 | 실행 | `cd backend && npm test` (PowerShell은 PATH에 `C:\Program Files\nodejs` 선행 필요) |
 
 ### 신규 작성 테스트
@@ -37,6 +37,7 @@
 | `__tests__/securitySettings.test.js` (7) | 보안강화 F-57 | buildUpserts 범위검증·화이트리스트, refresh 오버라이드 반영 |
 | `__tests__/authFlow.test.js` (8) | 인증 F-01/11 | OTP 2단계 검증, 비번 재설정 흐름·재사용 금지·잠금 해제 |
 | `__tests__/board.test.js` (+3) | 보드 F-35 | **카드 의존성 순환 방지(신규)** |
+| `__tests__/anomaly.test.js` (3) | 이상탐지 F-57 | **경보 쿨다운(중복 발송 방지)** |
 
 ---
 
@@ -76,7 +77,7 @@
 ### 🟡 P3 — 로버스트니스 관찰 (라이브 버그 아님, 테스트로 현재 동작 고정)
 - **자동화 `changed_to` 조건**: `automationService.evalCondition`은 `cond.field`가 없으면 무조건 `true`로 단락한다. `changed_to`는 `ctx.status/prevStatus`만 쓰므로 `field` 없이 만든 규칙은 상태변경 여부와 무관하게 항상 통과한다. 현재 UI는 `field`(status)를 채워 정상 동작하지만, `changed_to`는 field 유무와 무관하게 평가되도록 예외 처리하는 편이 안전.
 - **PII 외국인 주민번호**: `piiPatterns`의 주민번호 성별코드가 `[1-4]`만 매칭 → 외국인등록번호(5~8)는 미탐지. 정책상 내국인 RRN만 대상이면 무방하나, 외국인 정보까지 막으려면 `[1-8]`로 확장 필요.
-- **이상탐지 중복 경보**: `anomalyService.detectBulkRead`/`detectForbiddenFlood`가 전달받은 `since`(직전 스캔 시각)를 무시하고 고정 롤링 윈도우로만 집계 → 스캔 주기가 윈도우보다 짧으면 동일 버스트가 매 스캔마다 재경보된다(헤더 주석의 "직전 탐지 이후만 평가"와 불일치). `since` 기준 필터 또는 경보 dedup 키 도입 권장.
+- **이상탐지 중복 경보** → **수정 완료**: `anomalyService`에 경보 쿨다운(`shouldAlert`, 인메모리 Map) 도입. 동일 (유형+대상) 경보는 윈도우(대량조회/권한오류) 또는 24h(신규IP/업무외) 내 1회만 발송. ✔ `anomaly.test.js` 3건(연속 스캔 시 1회만).
 - **비번 재설정 계정 열거**: `requestPasswordReset`은 OTP 설정된 활성 계정만 200(+토큰), 그 외 404 → 계정 존재 여부가 구분된다. 단 재설정은 OTP 필요라 실질 악용은 어려움. 실패도 200으로 통일 권장.
 - **OTP 검증 throttle 없음**: `verifyLoginTotp`는 코드 불일치 시 계정 잠금/실패카운트를 올리지 않는다(pre-auth 토큰 5분 만료가 유일한 제한). OTP 시도 횟수 제한 추가 고려.
 
