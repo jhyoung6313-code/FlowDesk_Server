@@ -1633,6 +1633,7 @@ model InternalMail {
   subject      String   @db.VarChar(300)
   body         String   @db.Text
   isDraft      Boolean  @default(false) @map("is_draft")
+  senderDeleted Boolean @default(false) @map("sender_deleted") // 발신자가 보낸편지함에서 삭제(숨김)
   priority     String   @default("normal") @db.VarChar(10)  // normal | urgent
   parentId     Int?     @map("parent_id")   // 답장/전달 원본
   threadId     Int?     @map("thread_id")   // 대화 스레드 루트 메일 id

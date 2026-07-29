@@ -40,7 +40,7 @@ exports.list = async (req, res, next) => {
     let total = 0;
 
     if (folder === 'sent') {
-      const where = { fromUserId: me, isDraft: false, ...buildMailSearch(), ...labelFilter };
+      const where = { fromUserId: me, isDraft: false, senderDeleted: false, ...buildMailSearch(), ...labelFilter };
       [mails, total] = await Promise.all([
         prisma.internalMail.findMany({
           where,
@@ -427,10 +427,12 @@ exports.deleteSent = async (req, res, next) => {
     const id = parseInt(req.params.id);
     const mail = await prisma.internalMail.findUnique({ where: { id } });
     if (!mail || mail.fromUserId !== me) return res.status(403).json({ error: '권한이 없습니다.' });
-    // 발신자 입장에서 숨기기 위한 처리 — 실제 삭제 대신 fromUserId를 null로
-    // 단순화: isDraft인 경우 실제 삭제
+    // 임시보관함(draft)은 수신자가 없으므로 실제 삭제.
+    // 발송된 메일은 수신자 편지함을 보존해야 하므로 발신자 뷰에서만 숨김(senderDeleted).
     if (mail.isDraft) {
       await prisma.internalMail.delete({ where: { id } });
+    } else {
+      await prisma.internalMail.update({ where: { id }, data: { senderDeleted: true } });
     }
     res.json({ ok: true });
   } catch (err) { next(err); }

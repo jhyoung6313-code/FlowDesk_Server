@@ -10,7 +10,7 @@
 | 항목 | 값 |
 |------|-----|
 | 전체 스위트 | 31 passed (기존 10 + 신규 21) |
-| 전체 테스트 | **303 passed** (기존 103 + 신규 200) |
+| 전체 테스트 | **308 passed** (기존 103 + 신규 205) |
 | 실행 | `cd backend && npm test` (PowerShell은 PATH에 `C:\Program Files\nodejs` 선행 필요) |
 
 ### 신규 작성 테스트
@@ -61,9 +61,8 @@
 ### ✅ P2 — 보드 카드 순환 의존성 → **수정 완료**
 `boardController.addDependency`가 자기참조만 막고 순환(A→B, B→A 또는 더 긴 사이클)을 막지 않아 간트/토폴로지 렌더에서 교착·무한루프 가능. `dependencyCreatesCycle`(BFS) 추가로 순환 시 400 반환. ✔ `board.test.js` 3건.
 
-### 🟠 P2 — 발송 메일 삭제가 무동작
-`mailController.deleteSent`는 발송(non-draft) 메일에 대해 아무 작업도 하지 않고 `{ ok: true }`만 반환한다(주석은 "fromUserId를 null로" 라고 하나 미구현). 발신자가 보낸편지함에서 메일을 지울 수 없다.
-- **권장**: 발신자용 소프트 숨김 플래그(예: `senderDeleted`) 추가 또는 발신자 휴지통 도입. `bulkAction`/`trash`는 수신자 레코드만 다루므로 발신 뷰를 커버하지 못함.
+### ✅ P2 — 발송 메일 삭제 무동작 → **수정 완료**
+`InternalMail`에 `senderDeleted` 플래그 추가(마이그레이션 `20260729005640_add_mail_sender_deleted`, DB 적용·클라이언트 재생성 완료). `deleteSent`는 발송 메일을 `senderDeleted=true`로 숨기고(수신자 편지함 보존) draft는 실제 삭제, `list`의 보낸편지함 조회는 `senderDeleted:false` 필터. ✔ `mail.test.js` 4건.
 
 ### ✅ P2 — 자원(회의실·차량) 중복 예약 충돌 검사 → **구현 완료**
 `scheduleController`에 `findResourceConflict` 헬퍼를 추가하고 `createEvent`/`updateEvent`에서 자원이 지정된 일정 저장 전 충돌을 검사하도록 구현. 충돌 시 **409**와 겹치는 예약 정보(제목·시간·예약자)를 반환한다.
@@ -71,8 +70,8 @@
 - 수정 시 본인 일정은 `excludeId`로 제외. ✔ `schedule.test.js` 5건 추가.
 - 알려진 한계: 여러 날에 걸친 "시간 지정" 일정은 단순화하여 시간대만 비교(소규모 팀 로컬 전제). 필요 시 일자별 분해로 정밀화 가능.
 
-### 🟡 P3 — OKR 체크인 권한 미확인 (설계 확인 필요)
-`okrController.createCheckin`은 인증된 누구나 체크인해 KR `currentValue`를 덮어쓸 수 있다(KR CRUD는 소유자/admin으로 제한하는 것과 비대칭). 팀 투명성 목적이면 의도된 설계일 수 있으나, 아니라면 목표 소유자/KR 소유자로 제한 권장.
+### ✅ P3 — OKR 체크인 권한 → **수정 완료**
+`okrController.createCheckin`에 `canEditObjective` 게이트 추가 — KR CRUD와 동일하게 목표 소유자·관리자만 체크인(KR 현재값 갱신) 가능. ✔ `okr.test.js` 403 케이스 추가.
 
 ### 🟡 P3 — 로버스트니스 관찰 (라이브 버그 아님, 테스트로 현재 동작 고정)
 - **자동화 `changed_to` 조건**: `automationService.evalCondition`은 `cond.field`가 없으면 무조건 `true`로 단락한다. `changed_to`는 `ctx.status/prevStatus`만 쓰므로 `field` 없이 만든 규칙은 상태변경 여부와 무관하게 항상 통과한다. 현재 UI는 `field`(status)를 채워 정상 동작하지만, `changed_to`는 field 유무와 무관하게 평가되도록 예외 처리하는 편이 안전.

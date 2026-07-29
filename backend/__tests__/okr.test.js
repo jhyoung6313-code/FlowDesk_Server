@@ -103,6 +103,12 @@ describe('createKeyResult — Objective 재계산 트리거', () => {
 });
 
 describe('createCheckin — 값으로 KR 현재값 갱신', () => {
+  test('타인 목표의 KR 체크인 → 403 (소유자/관리자만)', async () => {
+    prisma.keyResult.findUnique.mockResolvedValue({ id: 5, objectiveId: 1, objective: { id: 1, ownerId: 99 } });
+    const res = await request(app('member', 10)).post('/okr/krs/5/checkins').send({ value: 50 });
+    expect(res.status).toBe(403);
+  });
+
   test('현재값 누락 → 400', async () => {
     prisma.keyResult.findUnique.mockResolvedValue({ id: 5, objectiveId: 1, objective: { id: 1, ownerId: 10 } });
     const res = await request(app('member', 10)).post('/okr/krs/5/checkins').send({});

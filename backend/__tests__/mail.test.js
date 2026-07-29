@@ -7,7 +7,7 @@ const express = require('express');
 
 jest.mock('@prisma/client', () => {
   const m = {
-    internalMail: { findUnique: jest.fn(), findMany: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
+    internalMail: { findUnique: jest.fn(), findMany: jest.fn(), count: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
     internalMailRecipient: { findFirst: jest.fn(), findMany: jest.fn(), count: jest.fn(), update: jest.fn(), updateMany: jest.fn(), deleteMany: jest.fn(), delete: jest.fn() },
     internalMailComment: { findMany: jest.fn(), findUnique: jest.fn(), create: jest.fn(), delete: jest.fn() },
     internalMailLabel: { findMany: jest.fn(), findUnique: jest.fn(), count: jest.fn(), create: jest.fn() },
@@ -32,6 +32,8 @@ function app(uid = 10, role = 'member') {
   a.get('/mail/:id/comments', ctrl.listComments);
   a.post('/mail/:id/comments', ctrl.createComment);
   a.post('/mail/bulk', ctrl.bulkAction);
+  a.delete('/mail/sent/:id', ctrl.deleteSent);
+  a.get('/mail', ctrl.list);
   a.use((err, req, res, next) => res.status(500).json({ error: err.message }));
   return a;
 }
@@ -108,5 +110,41 @@ describe('POST /mail/bulk (일괄 처리)', () => {
     const call = prisma.internalMailRecipient.updateMany.mock.calls[0][0];
     expect(call.where).toEqual({ userId: 10, mailId: { in: [1, 2] } });
     expect(call.data.isRead).toBe(true);
+  });
+});
+
+describe('DELETE /mail/sent/:id (발송 메일 삭제)', () => {
+  test('타인 발송 메일 삭제 → 403', async () => {
+    prisma.internalMail.findUnique.mockResolvedValue({ id: 1, fromUserId: 99, isDraft: false });
+    const res = await request(app(10)).delete('/mail/sent/1');
+    expect(res.status).toBe(403);
+  });
+
+  test('발송 메일은 senderDeleted=true로 숨김(수신자 편지함 보존)', async () => {
+    prisma.internalMail.findUnique.mockResolvedValue({ id: 1, fromUserId: 10, isDraft: false });
+    prisma.internalMail.update.mockResolvedValue({});
+    const res = await request(app(10)).delete('/mail/sent/1');
+    expect(res.status).toBe(200);
+    expect(prisma.internalMail.update).toHaveBeenCalledWith({ where: { id: 1 }, data: { senderDeleted: true } });
+    expect(prisma.internalMail.delete).not.toHaveBeenCalled();
+  });
+
+  test('임시보관함(draft)은 실제 삭제', async () => {
+    prisma.internalMail.findUnique.mockResolvedValue({ id: 2, fromUserId: 10, isDraft: true });
+    prisma.internalMail.delete.mockResolvedValue({});
+    const res = await request(app(10)).delete('/mail/sent/2');
+    expect(res.status).toBe(200);
+    expect(prisma.internalMail.delete).toHaveBeenCalled();
+    expect(prisma.internalMail.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('GET /mail?folder=sent (숨긴 메일 제외)', () => {
+  test('보낸편지함 조회 where에 senderDeleted:false 포함', async () => {
+    prisma.internalMail.findMany.mockResolvedValue([]);
+    prisma.internalMail.count.mockResolvedValue(0);
+    await request(app(10)).get('/mail?folder=sent');
+    const where = prisma.internalMail.findMany.mock.calls[0][0].where;
+    expect(where.senderDeleted).toBe(false);
   });
 });
