@@ -440,7 +440,7 @@ export default function LedgerPage() {
               >
                 <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#333' : '#f0f0f0'} />
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tickFormatter={(v) => v >= 10000 ? `${(v / 10000).toFixed(0)}만` : v} tick={{ fontSize: 11 }} />
+                <YAxis tickFormatter={(v) => v >= 10000 ? `${(v / 10000).toFixed(0)}만` : v} tick={{ fontSize: 12 }} />
                 <RTooltip formatter={(v) => `${fmt(v)}원`} />
                 <Legend />
                 <Bar dataKey="수입" fill="#52c41a" radius={[3, 3, 0, 0]}>
@@ -567,7 +567,7 @@ export default function LedgerPage() {
               {categories.map((c) => (
                 <Option key={c.id} value={c.id}>
                   <Tag color={c.color} style={{ marginRight: 6 }}>{c.name}</Tag>
-                  <span style={{ fontSize: 11, color: '#888' }}>{c.type === 'income' ? '수입' : '지출'}</span>
+                  <span style={{ fontSize: 12, color: '#888' }}>{c.type === 'income' ? '수입' : '지출'}</span>
                 </Option>
               ))}
             </Select>

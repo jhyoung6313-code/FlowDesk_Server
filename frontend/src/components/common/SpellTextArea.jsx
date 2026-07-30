@@ -62,7 +62,7 @@ export default function SpellTextArea({
     border: '1px solid var(--fd-border, #d9d9d9)',
     borderRadius: 8,
     fontFamily: 'inherit',
-    fontSize: 14,
+    fontSize: 13,
     lineHeight: 1.5715,
     letterSpacing: 'normal',
     whiteSpace: 'pre-wrap',

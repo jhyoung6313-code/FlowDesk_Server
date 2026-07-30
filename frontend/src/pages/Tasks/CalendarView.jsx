@@ -282,7 +282,7 @@ export default function CalendarView({ isActive }) {
 
     if (props.type === 'note') {
       return (
-        <div style={{ padding: '1px 4px', overflow: 'hidden', fontSize: 11, fontWeight: 500 }}>
+        <div style={{ padding: '1px 4px', overflow: 'hidden', fontSize: 12, fontWeight: 500 }}>
           📝 {props.content}
         </div>
       );

@@ -637,7 +637,7 @@ export default function DocumentForm({ embedded = false, initialDocId = null, co
               onChange={e => setPresetName(e.target.value)} onPressEnter={savePreset} />
             <Button type="primary" onClick={savePreset} disabled={approvalLine.length === 0}>저장</Button>
           </div>
-          {approvalLine.length === 0 && <Text type="secondary" style={{ fontSize: 11 }}>먼저 결재자를 추가하세요.</Text>}
+          {approvalLine.length === 0 && <Text type="secondary" style={{ fontSize: 12 }}>먼저 결재자를 추가하세요.</Text>}
         </div>
         <Divider style={{ margin: '12px 0' }} />
         <Text style={{ fontSize: 13, fontWeight: 600 }}>저장된 프리셋</Text>
@@ -647,7 +647,7 @@ export default function DocumentForm({ embedded = false, initialDocId = null, co
           <div style={{ marginTop: 6 }}>
             {presets.map(p => (
               <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #f5f5f5' }}>
-                <span style={{ flex: 1, fontSize: 13 }}>{p.name} <Text type="secondary" style={{ fontSize: 11 }}>({(p.steps || []).length}명)</Text></span>
+                <span style={{ flex: 1, fontSize: 13 }}>{p.name} <Text type="secondary" style={{ fontSize: 12 }}>({(p.steps || []).length}명)</Text></span>
                 <Button size="small" onClick={() => { loadPreset(p.id); setSaveOpen(false); }}>불러오기</Button>
                 <Popconfirm title="삭제하시겠습니까?" onConfirm={() => deletePreset(p.id)} okText="삭제" cancelText="취소">
                   <Button size="small" danger type="text" icon={<DeleteOutlined />} />

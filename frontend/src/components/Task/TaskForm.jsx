@@ -453,7 +453,7 @@ export default function TaskForm({ open, task, onClose, onSubmit, initialStatus 
                         {c.user?.displayName?.slice(0, 1)}
                       </Avatar>
                       <Typography.Text strong style={{ fontSize: 12 }}>{c.user?.displayName}</Typography.Text>
-                      <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                         {dayjs(c.createdAt).format('MM/DD HH:mm')}
                       </Typography.Text>
                     </Space>
@@ -526,7 +526,7 @@ export default function TaskForm({ open, task, onClose, onSubmit, initialStatus 
                 }}>
                   <PaperClipOutlined style={{ color: '#1677ff', fontSize: 12 }} />
                   <Typography.Text style={{ fontSize: 12, flex: 1 }} ellipsis>{commentFile.name}</Typography.Text>
-                  <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                     {commentFile.size < 1024 * 1024
                       ? `${(commentFile.size / 1024).toFixed(1)}KB`
                       : `${(commentFile.size / (1024 * 1024)).toFixed(1)}MB`}

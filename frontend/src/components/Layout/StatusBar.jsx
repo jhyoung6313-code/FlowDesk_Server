@@ -43,7 +43,7 @@ export default function StatusBar() {
       alignItems: 'center',
       justifyContent: 'space-between',
       padding: '0 16px',
-      fontSize: 11.5,
+      fontSize: 12,
       color: t2,
       gap: 16,
       userSelect: 'none',

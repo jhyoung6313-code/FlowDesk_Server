@@ -66,7 +66,7 @@ export default function ScheduleDetail({ open, event, onClose, onEdit }) {
         <span style={{ fontSize: 22 }}>{m.icon}</span>
         <div>
           <div style={{ fontSize: 16, fontWeight: 700 }}>{event.title || m.label}</div>
-          <div style={{ fontSize: 11.5, opacity: 0.9 }}>{m.label}{event.allDay ? ' · 종일' : ''}</div>
+          <div style={{ fontSize: 12, opacity: 0.9 }}>{m.label}{event.allDay ? ' · 종일' : ''}</div>
         </div>
       </div>
 

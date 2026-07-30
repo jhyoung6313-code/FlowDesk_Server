@@ -21,7 +21,7 @@ export default function PropertyValue({ property, value, card }) {
     if (!date) return <Text type="secondary">—</Text>;
     return (
       <Tooltip title={dayjs(date).format('YYYY-MM-DD HH:mm')}>
-        <Text style={{ fontSize: 11 }}>
+        <Text style={{ fontSize: 12 }}>
           <ClockCircleOutlined style={{ marginRight: 4 }} />
           {dayjs(date).format('MM/DD HH:mm')}
         </Text>
@@ -37,7 +37,7 @@ export default function PropertyValue({ property, value, card }) {
         <Avatar size={16} style={{ backgroundColor: creator.avatarColor || '#1677ff', fontSize: 9 }}>
           {creator.displayName?.[0]}
         </Avatar>
-        <Text style={{ fontSize: 11 }}>{creator.displayName}</Text>
+        <Text style={{ fontSize: 12 }}>{creator.displayName}</Text>
       </span>
     );
   }
@@ -49,28 +49,28 @@ export default function PropertyValue({ property, value, card }) {
   }
   if (type === 'url') {
     return (
-      <a href={parsed} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 11 }}>
+      <a href={parsed} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()} style={{ fontSize: 12 }}>
         <LinkOutlined /> {parsed}
       </a>
     );
   }
   if (type === 'email') {
     return (
-      <a href={`mailto:${parsed}`} onClick={e => e.stopPropagation()} style={{ fontSize: 11 }}>
+      <a href={`mailto:${parsed}`} onClick={e => e.stopPropagation()} style={{ fontSize: 12 }}>
         <MailOutlined style={{ marginRight: 3 }} />{parsed}
       </a>
     );
   }
   if (type === 'phone') {
     return (
-      <a href={`tel:${parsed}`} onClick={e => e.stopPropagation()} style={{ fontSize: 11 }}>
+      <a href={`tel:${parsed}`} onClick={e => e.stopPropagation()} style={{ fontSize: 12 }}>
         <PhoneOutlined style={{ marginRight: 3 }} />{parsed}
       </a>
     );
   }
   if (type === 'select') {
     const opt = options.find(o => o.value === parsed);
-    return opt ? <Tag color={opt.color} style={{ fontSize: 11 }}>{opt.value}</Tag> : <Text style={{ fontSize: 11 }}>{parsed}</Text>;
+    return opt ? <Tag color={opt.color} style={{ fontSize: 12 }}>{opt.value}</Tag> : <Text style={{ fontSize: 12 }}>{parsed}</Text>;
   }
   if (type === 'multiselect') {
     const vals = Array.isArray(parsed) ? parsed : [];
@@ -78,7 +78,7 @@ export default function PropertyValue({ property, value, card }) {
       <span>
         {vals.map(v => {
           const opt = options.find(o => o.value === v);
-          return <Tag key={v} color={opt?.color} style={{ fontSize: 11 }}>{v}</Tag>;
+          return <Tag key={v} color={opt?.color} style={{ fontSize: 12 }}>{v}</Tag>;
         })}
       </span>
     );
@@ -98,7 +98,7 @@ export default function PropertyValue({ property, value, card }) {
     );
   }
   if (type === 'date') {
-    return <Text style={{ fontSize: 11 }}>{String(parsed).slice(0, 10)}</Text>;
+    return <Text style={{ fontSize: 12 }}>{String(parsed).slice(0, 10)}</Text>;
   }
-  return <Text style={{ fontSize: 11 }}>{String(parsed)}</Text>;
+  return <Text style={{ fontSize: 12 }}>{String(parsed)}</Text>;
 }

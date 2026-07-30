@@ -72,7 +72,7 @@ export default function ScheduleMonthModal({ open, initialDate, isDark, onClose,
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
         {dow.map((d, i) => (
           <div key={d} style={{
-            padding: 8, textAlign: 'center', fontSize: 11, fontWeight: 700,
+            padding: 8, textAlign: 'center', fontSize: 12, fontWeight: 700,
             color: i === 0 ? '#DC2626' : i === 6 ? '#3B82F6' : T.text2,
             borderBottom: `1px solid ${T.border}`,
           }}>{d}</div>
@@ -99,7 +99,7 @@ export default function ScheduleMonthModal({ open, initialDate, isDark, onClose,
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 1, minWidth: 0 }}>
                 <span style={{
-                  fontSize: 11.5, fontWeight: 700,
+                  fontSize: 12, fontWeight: 700,
                   color: outMonth ? (isDark ? '#475569' : '#CBD5E1') : (holiday || d.day() === 0) ? '#DC2626' : d.day() === 6 ? '#3B82F6' : T.text1,
                   ...(isToday ? { display: 'inline-flex', width: 20, height: 20, alignItems: 'center', justifyContent: 'center', background: '#F97316', color: '#fff', borderRadius: '50%' } : {}),
                 }}>{d.date()}</span>
@@ -148,7 +148,7 @@ function Pill({ ev, day, onClick }) {
 function FilterChip({ on, onClick, label, dot, T }) {
   return (
     <span onClick={onClick} style={{
-      fontSize: 11, fontWeight: 600, padding: '4px 11px', borderRadius: 20, cursor: 'pointer',
+      fontSize: 12, fontWeight: 600, padding: '4px 11px', borderRadius: 20, cursor: 'pointer',
       border: `1px solid ${on ? '#0F172A' : T.border}`,
       background: on ? '#0F172A' : 'transparent', color: on ? '#fff' : T.text2,
       display: 'flex', alignItems: 'center', gap: 5,

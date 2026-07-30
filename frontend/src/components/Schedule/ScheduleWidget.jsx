@@ -62,7 +62,7 @@ export default function ScheduleWidget({ isDark, D, fill }) {
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 14px', borderBottom: `1px solid ${border}` }}>
         <div style={{ width: 24, height: 24, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, background: isDark ? 'rgba(59,130,246,.15)' : '#EFF6FF', color: '#3B82F6' }}>📅</div>
-        <div style={{ fontSize: 13.5, fontWeight: 700, color: text1 }}>이번 주 일정 · 자원</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: text1 }}>이번 주 일정 · 자원</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 4 }}>
           <span style={navBtn} onClick={() => setWeekStart((w) => w.subtract(1, 'week'))}><LeftOutlined style={{ fontSize: 10 }} /></span>
           <span style={{ fontSize: 12.5, fontWeight: 700, color: text1, padding: '0 2px' }}>

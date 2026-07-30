@@ -63,7 +63,7 @@ function CommentItem({ comment, postId, isAdmin, userId, onReload, token }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <Space size={6} style={{ marginBottom: 4 }}>
             <Text strong style={{ fontSize: 13 }}>{comment.user?.displayName}</Text>
-            <Text type="secondary" style={{ fontSize: 11 }}>
+            <Text type="secondary" style={{ fontSize: 12 }}>
               <ClockCircleOutlined style={{ marginRight: 3 }} />
               {dayjs(comment.createdAt).format('MM.DD HH:mm')}
             </Text>
@@ -133,27 +133,27 @@ function CommentItem({ comment, postId, isAdmin, userId, onReload, token }) {
       {comment.replies?.map(reply => (
         <div key={reply.id} style={{ marginLeft: 44, marginTop: 10 }}>
           <div style={{ display: 'flex', gap: 8 }}>
-            <Avatar size={28} style={{ background: getAvatarBg(reply.user?.avatarColor), flexShrink: 0, fontSize: 11 }}>
+            <Avatar size={28} style={{ background: getAvatarBg(reply.user?.avatarColor), flexShrink: 0, fontSize: 12 }}>
               {getInitial(reply.user?.displayName)}
             </Avatar>
             <div style={{ flex: 1 }}>
               <Space size={6} style={{ marginBottom: 4 }}>
                 <Text strong style={{ fontSize: 12 }}>{reply.user?.displayName}</Text>
-                <Text type="secondary" style={{ fontSize: 11 }}>{dayjs(reply.createdAt).format('MM.DD HH:mm')}</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>{dayjs(reply.createdAt).format('MM.DD HH:mm')}</Text>
               </Space>
               <div style={{ background: token.colorBgLayout, borderRadius: token.borderRadius, padding: '6px 10px', fontSize: 12, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: token.colorText }}>
                 {reply.content}
               </div>
               {reply.attachments?.map(att => (
                 <div key={att.id} style={{ marginTop: 2 }}>
-                  <a href={downloadBbsAttachmentUrl(postId, att.id)} download={att.originalName} style={{ fontSize: 11, color: token.colorPrimary }}>
+                  <a href={downloadBbsAttachmentUrl(postId, att.id)} download={att.originalName} style={{ fontSize: 12, color: token.colorPrimary }}>
                     <PaperClipOutlined style={{ marginRight: 4 }} />{att.originalName}
                   </a>
                 </div>
               ))}
               {(isAdmin || reply.userId === userId) && (
                 <Popconfirm title="삭제하시겠습니까?" onConfirm={async () => { await deleteBbsComment(postId, reply.id); onReload(); }} okText="삭제" cancelText="취소">
-                  <Button type="link" size="small" danger style={{ padding: 0, fontSize: 11, height: 'auto', marginTop: 4 }}>삭제</Button>
+                  <Button type="link" size="small" danger style={{ padding: 0, fontSize: 12, height: 'auto', marginTop: 4 }}>삭제</Button>
                 </Popconfirm>
               )}
             </div>
@@ -282,7 +282,7 @@ export default function PostDetail({ postId, onBack, onChanged }) {
             {getInitial(post.creator?.displayName)}
           </Avatar>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Text strong style={{ fontSize: 14 }}>{post.creator?.displayName || '-'}</Text>
+            <Text strong style={{ fontSize: 13 }}>{post.creator?.displayName || '-'}</Text>
             <div style={{ marginTop: 2 }}>
               <Text type="secondary" style={{ fontSize: 12 }}>
                 <EyeOutlined style={{ marginRight: 4 }} />조회 {post.viewCount}
@@ -355,7 +355,7 @@ export default function PostDetail({ postId, onBack, onChanged }) {
                   <a href={downloadBbsAttachmentUrl(id, att.id)} download={att.originalName} style={{ color: token.colorText }}>
                     {att.originalName}
                   </a>
-                  <Text type="secondary" style={{ fontSize: 11 }}>({(att.size / 1024).toFixed(0)}KB)</Text>
+                  <Text type="secondary" style={{ fontSize: 12 }}>({(att.size / 1024).toFixed(0)}KB)</Text>
                   {(isAdmin || att.uploadedBy === user?.id) && (
                     <Popconfirm title="삭제?" onConfirm={() => handleDeleteAttachment(att.id)} okText="삭제" cancelText="취소">
                       <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ width: 18, height: 18, padding: 0 }} />
@@ -370,7 +370,7 @@ export default function PostDetail({ postId, onBack, onChanged }) {
         {/* 본문 */}
         <div
           className="bbs-post-content"
-          style={{ minHeight: 240, fontSize: 14, lineHeight: 1.9, color: token.colorText }}
+          style={{ minHeight: 240, fontSize: 13, lineHeight: 1.9, color: token.colorText }}
           dangerouslySetInnerHTML={{ __html: post.content || '<span style="color:#aaa;font-style:italic">(내용 없음)</span>' }}
         />
       </Card>
@@ -381,7 +381,7 @@ export default function PostDetail({ postId, onBack, onChanged }) {
         style={{ boxShadow: `0 1px 4px ${token.colorBorderSecondary}` }}
         bodyStyle={{ padding: '16px 24px' }}
       >
-        <Text strong style={{ fontSize: 14 }}>
+        <Text strong style={{ fontSize: 13 }}>
           댓글 <Text style={{ color: token.colorPrimary }}>{comments.length}</Text>
         </Text>
 

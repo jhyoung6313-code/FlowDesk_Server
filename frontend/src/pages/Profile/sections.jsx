@@ -217,11 +217,11 @@ export function OtpSection({ totpEnabled: initialEnabled }) {
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: step === 'idle' ? 0 : 20 }}>
         {enabled ? (
-          <Tag icon={<CheckCircleOutlined />} color="success" style={{ fontSize: 14, padding: '4px 10px' }}>
+          <Tag icon={<CheckCircleOutlined />} color="success" style={{ fontSize: 13, padding: '4px 10px' }}>
             활성화됨
           </Tag>
         ) : (
-          <Tag color="default" style={{ fontSize: 14, padding: '4px 10px' }}>
+          <Tag color="default" style={{ fontSize: 13, padding: '4px 10px' }}>
             비활성화됨
           </Tag>
         )}
@@ -374,7 +374,7 @@ function SignSlot({ kind, label, hint, path, saving, onUpload, onDelete, onDraw 
           )}
         </Space>
       </div>
-      <Typography.Text type="secondary" style={{ fontSize: 11, display: 'block', marginTop: 6 }}>{hint}</Typography.Text>
+      <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 6 }}>{hint}</Typography.Text>
     </div>
   );
 }

@@ -142,12 +142,12 @@ function StepRow({ step, isCurrentGroup, docStatus, token }) {
       <Tag color={role.color} style={{ fontSize: 10, margin: 0, lineHeight: '18px', flexShrink: 0 }}>{role.label}</Tag>
       <div style={{ flex: 1, minWidth: 0 }}>
         <Space size={6} wrap>
-          {step.approverTitleSnap && <Text type="secondary" style={{ fontSize: 11 }}>{step.approverTitleSnap}</Text>}
+          {step.approverTitleSnap && <Text type="secondary" style={{ fontSize: 12 }}>{step.approverTitleSnap}</Text>}
           <Text style={{ fontSize: 12, color: statusColor, fontWeight: isProcessing ? 600 : 400 }}>{name}</Text>
           {isProcessing && <Text style={{ fontSize: 10, color: token.colorPrimary }}>진행중</Text>}
           {skipped && <Text style={{ fontSize: 10, color: token.colorTextTertiary }}>전결 생략</Text>}
         </Space>
-        <div style={{ fontSize: 11, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 12, lineHeight: 1.5 }}>
           {done && (
             step.signImagePath
               ? <img src={step.signImagePath} alt="서명" style={{ height: 34, maxWidth: 88, objectFit: 'contain', marginTop: 2 }} />
@@ -198,7 +198,7 @@ function FormDataView({ template, formData, token }) {
     const display = formatFieldValue(f, data[f.id]);
     bucket.push(
       <div key={f.id} style={{ padding: '8px 12px', background: token.colorBgLayout, borderRadius: token.borderRadius, borderLeft: `3px solid ${token.colorPrimary}` }}>
-        <div style={{ fontSize: 11, color: token.colorTextTertiary, marginBottom: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+        <div style={{ fontSize: 12, color: token.colorTextTertiary, marginBottom: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
           {f.label}{f.required && <span style={{ color: token.colorError }}>*</span>}
         </div>
         <div style={{ fontSize: 13, color: token.colorText, wordBreak: 'break-all' }}>
@@ -495,7 +495,7 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                     <a href={downloadApprovalAttachmentUrl(id, att.id)} download={att.originalName} style={{ color: token.colorText }}>
                       {att.originalName}
                     </a>
-                    <Text type="secondary" style={{ fontSize: 11 }}>({(att.size / 1024).toFixed(0)}KB)</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>({(att.size / 1024).toFixed(0)}KB)</Text>
                     {(isAdmin || att.uploadedBy === user?.id) && (
                       <Popconfirm title="삭제?" onConfirm={() => handleDeleteAttachment(att.id)} okText="삭제" cancelText="취소">
                         <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ width: 18, height: 18, padding: 0 }} />
@@ -525,13 +525,13 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                   <div key={c.id}>
                     {idx > 0 && <Divider style={{ margin: '10px 0' }} />}
                     <div style={{ display: 'flex', gap: 10 }}>
-                      <Avatar size={30} style={{ background: getAvatarBg(c.user?.avatarColor), flexShrink: 0, fontSize: 11 }}>
+                      <Avatar size={30} style={{ background: getAvatarBg(c.user?.avatarColor), flexShrink: 0, fontSize: 12 }}>
                         {getInitial(c.user?.displayName)}
                       </Avatar>
                       <div style={{ flex: 1 }}>
                         <Space size={8} style={{ marginBottom: 4 }}>
                           <Text strong style={{ fontSize: 13 }}>{c.user?.displayName}</Text>
-                          <Text type="secondary" style={{ fontSize: 11 }}>{dayjs(c.createdAt).format('MM.DD HH:mm')}</Text>
+                          <Text type="secondary" style={{ fontSize: 12 }}>{dayjs(c.createdAt).format('MM.DD HH:mm')}</Text>
                         </Space>
                         <div style={{ background: token.colorBgLayout, borderRadius: token.borderRadius, padding: '6px 10px', fontSize: 13, whiteSpace: 'pre-wrap', color: token.colorText }}>
                           {c.content}
@@ -550,7 +550,7 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
 
             <Divider style={{ margin: '10px 0 12px' }} />
             <div style={{ display: 'flex', gap: 10 }}>
-              <Avatar size={30} style={{ background: getAvatarBg(user?.avatarColor), flexShrink: 0, fontSize: 11 }}>
+              <Avatar size={30} style={{ background: getAvatarBg(user?.avatarColor), flexShrink: 0, fontSize: 12 }}>
                 {getInitial(user?.displayName)}
               </Avatar>
               <div style={{ flex: 1 }}>
@@ -587,7 +587,7 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
             return (
               <div key={order} style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                  <Text style={{ fontSize: 11, fontWeight: 600, color: isCurrentGroup ? token.colorPrimary : token.colorTextSecondary }}>
+                  <Text style={{ fontSize: 12, fontWeight: 600, color: isCurrentGroup ? token.colorPrimary : token.colorTextSecondary }}>
                     {order}차
                   </Text>
                   {parallel && <Tag color="cyan" style={{ fontSize: 9, margin: 0, lineHeight: '16px' }}>병렬</Tag>}
@@ -603,7 +603,7 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
 
           {refSteps.length > 0 && (
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px dashed ${token.colorBorderSecondary}` }}>
-              <Text style={{ fontSize: 11, fontWeight: 600, color: token.colorTextSecondary }}>참조</Text>
+              <Text style={{ fontSize: 12, fontWeight: 600, color: token.colorTextSecondary }}>참조</Text>
               <div style={{ marginTop: 2 }}>
                 {refSteps.map(step => (
                   <StepRow key={step.id} step={step} isCurrentGroup={false} docStatus={doc.status} token={token} />

@@ -140,7 +140,7 @@ export default function PlaybookWorkspace() {
                   >
                     {isOpen ? <DownOutlined style={{ fontSize: 12, color: '#8c8c8c' }} /> : <RightOutlined style={{ fontSize: 12, color: '#8c8c8c' }} />}
                     <BookOutlined style={{ color: '#1677ff', flexShrink: 0 }} />
-                    <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: 'var(--fd-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={pb.name}>
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--fd-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={pb.name}>
                       {pb.name}
                     </span>
                     <span style={{ fontSize: 12, color: '#bfbfbf' }}>{runCount}</span>
@@ -149,11 +149,11 @@ export default function PlaybookWorkspace() {
                         <PlayCircleOutlined style={{ color: '#52c41a', fontSize: 15 }} onClick={(e) => openRunModal(e, pb.id)} />
                       </Tooltip>
                       <Tooltip title="보기">
-                        <EyeOutlined style={{ color: '#8c8c8c', fontSize: 14 }} onClick={() => navigate(`/playbooks/${pb.id}`)} />
+                        <EyeOutlined style={{ color: '#8c8c8c', fontSize: 13 }} onClick={() => navigate(`/playbooks/${pb.id}`)} />
                       </Tooltip>
                       {canEdit && (
                         <Tooltip title="편집">
-                          <EditOutlined style={{ color: '#8c8c8c', fontSize: 14 }} onClick={() => navigate(`/playbooks/${pb.id}/edit`)} />
+                          <EditOutlined style={{ color: '#8c8c8c', fontSize: 13 }} onClick={() => navigate(`/playbooks/${pb.id}/edit`)} />
                         </Tooltip>
                       )}
                     </span>
@@ -199,7 +199,7 @@ export default function PlaybookWorkspace() {
                               padding: '5px 8px 5px 30px', borderRadius: 6, fontSize: 13, color: '#52c41a',
                             }}
                           >
-                            <PlusOutlined style={{ fontSize: 11 }} /> 새 Run
+                            <PlusOutlined style={{ fontSize: 12 }} /> 새 Run
                           </div>
                         </>
                       )}

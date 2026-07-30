@@ -223,7 +223,7 @@ function ColumnHeader({ col, count, wipLimit, onAddCard }) {
         }}>
           {count}{wipLimit != null && <span style={{ opacity: 0.6 }}>/{wipLimit}</span>}
         </span>
-        {overWip && <Tooltip title="WIP 한도 초과"><WarningOutlined style={{ color: '#ff4d4f', fontSize: 11 }} /></Tooltip>}
+        {overWip && <Tooltip title="WIP 한도 초과"><WarningOutlined style={{ color: '#ff4d4f', fontSize: 12 }} /></Tooltip>}
       </div>
       <Button
         type="text"
@@ -250,7 +250,7 @@ function SwimlaneHeader({ label, color, count }) {
       gap: 8,
     }}>
       <Text strong style={{ fontSize: 12 }}>{label}</Text>
-      <Text type="secondary" style={{ fontSize: 11 }}>({count}장)</Text>
+      <Text type="secondary" style={{ fontSize: 12 }}>({count}장)</Text>
     </div>
   );
 }
@@ -339,7 +339,7 @@ export default function KanbanView({ board, cards, onAddCard, onEditCard, onDele
               style={visibleProps.length < cardSelectableProps.length ? { borderColor: '#1677ff', color: '#1677ff' } : {}}
             >
               카드 표시 항목
-              <span style={{ marginLeft: 6, fontSize: 11, color: '#888' }}>
+              <span style={{ marginLeft: 6, fontSize: 12, color: '#888' }}>
                 ({visibleProps.length}/{cardSelectableProps.length})
               </span>
             </Button>
@@ -503,7 +503,7 @@ function BoardCard({ card, dragging, visibleProps, onDragStart, onEdit, onDelete
             {card.cardNumber && (
               <span style={{ fontSize: 10, color: '#ccc', fontFamily: 'monospace' }}>#{card.cardNumber}</span>
             )}
-            {isBlocked && <Tooltip title="선행 카드 완료 필요"><span style={{ fontSize: 11 }}>⛔</span></Tooltip>}
+            {isBlocked && <Tooltip title="선행 카드 완료 필요"><span style={{ fontSize: 12 }}>⛔</span></Tooltip>}
           </div>
           <div style={{ display: 'flex', opacity: hover ? 1 : 0, transition: 'opacity 0.12s' }}>
             <Button type="text" size="small" icon={<EditOutlined />} style={{ padding: '0 3px', height: 18 }}

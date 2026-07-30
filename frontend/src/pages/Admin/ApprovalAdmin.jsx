@@ -206,7 +206,7 @@ function FormTypeTab() {
       title: '이름', dataIndex: 'name',
       render: (name, rec) => (
         <Space>
-          {rec.parentId && <Text type="secondary" style={{ fontSize: 11 }}>└ </Text>}
+          {rec.parentId && <Text type="secondary" style={{ fontSize: 12 }}>└ </Text>}
           <Text>{name}</Text>
         </Space>
       ),
@@ -670,7 +670,7 @@ function TemplateTab() {
                 {!['truthy'].includes(step.condition.op) && (
                   <Input size="small" placeholder="값" style={{ width: 90 }} value={step.condition.value} onChange={e => setCondition(i, { value: e.target.value })} />
                 )}
-                <Text type="secondary" style={{ fontSize: 11 }}>일 때만 결재</Text>
+                <Text type="secondary" style={{ fontSize: 12 }}>일 때만 결재</Text>
               </div>
             )}
           </div>
@@ -705,7 +705,7 @@ function TemplateTab() {
                   const f = fields.find(x => x.id === fid);
                   return (
                     <div key={fid} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <Text style={{ fontSize: 11, color: '#888' }}>{f?.label || fid}</Text>
+                      <Text style={{ fontSize: 12, color: '#888' }}>{f?.label || fid}</Text>
                       {renderSampleInput(fid)}
                     </div>
                   );

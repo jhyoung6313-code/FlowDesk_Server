@@ -160,7 +160,7 @@ export default function AdminConsole() {
                             <Space align="center" size={12}>
                               <span style={{ fontSize: 18, color: '#2563eb' }}>{it.icon}</span>
                               <div>
-                                <div style={{ fontWeight: 600, fontSize: 14 }}>{it.label}</div>
+                                <div style={{ fontWeight: 600, fontSize: 13 }}>{it.label}</div>
                                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>{it.desc}</Typography.Text>
                               </div>
                             </Space>
@@ -200,7 +200,7 @@ export default function AdminConsole() {
                               </Space>
                             }
                             description={
-                              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                                 {dayjs(log.createdAt).format('MM/DD HH:mm')}
                                 {log.ipAddress ? ` · ${log.ipAddress}` : ''}
                               </Typography.Text>

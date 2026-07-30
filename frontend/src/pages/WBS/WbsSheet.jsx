@@ -86,7 +86,7 @@ function EditCell({ value, onChange, type = 'text', style = {}, readOnly = false
           style={{ cursor: readOnly ? 'default' : 'pointer', ...style }}
           onClick={() => { if (!readOnly) { setVal(num); setEditing(true); } }}
         >
-          <span style={{ fontSize: 11, minWidth: 28, display: 'block', textAlign: 'right' }}>{num}%</span>
+          <span style={{ fontSize: 12, minWidth: 28, display: 'block', textAlign: 'right' }}>{num}%</span>
         </div>
       );
     }
@@ -294,7 +294,7 @@ function DeliverableCell({ taskId, value, fileOrigName, onChange, onRefresh }) {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 4,
           background: '#e6f4ff', border: '1px solid #91caff',
-          borderRadius: 4, padding: '2px 6px', fontSize: 11,
+          borderRadius: 4, padding: '2px 6px', fontSize: 12,
         }}>
           <PaperClipOutlined style={{ color: '#1890ff', flexShrink: 0 }} />
           <Tooltip title={fileOrigName} placement="topLeft">
@@ -324,7 +324,7 @@ function DeliverableCell({ taskId, value, fileOrigName, onChange, onRefresh }) {
           <Button
             type="text" size="small" icon={<PaperClipOutlined />}
             loading={uploading}
-            style={{ color: '#aaa', fontSize: 11, padding: '0 4px', height: 18, lineHeight: '18px' }}
+            style={{ color: '#aaa', fontSize: 12, padding: '0 4px', height: 18, lineHeight: '18px' }}
           >
             파일 첨부
           </Button>
@@ -386,7 +386,7 @@ function filterTree(nodes, keyword) {
 }
 
 const LEVEL_CONFIG = [
-  { rowBg: '#dff0df', borderColor: '#2e7d32', borderWidth: 4, dotColor: '#1b5e20', textColor: '#1b5e20', fontWeight: 800, fontSize: 14, label: '대', labelBg: '#2e7d32' },
+  { rowBg: '#dff0df', borderColor: '#2e7d32', borderWidth: 4, dotColor: '#1b5e20', textColor: '#1b5e20', fontWeight: 800, fontSize: 13, label: '대', labelBg: '#2e7d32' },
   { rowBg: '#edf7ed', borderColor: '#43a047', borderWidth: 3, dotColor: '#2e7d32', textColor: '#2e7d32', fontWeight: 700, fontSize: 13, label: '중', labelBg: '#43a047' },
   { rowBg: '#f3faf3', borderColor: '#81c784', borderWidth: 2, dotColor: '#388e3c', textColor: '#2d5a31', fontWeight: 600, fontSize: 13, label: '소', labelBg: '#66bb6a' },
   { rowBg: '#f9fdf9', borderColor: '#c8e6c9', borderWidth: 2, dotColor: '#66bb6a', textColor: '#37474f', fontWeight: 500, fontSize: 12, label: null, labelBg: '#a5d6a7' },
@@ -618,7 +618,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 3,
                   marginTop: 3, marginLeft: 2,
-                  color: cfg.borderColor, fontSize: 11, cursor: 'pointer',
+                  color: cfg.borderColor, fontSize: 12, cursor: 'pointer',
                   opacity: 0.55, transition: 'opacity 0.15s',
                   userSelect: 'none',
                 }}
@@ -930,7 +930,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
                     </Popconfirm>
                   </div>
                   {(iss.occurDate || iss.targetDate) && (
-                    <div style={{ marginTop: 6, fontSize: 11, color: '#aaa', display: 'flex', gap: 12 }}>
+                    <div style={{ marginTop: 6, fontSize: 12, color: '#aaa', display: 'flex', gap: 12 }}>
                       {iss.occurDate && <span>발생일: {dayjs(iss.occurDate).format('MM/DD')}</span>}
                       {iss.targetDate && (
                         <span style={{ color: dayjs().isAfter(dayjs(iss.targetDate), 'day') && iss.status !== 'closed' ? '#ff4d4f' : '#aaa' }}>

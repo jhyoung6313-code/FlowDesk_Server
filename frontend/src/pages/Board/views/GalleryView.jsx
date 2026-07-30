@@ -178,7 +178,7 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
 
           {/* 설명 */}
           {card.description && (
-            <div style={{ fontSize: 11, color: '#aaa', marginBottom: 8, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            <div style={{ fontSize: 12, color: '#aaa', marginBottom: 8, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
               {card.description}
             </div>
           )}
@@ -268,7 +268,7 @@ export default function GalleryView({ board, cards, onAddCard, onEditCard, onDel
               style={visibleProps.length < allProperties.length ? { borderColor: '#1677ff', color: '#1677ff' } : {}}
             >
               카드 표시 항목
-              <span style={{ marginLeft: 6, fontSize: 11, color: '#888' }}>
+              <span style={{ marginLeft: 6, fontSize: 12, color: '#888' }}>
                 ({visibleProps.length}/{allProperties.length})
               </span>
             </Button>

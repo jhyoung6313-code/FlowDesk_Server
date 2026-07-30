@@ -331,9 +331,9 @@ export default function BbsPage() {
         </Space>
         {isAdmin && (
           <Space size={2} className="cat-actions" style={{ flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-            <Button size="small" type="text" icon={<EditOutlined style={{ fontSize: 11 }} />} onClick={() => openCatEdit(cat)} style={{ width: 20, height: 20, padding: 0 }} />
+            <Button size="small" type="text" icon={<EditOutlined style={{ fontSize: 12 }} />} onClick={() => openCatEdit(cat)} style={{ width: 20, height: 20, padding: 0 }} />
             <Popconfirm title="삭제하시겠습니까?" onConfirm={() => handleCatDelete(cat)} okText="삭제" cancelText="취소">
-              <Button size="small" type="text" danger icon={<DeleteOutlined style={{ fontSize: 11 }} />} style={{ width: 20, height: 20, padding: 0 }} />
+              <Button size="small" type="text" danger icon={<DeleteOutlined style={{ fontSize: 12 }} />} style={{ width: 20, height: 20, padding: 0 }} />
             </Popconfirm>
           </Space>
         )}
@@ -370,18 +370,18 @@ export default function BbsPage() {
             {`[${title}]`}
           </Text>
           {row._count?.attachments > 0 && (
-            <span style={{ fontSize: 11, color: token.colorTextTertiary, flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: token.colorTextTertiary, flexShrink: 0 }}>
               <PaperClipOutlined /> {row._count.attachments}
             </span>
           )}
           {row._count?.comments > 0 && (
-            <span style={{ fontSize: 11, color: token.colorPrimary, flexShrink: 0 }}>
+            <span style={{ fontSize: 12, color: token.colorPrimary, flexShrink: 0 }}>
               <CommentOutlined /> {row._count.comments}
             </span>
           )}
         </div>
         {compact && (
-          <div style={{ marginTop: 3, display: 'flex', gap: 10, fontSize: 11, color: token.colorTextTertiary }}>
+          <div style={{ marginTop: 3, display: 'flex', gap: 10, fontSize: 12, color: token.colorTextTertiary }}>
             <span>{row.creator?.displayName}</span>
             <span>{dayjs(row.createdAt).format('MM.DD HH:mm')}</span>
             <span><EyeOutlined /> {row.viewCount}</span>
@@ -553,7 +553,7 @@ export default function BbsPage() {
                     {selectedCat?.icon && <span style={{ fontSize: 18 }}>{selectedCat.icon}</span>}
                     <Title level={5} style={{ margin: 0 }}>{selectedCat?.name}</Title>
                     {selectedCat?.writeRole === 'admin' && (
-                      <Tag icon={<LockOutlined />} color="warning" style={{ fontSize: 11 }}>관리자 전용</Tag>
+                      <Tag icon={<LockOutlined />} color="warning" style={{ fontSize: 12 }}>관리자 전용</Tag>
                     )}
                   </Space>
                 }

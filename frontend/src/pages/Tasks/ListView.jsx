@@ -232,11 +232,6 @@ export default function ListView() {
             )}
             <DdayBadge dueDate={record.dueDate} status={record.status} />
           </Space>
-          {record.part && (
-            <Tag color="blue" style={{ fontSize: 12, marginTop: 2 }}>
-              {record.part.name}
-            </Tag>
-          )}
           {record.tags?.length > 0 && (
             <Space size={2} style={{ marginTop: 2 }} wrap>
               {record.tags.map((tt) => (
@@ -255,6 +250,17 @@ export default function ListView() {
             </Space>
           )}
         </Space>
+      ),
+    },
+    {
+      title: '담당팀',
+      dataIndex: ['part', 'name'],
+      key: 'part',
+      width: 110,
+      render: (_, record) => (
+        record.part
+          ? <Tag color="blue" style={{ fontSize: 12, margin: 0 }}>{record.part.name}</Tag>
+          : <Typography.Text type="secondary" style={{ fontSize: 12 }}>-</Typography.Text>
       ),
     },
     {
@@ -555,7 +561,7 @@ export default function ListView() {
           <Space>
             <span>{detailTask?.title}</span>
             {detailTask && isOverdue(detailTask.dueDate, detailTask.status) && (
-              <Tag color="error" style={{ fontSize: 11, padding: '0 5px', lineHeight: '18px', marginInlineEnd: 0 }}>지연</Tag>
+              <Tag color="error" style={{ fontSize: 12, padding: '0 5px', lineHeight: '18px', marginInlineEnd: 0 }}>지연</Tag>
             )}
             {detailTask && <DdayBadge dueDate={detailTask.dueDate} status={detailTask.status} />}
           </Space>
@@ -715,10 +721,10 @@ export default function ListView() {
                                   <Typography.Text strong style={{ fontSize: 12 }}>
                                     {ACTION_LABEL[h.action] || h.action}
                                   </Typography.Text>
-                                  <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                                     {h.user?.displayName}
                                   </Typography.Text>
-                                  <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                                     {dayjs(h.createdAt).format('MM/DD HH:mm')}
                                   </Typography.Text>
                                 </Space>

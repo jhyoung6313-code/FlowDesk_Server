@@ -185,7 +185,7 @@ export default function WbsWorkspace() {
                   className="fd-wbs-row"
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
-                    padding: '7px 8px', borderRadius: 6, fontSize: 14, marginBottom: 1,
+                    padding: '7px 8px', borderRadius: 6, fontSize: 13, marginBottom: 1,
                     background: active ? '#e6f4ff' : 'transparent',
                     color: active ? '#1677ff' : 'var(--fd-text-primary)',
                     fontWeight: active ? 600 : 400,

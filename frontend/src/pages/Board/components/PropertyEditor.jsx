@@ -167,11 +167,11 @@ function PropertyRow({ prop, boardId, onUpdated, onDeleted }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <Text strong style={{ fontSize: 13 }}>{prop.name}</Text>
-            <Tag style={{ marginLeft: 8, fontSize: 11 }}>{typeLabel}</Tag>
+            <Tag style={{ marginLeft: 8, fontSize: 12 }}>{typeLabel}</Tag>
             {hasOptions && (
               <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 {(prop.options ?? []).map(o => (
-                  <Tag key={o.id} color={o.color} style={{ fontSize: 11, margin: 0 }}>{o.value}</Tag>
+                  <Tag key={o.id} color={o.color} style={{ fontSize: 12, margin: 0 }}>{o.value}</Tag>
                 ))}
               </div>
             )}

@@ -241,7 +241,7 @@ export default function MeetingsPage() {
                       <span style={{ fontWeight: 600, fontSize: 13 }}>{m.title}</span>
                       <Tag color={STATUS[m.status]?.color} style={{ margin: 0 }}>{STATUS[m.status]?.label}</Tag>
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--fd-text-secondary)', marginTop: 3 }}>
+                    <div style={{ fontSize: 12, color: 'var(--fd-text-secondary)', marginTop: 3 }}>
                       <ClockCircleOutlined /> {dayjs(m.startAt).format('MM-DD(ddd) HH:mm')}
                       {m._count?.actionItems > 0 && <span style={{ marginLeft: 8 }}>✅ {m._count.actionItems}</span>}
                     </div>

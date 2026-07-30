@@ -17,7 +17,7 @@ const ROLE_OPTIONS = [
 
 function RoleTag({ role }) {
   const r = ROLE_OPTIONS.find(o => o.value === role) ?? { label: role, color: 'default' };
-  return <Tag color={r.color} style={{ fontSize: 11 }}>{r.label}</Tag>;
+  return <Tag color={r.color} style={{ fontSize: 12 }}>{r.label}</Tag>;
 }
 
 export default function MemberManager({
@@ -106,7 +106,7 @@ export default function MemberManager({
               <div>
                 <Text>{m.user?.displayName}</Text>
                 <br />
-                <Text type="secondary" style={{ fontSize: 11 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
                   {ROLE_OPTIONS.find(r => r.value === m.role)?.desc ?? m.role}
                 </Text>
               </div>
@@ -124,7 +124,7 @@ export default function MemberManager({
                 >
                   {ROLE_OPTIONS.filter(r => r.value !== 'owner').map(r => (
                     <Select.Option key={r.value} value={r.value}>
-                      <Tag color={r.color} style={{ fontSize: 11, margin: 0 }}>{r.label}</Tag>
+                      <Tag color={r.color} style={{ fontSize: 12, margin: 0 }}>{r.label}</Tag>
                     </Select.Option>
                   ))}
                 </Select>
@@ -148,11 +148,11 @@ export default function MemberManager({
 
       {/* 역할 설명 */}
       <div style={{ background: 'var(--fd-surface-sunken)', borderRadius: 6, padding: '8px 12px', marginBottom: 16 }}>
-        <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4, fontWeight: 600 }}>역할 안내</Text>
+        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4, fontWeight: 600 }}>역할 안내</Text>
         {ROLE_OPTIONS.map(r => (
           <div key={r.value} style={{ display: 'flex', gap: 6, marginBottom: 2 }}>
             <Tag color={r.color} style={{ fontSize: 10, margin: 0 }}>{r.label}</Tag>
-            <Text type="secondary" style={{ fontSize: 11 }}>{r.desc}</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>{r.desc}</Text>
           </div>
         ))}
       </div>

@@ -86,11 +86,11 @@ function DashBlock({ editing, onHide, D, children }) {
           borderBottom: `1px solid ${D.border}`, background: D.stripBg,
           borderRadius: '13px 13px 0 0',
         }}>
-          <span style={{ fontSize: 11.5, color: D.text2, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span style={{ fontSize: 12, color: D.text2, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <HolderOutlined /> 드래그 이동 · 모서리로 크기조절
           </span>
           <span onClick={(e) => { e.stopPropagation(); onHide(); }}
-            style={{ fontSize: 11.5, color: '#c73a2f', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            style={{ fontSize: 12, color: '#c73a2f', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
             <EyeInvisibleOutlined /> 숨기기
           </span>
         </div>
@@ -384,10 +384,10 @@ export default function DashboardPage() {
     display: 'flex', alignItems: 'center', gap: 9, padding: '12px 15px',
     borderBottom: `1px solid ${D.border}`, flexShrink: 0,
   };
-  const wIco  = { width: 28, height: 28, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, flexShrink: 0 };
-  const wTtl  = { fontSize: 13.5, fontWeight: 700, flex: 1, color: D.text1 };
+  const wIco  = { width: 28, height: 28, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 };
+  const wTtl  = { fontSize: 13, fontWeight: 700, flex: 1, color: D.text1 };
   const wBadge= { fontSize: 10.5, fontWeight: 700, padding: '2px 9px', borderRadius: 20 };
-  const wMore = { fontSize: 11.5, color: D.text2, cursor: 'pointer', whiteSpace: 'nowrap' };
+  const wMore = { fontSize: 12, color: D.text2, cursor: 'pointer', whiteSpace: 'nowrap' };
   const wBody = { flex: 1, overflowY: 'auto', padding: '4px 0' };
   const wEmpty= { padding: '36px 16px', textAlign: 'center', color: D.text2, fontSize: 12.5 };
   const wRow  = { display: 'flex', gap: 10, padding: '9px 15px', cursor: 'pointer', borderBottom: `1px solid ${D.border}` };
@@ -441,14 +441,14 @@ export default function DashboardPage() {
     return variant === 'accent' ? '#15803d' : variant === 'risk' ? '#c73a2f' : variant === 'info' ? '#2563eb' : D.text1;
   };
   const kpiMuted = (variant) => ((KPI_MODE === 'flat' || KPI_MODE === 'grad') && kpiColored(variant)) ? 'var(--fd-sk-kpi-txt)' : D.text2;
-  const kpiLbl   = (variant) => ({ fontSize: 11.5, color: kpiMuted(variant), fontWeight: 700, opacity: (KPI_MODE === 'flat' || KPI_MODE === 'grad') && kpiColored(variant) ? 0.92 : 1, display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+  const kpiLbl   = (variant) => ({ fontSize: 12, color: kpiMuted(variant), fontWeight: 700, opacity: (KPI_MODE === 'flat' || KPI_MODE === 'grad') && kpiColored(variant) ? 0.92 : 1, display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
     ...(KPI_MODE === 'line' ? { textTransform: 'uppercase', letterSpacing: '0.1em' } : {}) });
   const kpiBig   = (variant) => ({ fontSize: 28, fontWeight: 900, lineHeight: 1, marginTop: 6, letterSpacing: '-1px', fontFamily: 'var(--fd-sk-font-num)', color: kpiTxtColor(variant) });
   const kpiSub   = (variant) => ({ fontSize: 10.5, color: kpiMuted(variant), opacity: (KPI_MODE === 'flat' || KPI_MODE === 'grad') && kpiColored(variant) ? 0.8 : 1, marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' });
   const qbtn     = (green) => ({
     background: green ? '#16a34a' : D.cardBg, color: green ? '#fff' : D.text2,
     border: `1px solid ${green ? '#16a34a' : D.cardBor}`, borderRadius: 8, padding: '6px 8px',
-    fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+    fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
     display: 'flex', alignItems: 'center', justifyContent: 'center',
   });
 
@@ -511,7 +511,7 @@ export default function DashboardPage() {
       {/* ══ 히어로: 오늘의 포커스 (오늘 우선순위 + KPI) ══ */}
       <div style={{ padding: '14px 16px', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={secTitle}>🎯 오늘의 포커스
-          <span style={{ fontSize: 11, fontWeight: 600, color: D.text2 }}>지금 집중해야 할 일</span>
+          <span style={{ fontSize: 12, fontWeight: 600, color: D.text2 }}>지금 집중해야 할 일</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) minmax(0,1fr)', gap: 14, alignItems: 'stretch', flex: 1, minHeight: 0 }}>
 
@@ -519,7 +519,7 @@ export default function DashboardPage() {
           <div style={heroCard}>
             <div style={heroHd}>
               <span style={heroHdT}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} /> 오늘 우선순위</span>
-              <span style={{ background: '#16a34a', color: '#fff', borderRadius: 20, fontSize: 11, fontWeight: 700, padding: '1px 9px' }}>{todayPriorities.length}</span>
+              <span style={{ background: '#16a34a', color: '#fff', borderRadius: 20, fontSize: 12, fontWeight: 700, padding: '1px 9px' }}>{todayPriorities.length}</span>
             </div>
             {todayPriorities.length === 0 ? (
               <div style={{ flex: 1, minHeight: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', color: D.text2, fontSize: 12.5 }}>오늘 집중할 우선 업무가 없습니다 🎉</div>
@@ -530,10 +530,10 @@ export default function DashboardPage() {
               return (
                 <div key={t.id} onClick={() => { setSelectedTask(t); setFormOpen(true); }}
                   style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: `1px solid ${D.border}`, cursor: 'pointer' }}>
-                  <span style={{ width: 16, height: 16, borderRadius: 5, flexShrink: 0, border: `1.6px solid ${done ? '#16a34a' : D.text2}`, background: done ? '#16a34a' : 'transparent', color: '#fff', fontSize: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{done ? '✓' : ''}</span>
+                  <span style={{ width: 16, height: 16, borderRadius: 5, flexShrink: 0, border: `1.6px solid ${done ? '#16a34a' : D.text2}`, background: done ? '#16a34a' : 'transparent', color: '#fff', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{done ? '✓' : ''}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 12.5, color: D.text1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
-                    <div style={{ color: D.text2, fontSize: 11, marginTop: 2, display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ color: D.text2, fontSize: 12, marginTop: 2, display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
                       {t.part && <span style={{ background: D.stripBg, border: `1px solid ${D.border}`, borderRadius: 6, padding: '1px 6px', color: D.text2 }}>{t.part.name}</span>}
                       {prio && <span style={{ background: prio.bg, color: prio.color, borderRadius: 20, padding: '1px 8px', fontWeight: 600 }}>{prio.label}</span>}
                       <span style={{ color: late ? '#c73a2f' : D.text2, fontWeight: late ? 700 : 400 }}>
@@ -640,7 +640,7 @@ export default function DashboardPage() {
             }}>
               <span style={{ width: 8, height: 8, borderRadius: '50%', background: col.dot, flexShrink: 0, display: 'inline-block' }} />
               <span style={{
-                fontSize: 11.5, fontWeight: 700,
+                fontSize: 12, fontWeight: 700,
                 color: col.key === 'overdue' ? '#DC2626' : (isDark ? '#ccc' : '#334155'),
                 flex: 1,
               }}>{col.label}</span>
@@ -774,7 +774,7 @@ export default function DashboardPage() {
                   borderRadius: 8,
                   border: `1.5px dashed ${D.addBor}`,
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5,
-                  fontSize: 11,
+                  fontSize: 12,
                   color: D.addTxt,
                   cursor: 'pointer',
                   transition: '.12s',
@@ -868,7 +868,7 @@ export default function DashboardPage() {
                 const on = c.id === bbsCatId;
                 return (
                   <span key={`a${c.id}`} onClick={() => setBbsCatId(c.id)} style={{
-                    fontSize: 11, padding: '3px 10px', borderRadius: 20, cursor: 'pointer',
+                    fontSize: 12, padding: '3px 10px', borderRadius: 20, cursor: 'pointer',
                     border: `1px solid ${on ? '#3B82F6' : D.border}`,
                     background: on ? '#3B82F6' : 'transparent',
                     color: on ? '#fff' : D.text2,
@@ -886,7 +886,7 @@ export default function DashboardPage() {
                 const on = c.id === bbsCatId;
                 return (
                   <span key={`p${c.id}`} onClick={() => setBbsCatId(c.id)} style={{
-                    fontSize: 11, padding: '3px 10px', borderRadius: 20, cursor: 'pointer',
+                    fontSize: 12, padding: '3px 10px', borderRadius: 20, cursor: 'pointer',
                     border: `1px dashed ${on ? '#3B82F6' : D.border}`,
                     background: on ? (isDark ? 'rgba(59,130,246,.25)' : '#EFF6FF') : 'transparent',
                     color: on ? '#3B82F6' : D.text2,
@@ -933,10 +933,10 @@ export default function DashboardPage() {
                 )}
               >
                 <span style={{
-                  fontSize: 11, padding: '3px 8px', borderRadius: 20, cursor: 'pointer',
+                  fontSize: 12, padding: '3px 8px', borderRadius: 20, cursor: 'pointer',
                   color: D.text2, display: 'inline-flex', alignItems: 'center', gap: 3,
                 }}>
-                  <SettingOutlined style={{ fontSize: 11 }} /> 설정
+                  <SettingOutlined style={{ fontSize: 12 }} /> 설정
                 </span>
               </Popover>
             </div>
@@ -1013,7 +1013,7 @@ export default function DashboardPage() {
       {/* ══ 고정 메모 스트립 ══ */}
       <div style={{ flexShrink: 0, padding: '14px 16px' }}>
           <div style={secTitle}>📌 고정 메모
-            <span onClick={() => navigate('/memos')} style={{ fontSize: 11, fontWeight: 500, color: D.text2, cursor: 'pointer' }}>· 전체 보기</span>
+            <span onClick={() => navigate('/memos')} style={{ fontSize: 12, fontWeight: 500, color: D.text2, cursor: 'pointer' }}>· 전체 보기</span>
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-start' }}>
             {pinnedMemos.map((m) => (

@@ -56,7 +56,7 @@ function EditableCell({ value, onChange, type = 'text', options = [], style = {}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <Progress percent={num} size="small" style={{ flex: 1, margin: 0 }} showInfo={false}
               strokeColor={num >= 100 ? '#52c41a' : num >= 50 ? '#1890ff' : '#faad14'} />
-            <span style={{ fontSize: 11, minWidth: 30 }}>{num}%</span>
+            <span style={{ fontSize: 12, minWidth: 30 }}>{num}%</span>
           </div>
         </div>
       );
@@ -210,7 +210,7 @@ function WbsLinkCell({ value, onChange, wbsTasks }) {
             <span>
               <span style={{
                 display: 'inline-block', minWidth: 36,
-                fontSize: 11, color: '#1890ff', fontWeight: 700,
+                fontSize: 12, color: '#1890ff', fontWeight: 700,
                 marginRight: 6, fontVariantNumeric: 'tabular-nums',
               }}>
                 {t._num}

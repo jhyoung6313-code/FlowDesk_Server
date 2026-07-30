@@ -66,7 +66,7 @@ export default function PiiBlockLogPage() {
       width: 130,
       render: (u, rec) => (
         <Space size={4}>
-          <UserOutlined style={{ fontSize: 11, color: '#8c8c8c' }} />
+          <UserOutlined style={{ fontSize: 12, color: '#8c8c8c' }} />
           <span style={{ fontSize: 13 }}>{u?.displayName || rec.username || '익명'}</span>
         </Space>
       ),
@@ -75,7 +75,7 @@ export default function PiiBlockLogPage() {
       title: '유형',
       dataIndex: 'piiType',
       width: 110,
-      render: (v) => <Tag color={TYPE_COLORS[v] || 'default'} style={{ fontSize: 11 }}>{v}</Tag>,
+      render: (v) => <Tag color={TYPE_COLORS[v] || 'default'} style={{ fontSize: 12 }}>{v}</Tag>,
     },
     {
       title: '마스킹',
@@ -96,7 +96,7 @@ export default function PiiBlockLogPage() {
       dataIndex: 'endpoint',
       width: 200,
       render: (v) => v
-        ? <Tooltip title={v}><Typography.Text style={{ fontSize: 11, color: 'var(--fd-text-secondary)' }} ellipsis>{v}</Typography.Text></Tooltip>
+        ? <Tooltip title={v}><Typography.Text style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }} ellipsis>{v}</Typography.Text></Tooltip>
         : '-',
     },
     {

@@ -160,10 +160,10 @@ export default function WbsSummaryCards({ tasks, issues = [], refDate }) {
           <div style={{ fontSize: 28, fontWeight: 800, color: delayedTasks.length > 0 ? '#ff4d4f' : '#999', lineHeight: 1 }}>
             {delayedTasks.length}
           </div>
-          <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>개 항목 지연중</div>
+          <div style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>개 항목 지연중</div>
           {delayedTasks.length > 0 && (
             <Tooltip title={delayedTasks.slice(0, 5).map((t) => t.name).join(', ') + (delayedTasks.length > 5 ? ` 외 ${delayedTasks.length - 5}건` : '')}>
-              <div style={{ fontSize: 11, color: '#ff7875', marginTop: 4, cursor: 'pointer', textDecoration: 'underline dotted' }}>
+              <div style={{ fontSize: 12, color: '#ff7875', marginTop: 4, cursor: 'pointer', textDecoration: 'underline dotted' }}>
                 항목 보기
               </div>
             </Tooltip>
@@ -185,10 +185,10 @@ export default function WbsSummaryCards({ tasks, issues = [], refDate }) {
           <div style={{ fontSize: 28, fontWeight: 800, color: dueSoonTasks.length > 0 ? '#fa8c16' : '#999', lineHeight: 1 }}>
             {dueSoonTasks.length}
           </div>
-          <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>7일 이내 마감</div>
+          <div style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>7일 이내 마감</div>
           {dueSoonTasks.length > 0 && (
             <Tooltip title={dueSoonTasks.slice(0, 5).map((t) => `${t.name} (${dayjs(t.endDate).format('MM/DD')})`).join(', ')}>
-              <div style={{ fontSize: 11, color: '#ffa940', marginTop: 4, cursor: 'pointer', textDecoration: 'underline dotted' }}>
+              <div style={{ fontSize: 12, color: '#ffa940', marginTop: 4, cursor: 'pointer', textDecoration: 'underline dotted' }}>
                 항목 보기
               </div>
             </Tooltip>
@@ -211,7 +211,7 @@ export default function WbsSummaryCards({ tasks, issues = [], refDate }) {
             {completedCount}
             <span style={{ fontSize: 16, fontWeight: 500, color: '#aaa' }}> / {leafTasks.length}</span>
           </div>
-          <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>
+          <div style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>
             완료율 {leafTasks.length > 0 ? Math.round((completedCount / leafTasks.length) * 100) : 0}%
           </div>
         </Card>
@@ -231,7 +231,7 @@ export default function WbsSummaryCards({ tasks, issues = [], refDate }) {
           <div style={{ fontSize: 28, fontWeight: 800, color: openIssues > 0 ? '#1890ff' : '#999', lineHeight: 1 }}>
             {openIssues}
           </div>
-          <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>미결 이슈</div>
+          <div style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>미결 이슈</div>
         </Card>
       </Col>
     </Row>

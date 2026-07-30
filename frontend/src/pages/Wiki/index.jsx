@@ -244,7 +244,7 @@ export default function WikiPage() {
                     {doc.title}
                     <SensitivityTag value={doc.sensitivity} style={{ marginLeft: 8 }} />
                   </div>
-                  <div style={{ fontSize: 11, color: 'var(--fd-text-secondary)' }}>
+                  <div style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }}>
                     {doc.creator?.displayName} · {dayjs(doc.updatedAt).format('YYYY-MM-DD HH:mm')} 수정
                   </div>
                 </div>
@@ -306,7 +306,7 @@ export default function WikiPage() {
                         >
                           <List.Item.Meta
                             avatar={<Avatar style={{ background: c.author?.avatarColor || '#1677ff' }}>{c.author?.displayName?.[0]}</Avatar>}
-                            title={<span>{c.author?.displayName} <span style={{ fontWeight: 400, fontSize: 11, color: 'var(--fd-text-secondary)' }}>{dayjs(c.createdAt).format('MM-DD HH:mm')}</span></span>}
+                            title={<span>{c.author?.displayName} <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--fd-text-secondary)' }}>{dayjs(c.createdAt).format('MM-DD HH:mm')}</span></span>}
                             description={<span style={{ whiteSpace: 'pre-wrap' }}>{c.content}</span>}
                           />
                         </List.Item>

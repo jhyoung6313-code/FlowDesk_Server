@@ -693,7 +693,7 @@ export default function BoardContent({ boardId: propBoardId }) {
             </Title>
             {linkedRoom && (
               <Tooltip title={`채팅방: ${linkedRoom.name ?? '1:1 채팅'}`}>
-                <Tag icon={<MessageOutlined />} color="blue" style={{ fontSize: 11 }}>
+                <Tag icon={<MessageOutlined />} color="blue" style={{ fontSize: 12 }}>
                   {linkedRoom.name ?? '채팅 연결됨'}
                 </Tag>
               </Tooltip>

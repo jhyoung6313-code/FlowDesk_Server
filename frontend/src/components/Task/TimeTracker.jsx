@@ -221,7 +221,7 @@ export default function TimeTracker({ taskId, currentUser }) {
                         {entry.endTime && ` ~ ${dayjs(entry.endTime).format('HH:mm')}`}
                       </Text>
                       {entry.duration != null && (
-                        <Tag color="blue" style={{ fontSize: 11 }}>
+                        <Tag color="blue" style={{ fontSize: 12 }}>
                           {formatSeconds(entry.duration)}
                         </Tag>
                       )}
@@ -229,11 +229,11 @@ export default function TimeTracker({ taskId, currentUser }) {
                   }
                   description={
                     <Space direction="vertical" size={0}>
-                      <Text type="secondary" style={{ fontSize: 11 }}>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
                         {entry.user?.displayName}
                       </Text>
                       {entry.note && (
-                        <Text style={{ fontSize: 11 }}>{entry.note}</Text>
+                        <Text style={{ fontSize: 12 }}>{entry.note}</Text>
                       )}
                     </Space>
                   }

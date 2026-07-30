@@ -377,7 +377,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
-              fontSize: 14,
+              fontSize: 13,
             }}
           >
             {proj.name}
@@ -389,7 +389,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
             >
               <span
                 onClick={(e) => openProjectModal(e, proj)}
-                style={{ cursor: 'pointer', color: '#43a047', fontSize: 11, padding: '0 2px' }}
+                style={{ cursor: 'pointer', color: '#43a047', fontSize: 12, padding: '0 2px' }}
                 title="수정"
               >
                 <EditOutlined />
@@ -401,7 +401,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
                     handleDeleteProject(e, proj.id);
                   }
                 }}
-                style={{ cursor: 'pointer', color: '#ff4d4f', fontSize: 11, padding: '0 2px' }}
+                style={{ cursor: 'pointer', color: '#ff4d4f', fontSize: 12, padding: '0 2px' }}
                 title="삭제"
               >
                 <DeleteOutlined />
@@ -417,7 +417,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
             key: 'wbs-new-project',
             icon: <PlusOutlined style={{ color: collabClr }} />,
             label: (
-              <span style={{ color: collabClr, fontSize: 14, fontWeight: 500 }}>
+              <span style={{ color: collabClr, fontSize: 13, fontWeight: 500 }}>
                 새 프로젝트
               </span>
             ),
@@ -526,7 +526,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
         <div
           style={{
             padding: '10px 14px 4px',
-            fontSize: 11,
+            fontSize: 12,
             fontWeight: 800,
             textTransform: 'uppercase',
             letterSpacing: '1px',

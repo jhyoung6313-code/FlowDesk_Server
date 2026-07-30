@@ -318,7 +318,7 @@ export default function WbsPage() {
                 >
                   <div>
                     <div style={{ fontWeight: 600, fontSize: 12 }}>{snap.name}</div>
-                    <div style={{ fontSize: 11, color: '#aaa' }}>
+                    <div style={{ fontSize: 12, color: '#aaa' }}>
                       {dayjs(snap.createdAt).format('YYYY-MM-DD HH:mm')}
                     </div>
                   </div>
@@ -405,7 +405,7 @@ export default function WbsPage() {
               <Title level={4} style={{ margin: 0, color: '#1b5e20' }}>{project.name}</Title>
               {isAdmin && (
                 <Tooltip title="사이드 메뉴에서 수정·삭제할 수 있습니다">
-                  <EditOutlined style={{ color: '#9e9e9e', fontSize: 14 }} />
+                  <EditOutlined style={{ color: '#9e9e9e', fontSize: 13 }} />
                 </Tooltip>
               )}
               {compareSnap && (
@@ -461,7 +461,7 @@ export default function WbsPage() {
               const delta = (Number(t.actualProgress) || 0) - snap.actualProgress;
               if (delta === 0) return null;
               return (
-                <Tag key={t.id} color={delta > 0 ? 'green' : 'red'} style={{ fontSize: 11 }}>
+                <Tag key={t.id} color={delta > 0 ? 'green' : 'red'} style={{ fontSize: 12 }}>
                   {t.name}: {delta > 0 ? '+' : ''}{delta.toFixed(0)}%
                 </Tag>
               );

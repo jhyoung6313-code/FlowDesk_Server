@@ -35,7 +35,7 @@ function KrRow({ kr, canEdit, users, onCheckin, onEdit, onDelete, onLink }) {
           {kr.autoProgress && <Tooltip title="연결 업무 완료율로 자동 계산"><Tag color="cyan" style={{ marginLeft: 6 }}>자동</Tag></Tooltip>}
           {kr._count?.links > 0 && <Tag style={{ marginLeft: 6 }}><LinkOutlined /> {kr._count.links}</Tag>}
         </div>
-        <div style={{ fontSize: 11, color: 'var(--fd-text-secondary)' }}>
+        <div style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }}>
           {kr.metricType === 'boolean' ? '완료 여부' : `${Number(kr.currentValue)}${unit} / ${Number(kr.targetValue)}${unit}`}
           {kr.owner && <span style={{ marginLeft: 8 }}>· {kr.owner.displayName}</span>}
         </div>

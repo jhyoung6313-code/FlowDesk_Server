@@ -380,13 +380,13 @@ export default function GanttPage({ embedded = false }) {
               style={{ cursor: isAdmin ? 'pointer' : 'default' }}
             >
               <span>{m.name}</span>
-              <span style={{ marginLeft: 4, opacity: 0.8, fontSize: 11 }}>
+              <span style={{ marginLeft: 4, opacity: 0.8, fontSize: 12 }}>
                 {dayjs(m.date).format('MM/DD')}
               </span>
               {isAdmin && (
                 <>
                   <EditOutlined
-                    style={{ marginLeft: 6, fontSize: 11 }}
+                    style={{ marginLeft: 6, fontSize: 12 }}
                     onClick={(e) => { e.stopPropagation(); openMsEdit(m); }}
                   />
                   <Popconfirm
@@ -394,7 +394,7 @@ export default function GanttPage({ embedded = false }) {
                     onConfirm={() => handleMsDelete(m.id)}
                     onPopupClick={(e) => e.stopPropagation()}
                   >
-                    <DeleteOutlined style={{ marginLeft: 4, fontSize: 11 }} onClick={(e) => e.stopPropagation()} />
+                    <DeleteOutlined style={{ marginLeft: 4, fontSize: 12 }} onClick={(e) => e.stopPropagation()} />
                   </Popconfirm>
                 </>
               )}

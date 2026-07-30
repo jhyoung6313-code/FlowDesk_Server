@@ -146,7 +146,7 @@ export default function RichEditor({
           setFontFamily(v);
           if (v) editor.chain().focus().setFontFamily(v).run();
           else editor.chain().focus().unsetFontFamily().run();
-        }} style={{ height: 24, fontSize: 11, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', background: 'var(--fd-surface)', width: 82 }}>
+        }} style={{ height: 24, fontSize: 12, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', background: 'var(--fd-surface)', width: 82 }}>
           {FONT_FAMILIES.map(f => <option key={f.value ?? '_'} value={f.value ?? ''}>{f.label}</option>)}
         </select>
 
@@ -154,7 +154,7 @@ export default function RichEditor({
         <select value={fontSize} onChange={(e) => {
           setFontSize(e.target.value);
           editor.chain().focus().setFontSize(e.target.value).run();
-        }} style={{ height: 24, fontSize: 11, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', background: 'var(--fd-surface)', width: 56 }}>
+        }} style={{ height: 24, fontSize: 12, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', background: 'var(--fd-surface)', width: 56 }}>
           {FONT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <Separator />

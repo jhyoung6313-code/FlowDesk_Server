@@ -103,7 +103,7 @@ function UnreadBadge({ count }) {
   if (!count) return null;
   return (
     <span style={{
-      flexShrink: 0, background: '#ff4d4f', color: '#fff', fontSize: 11, fontWeight: 600,
+      flexShrink: 0, background: '#ff4d4f', color: '#fff', fontSize: 12, fontWeight: 600,
       lineHeight: '16px', minWidth: 16, height: 16, borderRadius: 8, padding: '0 5px', textAlign: 'center',
     }}>
       {count > UNREAD_MAX_DISPLAY ? `${UNREAD_MAX_DISPLAY}+` : count}
@@ -619,7 +619,7 @@ export default function BoardWorkspace() {
           >
             {childCats.map(cc => renderCategoryNode(cc, depth + 1))}
             {catBoards.length === 0 && childCats.length === 0
-              ? <div style={{ padding: `4px 8px 4px ${headerIndent + 18}px`, fontSize: 14, color: '#bfbfbf' }}>보드 없음</div>
+              ? <div style={{ padding: `4px 8px 4px ${headerIndent + 18}px`, fontSize: 13, color: '#bfbfbf' }}>보드 없음</div>
               : catBoards.map(b => renderBoardRow(b, headerIndent + 18))}
           </div>
         )}
@@ -734,7 +734,7 @@ export default function BoardWorkspace() {
                 <Radio.Button key={String(c.value)} value={c.value}>
                   {c.value
                     ? <span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: '50%', background: c.value, verticalAlign: 'middle' }} />
-                    : <span style={{ fontSize: 11 }}>기본</span>}
+                    : <span style={{ fontSize: 12 }}>기본</span>}
                 </Radio.Button>
               ))}
             </Radio.Group>
@@ -797,7 +797,7 @@ export default function BoardWorkspace() {
                   )}
                   <div style={{ fontSize: 24, marginBottom: 6 }}>{tpl.icon}</div>
                   <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{tpl.name}</div>
-                  <div style={{ fontSize: 11, color: '#8c8c8c' }}>{tpl.description}</div>
+                  <div style={{ fontSize: 12, color: '#8c8c8c' }}>{tpl.description}</div>
                 </div>
               </Col>
             ))}
@@ -821,7 +821,7 @@ export default function BoardWorkspace() {
                       <Radio.Button key={String(bg.value)} value={bg.value} style={{ marginBottom: 4 }}>
                         {bg.value
                           ? <span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: 4, background: bg.value, verticalAlign: 'middle' }} />
-                          : <span style={{ fontSize: 11 }}>없음</span>}
+                          : <span style={{ fontSize: 12 }}>없음</span>}
                       </Radio.Button>
                     ))}
                   </Radio.Group>
@@ -878,7 +878,7 @@ export default function BoardWorkspace() {
                     <Radio.Button key={String(bg.value)} value={bg.value} style={{ marginBottom: 4 }}>
                       {bg.value
                         ? <span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: 4, background: bg.value, verticalAlign: 'middle' }} />
-                        : <span style={{ fontSize: 11 }}>없음</span>}
+                        : <span style={{ fontSize: 12 }}>없음</span>}
                     </Radio.Button>
                   ))}
                 </Radio.Group>

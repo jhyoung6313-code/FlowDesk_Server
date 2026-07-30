@@ -102,8 +102,8 @@ export default function WorkloadPage() {
                     {u.displayName?.slice(0, 1)}
                   </Avatar>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{u.displayName}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{u.displayName}</div>
+                    <div style={{ fontSize: 12, color: '#94a3b8' }}>
                       {[u.department?.name, u.team?.name, u.position].filter(Boolean).join(' · ') || u.username}
                     </div>
                   </div>

@@ -234,7 +234,7 @@ export default function CommandPalette() {
           displayGroups.map((g) => (
             <div key={g.key} style={{ marginBottom: 6 }}>
               <div style={{
-                fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase',
+                fontSize: 12, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase',
                 padding: '8px 12px 4px', letterSpacing: 0.5,
               }}>
                 {g.label}
@@ -264,7 +264,7 @@ export default function CommandPalette() {
                       </div>
                       {item.subtitle && (
                         <div style={{
-                          fontSize: 11, color: '#94a3b8',
+                          fontSize: 12, color: '#94a3b8',
                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         }}>
                           {item.subtitle}

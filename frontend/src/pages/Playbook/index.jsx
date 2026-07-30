@@ -184,11 +184,11 @@ export default function PlaybookListPage({ onNew } = {}) {
                   {/* 카테고리 + 버전 */}
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
                     <Tag color={cat.color}>{cat.label}</Tag>
-                    <Text type="secondary" style={{ fontSize: 11 }}>v{pb.version}</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>v{pb.version}</Text>
                   </div>
 
                   {/* 이름 */}
-                  <Title level={5} style={{ margin: '0 0 4px', fontSize: 14 }}>{pb.name}</Title>
+                  <Title level={5} style={{ margin: '0 0 4px', fontSize: 13 }}>{pb.name}</Title>
 
                   {/* 설명 */}
                   {pb.description && (
@@ -201,7 +201,7 @@ export default function PlaybookListPage({ onNew } = {}) {
                   {tags.length > 0 && (
                     <div style={{ marginBottom: 8 }}>
                       {tags.slice(0, 3).map((t) => (
-                        <Tag key={t} style={{ fontSize: 11, marginBottom: 2 }}>{t}</Tag>
+                        <Tag key={t} style={{ fontSize: 12, marginBottom: 2 }}>{t}</Tag>
                       ))}
                     </div>
                   )}
@@ -209,7 +209,7 @@ export default function PlaybookListPage({ onNew } = {}) {
                   <Divider style={{ margin: '8px 0' }} />
 
                   {/* 통계 */}
-                  <Space size={12} style={{ fontSize: 11 }}>
+                  <Space size={12} style={{ fontSize: 12 }}>
                     <Tooltip title="페이즈">
                       <Space size={4}>
                         <AppstoreOutlined style={{ color: '#888' }} />
@@ -231,7 +231,7 @@ export default function PlaybookListPage({ onNew } = {}) {
                   </Space>
 
                   <div style={{ marginTop: 6 }}>
-                    <Text type="secondary" style={{ fontSize: 11 }}>by {pb.creator?.displayName}</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>by {pb.creator?.displayName}</Text>
                   </div>
                 </Card>
               </Col>
@@ -269,7 +269,7 @@ export default function PlaybookListPage({ onNew } = {}) {
               key: 'tags',
               render: (tags) =>
                 Array.isArray(tags) && tags.length > 0
-                  ? tags.slice(0, 3).map((t) => <Tag key={t} style={{ fontSize: 11 }}>{t}</Tag>)
+                  ? tags.slice(0, 3).map((t) => <Tag key={t} style={{ fontSize: 12 }}>{t}</Tag>)
                   : <Text type="secondary" style={{ fontSize: 12 }}>-</Text>,
             },
             {

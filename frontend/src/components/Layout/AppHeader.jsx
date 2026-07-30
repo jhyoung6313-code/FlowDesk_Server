@@ -123,7 +123,7 @@ function ThemePicker({ isDark, toggleDark, density, setDensity, skin, setSkin, o
                   width: 34, height: 24, flexShrink: 0,
                   borderRadius: pv.radius, border: pv.border, boxShadow: pv.shadow, background: pv.bg,
                 }} />
-                {on && <CheckOutlined style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--fd-accent-mid,#3b82f6)' }} />}
+                {on && <CheckOutlined style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--fd-accent-mid,#3b82f6)' }} />}
               </div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', lineHeight: 1.3 }}>{s.name}</div>
@@ -209,7 +209,7 @@ function NotificationPopup({ onClose }) {
         borderBottom: '1px solid #f0f0f0',
       }}>
         <Space align="center">
-          <Typography.Text strong style={{ fontSize: 14 }}>알림</Typography.Text>
+          <Typography.Text strong style={{ fontSize: 13 }}>알림</Typography.Text>
           {unreadCount > 0 && (
             <Badge count={unreadCount} style={{ backgroundColor: '#ff4d4f' }} />
           )}
@@ -266,14 +266,14 @@ function NotificationPopup({ onClose }) {
                         {NOTIFICATION_LABELS[item.type]}
                       </Tag>
                       {item.task?.dueDate && (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: getDdayColor(item.task.dueDate) }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: getDdayColor(item.task.dueDate) }}>
                           {calcDday(item.task.dueDate)}
                         </span>
                       )}
                     </Space>
                   }
                   description={
-                    <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                       {item.task?.dueDate ? `마감: ${dayjs(item.task.dueDate).format('MM/DD')} · ` : ''}
                       {dayjs(item.createdAt).format('MM/DD HH:mm')}
                     </Typography.Text>
@@ -451,7 +451,7 @@ export default function AppHeader({ collapsed, onCollapse }) {
           <FlowdeskIcon size={18} color={c.logoIcon} />
           <span
             style={{
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: 700,
               letterSpacing: 0.3,
               lineHeight: 1,

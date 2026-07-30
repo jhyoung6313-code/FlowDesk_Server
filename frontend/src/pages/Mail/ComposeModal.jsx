@@ -294,7 +294,7 @@ export default function ComposeModal({
                   <Space size={6}>
                     <PaperClipOutlined style={{ color: token.colorTextSecondary }} />
                     <Typography.Text style={{ fontSize: 12 }}>{att.originalName}</Typography.Text>
-                    <Typography.Text type="secondary" style={{ fontSize: 11 }}>{formatSize(att.size)}</Typography.Text>
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>{formatSize(att.size)}</Typography.Text>
                   </Space>
                   <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveAtt(att)} />
                 </div>

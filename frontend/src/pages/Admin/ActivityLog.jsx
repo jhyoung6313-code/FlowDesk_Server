@@ -76,7 +76,7 @@ export default function ActivityLogPage() {
       width: 100,
       render: (u) => (
         <Space size={4}>
-          <UserOutlined style={{ fontSize: 11, color: '#8c8c8c' }} />
+          <UserOutlined style={{ fontSize: 12, color: '#8c8c8c' }} />
           <span style={{ fontSize: 13 }}>{u?.displayName || '-'}</span>
         </Space>
       ),
@@ -87,7 +87,7 @@ export default function ActivityLogPage() {
       width: 90,
       render: (v) => {
         const cfg = ACTION_LABELS[v] || { label: v, color: 'default' };
-        return <Tag color={cfg.color} style={{ fontSize: 11 }}>{cfg.label}</Tag>;
+        return <Tag color={cfg.color} style={{ fontSize: 12 }}>{cfg.label}</Tag>;
       },
     },
     {

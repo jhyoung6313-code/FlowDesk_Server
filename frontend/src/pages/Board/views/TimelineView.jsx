@@ -153,7 +153,7 @@ export default function TimelineView({ board, cards, onEditCard }) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: 600,
                   color: 'var(--fd-text-secondary)',
                 }}
@@ -241,10 +241,10 @@ export default function TimelineView({ board, cards, onEditCard }) {
                   title={
                     <div>
                       <div style={{ fontWeight: 600 }}>{card.title}</div>
-                      <div style={{ fontSize: 11, opacity: 0.85 }}>
+                      <div style={{ fontSize: 12, opacity: 0.85 }}>
                         {card.startDate ? dayjs(card.startDate).format('MM/DD') : '?'} ~ {card.dueDate ? dayjs(card.dueDate).format('MM/DD') : '?'}
                       </div>
-                      {card.progress > 0 && <div style={{ fontSize: 11 }}>진행도: {card.progress}%</div>}
+                      {card.progress > 0 && <div style={{ fontSize: 12 }}>진행도: {card.progress}%</div>}
                     </div>
                   }
                 >
@@ -280,7 +280,7 @@ export default function TimelineView({ board, cards, onEditCard }) {
                     )}
                     <Text
                       ellipsis
-                      style={{ fontSize: 11, color: '#fff', fontWeight: 500, flex: 1, zIndex: 1 }}
+                      style={{ fontSize: 12, color: '#fff', fontWeight: 500, flex: 1, zIndex: 1 }}
                     >
                       {card.cardNumber ? `#${card.cardNumber} ` : ''}{card.title}
                     </Text>

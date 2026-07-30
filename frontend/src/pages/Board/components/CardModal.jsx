@@ -63,7 +63,7 @@ function SectionTitle({ icon, text }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
       <span style={{ color: 'var(--fd-text-muted)' }}>{icon}</span>
-      <Text strong style={{ fontSize: 14, color: 'var(--fd-text-primary)' }}>{text}</Text>
+      <Text strong style={{ fontSize: 13, color: 'var(--fd-text-primary)' }}>{text}</Text>
     </div>
   );
 }
@@ -90,7 +90,7 @@ function PropertyInput({ property, value, onChange, users, card }) {
     if (!creator) return <Text style={{ fontSize: 13, color: 'var(--fd-text-muted)' }}>카드 저장 후 표시</Text>;
     return (
       <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-        <Avatar size={20} style={{ backgroundColor: creator.avatarColor || '#1677ff', fontSize: 11 }}>
+        <Avatar size={20} style={{ backgroundColor: creator.avatarColor || '#1677ff', fontSize: 12 }}>
           {creator.displayName?.[0]}
         </Avatar>
         <Text style={{ fontSize: 13 }}>{creator.displayName}</Text>
@@ -806,7 +806,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
                     <PaperClipOutlined style={{ color: '#8c8c8c' }} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{att.originalName}</div>
-                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 1 }}>
+                      <div style={{ fontSize: 12, color: '#aaa', marginTop: 1 }}>
                         {formatFileSize(att.size)}
                         {att.createdAt && <span style={{ marginLeft: 6 }}>{dayjs(att.createdAt).format('YYYY-MM-DD HH:mm')}</span>}
                       </div>
@@ -835,7 +835,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
                   <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>이 카드는 다음 카드가 완료되어야 진행 가능:</Text>
                   {dependencies.dependsOn.map(dep => (
                     <div key={dep.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                      <Tag color={dep.blocking?.status === 'done' ? 'success' : 'warning'} style={{ fontSize: 11 }}>
+                      <Tag color={dep.blocking?.status === 'done' ? 'success' : 'warning'} style={{ fontSize: 12 }}>
                         {dep.blocking?.status === 'done' ? '✓' : '⛔'}
                       </Tag>
                       <Text style={{ fontSize: 12, flex: 1 }}>
@@ -856,7 +856,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
                 <div style={{ marginBottom: 8 }}>
                   <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>이 카드가 완료되어야 진행 가능한 카드:</Text>
                   {dependencies.blocks.map(dep => (
-                    <Tag key={dep.id} style={{ fontSize: 11, marginBottom: 4 }}>
+                    <Tag key={dep.id} style={{ fontSize: 12, marginBottom: 4 }}>
                       {dep.dependent?.cardNumber ? `#${dep.dependent.cardNumber} ` : ''}
                       {dep.dependent?.title}
                     </Tag>
@@ -893,7 +893,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
               <SectionTitle icon="📋" text="업무 연결" />
               {linkedTask ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', background: '#f0f9ff', borderRadius: 6, border: '1px solid #bae0ff' }}>
-                  <Tag color="blue" style={{ fontSize: 11 }}>{linkedTask.status}</Tag>
+                  <Tag color="blue" style={{ fontSize: 12 }}>{linkedTask.status}</Tag>
                   <Text style={{ fontSize: 13, flex: 1 }}>{linkedTask.title}</Text>
                   <Button type="text" size="small" danger onClick={handleUnlinkTask} loading={taskLinking}>
                     연결 해제
@@ -928,7 +928,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
               <Space direction="vertical" style={{ width: '100%' }} size={10}>
                 {comments.map(comment => (
                   <div key={comment.id} style={{ display: 'flex', gap: 8 }}>
-                    <Avatar size={28} style={{ backgroundColor: getAvatarColor(comment.userId ?? comment.user?.id), flexShrink: 0, fontSize: 11 }}>
+                    <Avatar size={28} style={{ backgroundColor: getAvatarColor(comment.userId ?? comment.user?.id), flexShrink: 0, fontSize: 12 }}>
                       {comment.user?.displayName?.slice(0, 1)}
                     </Avatar>
                     <div style={{ flex: 1 }}>
@@ -978,7 +978,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
                                       />
                                     </a>
                                     {att.createdAt && (
-                                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{dayjs(att.createdAt).format('YYYY-MM-DD HH:mm')}</div>
+                                      <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>{dayjs(att.createdAt).format('YYYY-MM-DD HH:mm')}</div>
                                     )}
                                   </>
                                 ) : (
@@ -995,7 +995,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
                                       <DownloadOutlined style={{ color: '#8c8c8c', fontSize: 12, flexShrink: 0 }} />
                                     </a>
                                     {att.createdAt && (
-                                      <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>{dayjs(att.createdAt).format('YYYY-MM-DD HH:mm')}</div>
+                                      <div style={{ fontSize: 12, color: '#aaa', marginTop: 2 }}>{dayjs(att.createdAt).format('YYYY-MM-DD HH:mm')}</div>
                                     )}
                                   </div>
                                 )}
@@ -1010,7 +1010,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
               </Space>
 
               <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                <Avatar size={28} style={{ backgroundColor: getAvatarColor(currentUser?.id), flexShrink: 0, fontSize: 11 }}>
+                <Avatar size={28} style={{ backgroundColor: getAvatarColor(currentUser?.id), flexShrink: 0, fontSize: 12 }}>
                   {currentUser?.displayName?.slice(0, 1)}
                 </Avatar>
                 <div style={{ flex: 1 }}>
@@ -1028,7 +1028,7 @@ export default function CardModal({ open, onClose, onSave, boardId, properties, 
                       <span style={{ flex: 1, fontSize: 12, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {commentFile.name}
                       </span>
-                      <span style={{ fontSize: 11, color: '#999', flexShrink: 0 }}>
+                      <span style={{ fontSize: 12, color: '#999', flexShrink: 0 }}>
                         {commentFile.size < 1024 * 1024
                           ? `${(commentFile.size / 1024).toFixed(1)}KB`
                           : `${(commentFile.size / (1024 * 1024)).toFixed(1)}MB`}
