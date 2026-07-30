@@ -46,6 +46,7 @@ export const SKINS = {
     key: 'default',
     name: '기본',
     desc: '노션 웜 · 부드러운 카드',
+    mode: 'light',
     accent: { light: '#2563eb', dark: '#3b82f6' },
     light: {
       'radius-lg': '12px', 'radius': '9px', 'radius-sm': '6px',
@@ -78,6 +79,7 @@ export const SKINS = {
     key: 'brutal',
     name: '뉴브루탈',
     desc: '두꺼운 테두리 · 하드 그림자',
+    mode: 'light',
     accent: { light: '#7c5cff', dark: '#8b7bff' },
     light: {
       'radius-lg': '14px', 'radius': '10px', 'radius-sm': '8px',
@@ -108,6 +110,7 @@ export const SKINS = {
     key: 'clay',
     name: '클레이',
     desc: '아주 둥근 · 말랑한 그림자',
+    mode: 'light',
     accent: { light: '#635bff', dark: '#8b7bff' },
     light: {
       'radius-lg': '26px', 'radius': '16px', 'radius-sm': '12px',
@@ -140,6 +143,7 @@ export const SKINS = {
     key: 'mono',
     name: '미니멀 모노',
     desc: '헤어라인 · 각진 · 무채색',
+    mode: 'light',
     accent: { light: '#1a1a1a', dark: '#5a606e' },
     light: {
       'radius-lg': '0px', 'radius': '0px', 'radius-sm': '0px',
@@ -201,6 +205,7 @@ export const SKINS = {
     key: 'pop',
     name: '소프트 팝',
     desc: '플랫 원색 · 통굽 그림자',
+    mode: 'light',
     accent: { light: '#7c5cff', dark: '#8b7bff' },
     light: {
       'radius-lg': '20px', 'radius': '13px', 'radius-sm': '10px',
