@@ -228,12 +228,12 @@ export default function ListView() {
               {title}
             </Typography.Link>
             {isOverdue(record.dueDate, record.status) && (
-              <Tag color="error" style={{ fontSize: 11, padding: '0 5px', lineHeight: '18px', marginInlineEnd: 0 }}>지연</Tag>
+              <Tag color="error" style={{ fontSize: 12, padding: '0 6px', lineHeight: '18px', marginInlineEnd: 0 }}>지연</Tag>
             )}
             <DdayBadge dueDate={record.dueDate} status={record.status} />
           </Space>
           {record.part && (
-            <Tag color="blue" style={{ fontSize: 11, marginTop: 2 }}>
+            <Tag color="blue" style={{ fontSize: 12, marginTop: 2 }}>
               {record.part.name}
             </Tag>
           )}
@@ -243,7 +243,7 @@ export default function ListView() {
                 <Tag
                   key={tt.tagId ?? tt.tag?.id}
                   style={{
-                    fontSize: 10, padding: '0 4px', lineHeight: '16px',
+                    fontSize: 12, padding: '0 6px', lineHeight: '18px',
                     backgroundColor: tt.tag?.color + '22',
                     borderColor: tt.tag?.color,
                     color: tt.tag?.color,
@@ -327,7 +327,7 @@ export default function ListView() {
       render: (_, record) => (
         <Space direction="vertical" size={1}>
           {record.startDate && (
-            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
               시작 {dayjs(record.startDate).format('MM/DD')}
             </Typography.Text>
           )}
