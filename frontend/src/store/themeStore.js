@@ -1,11 +1,16 @@
 import { create } from 'zustand';
 import { THEMES, DEFAULT_THEME, CSS_VAR_MAP, flattenColors, applyCustomAccent } from '../utils/themes';
+import { SKINS, DEFAULT_SKIN, applySkin } from '../utils/skins';
 import { updateThemePrefs } from '../api/settings';
 
-const STORAGE_THEME  = 'flowdesk_theme_key';
-const STORAGE_DARK   = 'flowdesk_dark';
-const STORAGE_ACCENT = 'flowdesk_accent';   // 커스텀 강조색 (없으면 프리셋)
-const STORAGE_DENS   = 'flowdesk_density';   // 'default' | 'compact'
+const STORAGE_DARK = 'flowdesk_dark';
+const STORAGE_DENS = 'flowdesk_density';   // 'default' | 'compact'
+const STORAGE_SKIN = 'flowdesk_skin';      // 'default' | 'brutal' | 'clay' | 'mono' | 'glass' | 'pop' | 'slick' | 'paper'
+
+/* 색상 테마 선택 기능은 제거됨 — 강조색·표면은 이제 스킨(skins.js)이 담당한다.
+   themes.js 의 베이스 팔레트(slate)는 스킨이 다루지 않는 잔여 CSS 변수
+   (로그인 페이지 그라디언트 등)의 중립 기본값으로만 사용한다. */
+const BASE = THEMES[DEFAULT_THEME];
 
 function applyCssVars(tokens) {
   const root = document.documentElement;
@@ -16,32 +21,35 @@ function applyCssVars(tokens) {
   }
 }
 
-/* 테마 토큰 + 라이트/다크 모드를 함께 적용.
-   다크일 때는 컴포넌트가 참조하는 "라이트 표면" 변수를 테마의 다크값으로 덮어쓴다.
-   (AntD 컴포넌트 색은 ConfigProvider의 darkAlgorithm이 담당) */
-function applyTheme(base, isDark, accent) {
-  const eff = applyCustomAccent(base, accent);
-  applyCssVars(eff.tokens);
-  const root = document.documentElement;
-  if (isDark) {
-    // 거의-검정 대신 부드러운 슬레이트(콘텐츠 레벨). 카드(#272c38)가 그 위에서 떠 보이도록.
-    root.style.setProperty('--fd-content-bg-light', '#1e222c');
-  }
-  root.dataset.dark = isDark ? 'true' : 'false';
+/* 스킨의 강조색 (라이트/다크) */
+function skinAccent(skin, isDark) {
+  const s = SKINS[skin] || SKINS[DEFAULT_SKIN];
+  return (s.accent && s.accent[isDark ? 'dark' : 'light']) || BASE.tokens.accent.mid;
 }
 
-function buildTheme(base, accent) {
-  const eff = applyCustomAccent(base, accent);
+/* 베이스 팔레트 + 스킨 강조색 + 스킨 형태 + 라이트/다크 를 함께 적용 */
+function applyTheme(isDark, skin) {
+  const accent = skinAccent(skin, isDark);
+  const eff = applyCustomAccent(BASE, accent);   // 강조색만 스킨 값으로 덮어씀
+  applyCssVars(eff.tokens);
+  const root = document.documentElement;
+  root.dataset.dark = isDark ? 'true' : 'false';
+  applySkin(skin, isDark);                        // --fd-sk-* (형태·표면·레일·KPI) 주입
+  const set = (SKINS[skin] || SKINS[DEFAULT_SKIN])[isDark ? 'dark' : 'light'];
+  root.style.setProperty('--fd-content-bg-light', set['page-bg']);
+}
+
+/* 컴포넌트가 참조하는 flat colors (강조색 = 스킨 강조색) */
+function buildTheme(skin, isDark) {
+  const eff = applyCustomAccent(BASE, skinAccent(skin, isDark));
   return { ...eff, colors: flattenColors(eff.tokens) };
 }
 
-/* 초기 로드 시 즉시 CSS 변수 + 모드 적용 (localStorage = 빠른 로컬 캐시) */
-const _initKey    = localStorage.getItem(STORAGE_THEME) || DEFAULT_THEME;
-const _initBase   = THEMES[_initKey] || THEMES[DEFAULT_THEME];
-const _initDark   = localStorage.getItem(STORAGE_DARK) === '1';
-const _initAccent = localStorage.getItem(STORAGE_ACCENT) || null;
-const _initDens   = localStorage.getItem(STORAGE_DENS) === 'compact' ? 'compact' : 'default';
-applyTheme(_initBase, _initDark, _initAccent);
+/* 초기 로드 시 즉시 적용 */
+const _initDark = localStorage.getItem(STORAGE_DARK) === '1';
+const _initDens = localStorage.getItem(STORAGE_DENS) === 'compact' ? 'compact' : 'default';
+const _initSkin = SKINS[localStorage.getItem(STORAGE_SKIN)] ? localStorage.getItem(STORAGE_SKIN) : DEFAULT_SKIN;
+applyTheme(_initDark, _initSkin);
 
 /* 서버 저장 (디바운스, 로그인 상태가 아니면 401 → 조용히 무시) */
 let _saveTimer = null;
@@ -49,48 +57,35 @@ function persist(get) {
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
     const s = get();
-    updateThemePrefs({
-      themeKey: s.themeKey,
-      isDark: s.isDark,
-      customAccent: s.customAccent,
-      density: s.density,
-    }).catch(() => {});
+    updateThemePrefs({ isDark: s.isDark, density: s.density, skin: s.skin }).catch(() => {});
   }, 400);
 }
 
 const useThemeStore = create((set, get) => ({
-  themeKey:     _initKey,
-  theme:        buildTheme(_initBase, _initAccent),
-  isDark:       _initDark,
-  customAccent: _initAccent,
-  density:      _initDens,
-
-  setTheme: (key) => {
-    const base = THEMES[key] || THEMES[DEFAULT_THEME];
-    const { isDark, customAccent } = get();
-    applyTheme(base, isDark, customAccent);
-    localStorage.setItem(STORAGE_THEME, key);
-    set({ themeKey: key, theme: buildTheme(base, customAccent) });
-    persist(get);
-  },
+  theme:    buildTheme(_initSkin, _initDark),
+  isDark:   _initDark,
+  density:  _initDens,
+  skin:     _initSkin,
 
   setDark: (isDark) => {
-    const base = THEMES[get().themeKey] || THEMES[DEFAULT_THEME];
-    applyTheme(base, isDark, get().customAccent);
+    applyTheme(isDark, get().skin);
     localStorage.setItem(STORAGE_DARK, isDark ? '1' : '0');
-    set({ isDark });
+    set({ isDark, theme: buildTheme(get().skin, isDark) });
     persist(get);
   },
 
   toggleDark: () => get().setDark(!get().isDark),
 
-  /* 커스텀 강조색 지정 (null = 프리셋 accent 로 복귀) */
-  setCustomAccent: (accent) => {
-    const base = THEMES[get().themeKey] || THEMES[DEFAULT_THEME];
-    applyTheme(base, get().isDark, accent);
-    if (accent) localStorage.setItem(STORAGE_ACCENT, accent);
-    else localStorage.removeItem(STORAGE_ACCENT);
-    set({ customAccent: accent || null, theme: buildTheme(base, accent) });
+  /* 스킨(형태+강조색) 지정 — 커스터마이즈의 단일 축.
+     스킨에 선호 모드(mode: 'light'|'dark')가 있으면 라이트/다크를 자동 전환한다. */
+  setSkin: (skin) => {
+    const key = SKINS[skin] ? skin : DEFAULT_SKIN;
+    const pref = SKINS[key].mode;
+    const isDark = pref === 'dark' ? true : pref === 'light' ? false : get().isDark;
+    applyTheme(isDark, key);
+    localStorage.setItem(STORAGE_SKIN, key);
+    localStorage.setItem(STORAGE_DARK, isDark ? '1' : '0');
+    set({ skin: key, isDark, theme: buildTheme(key, isDark) });
     persist(get);
   },
 
@@ -101,20 +96,17 @@ const useThemeStore = create((set, get) => ({
     persist(get);
   },
 
-  /* 로그인 후 서버 저장값으로 동기화 (없으면 로컬 유지). 서버 재저장은 하지 않음. */
+  /* 로그인 후 서버 저장값으로 동기화 (없으면 로컬 유지) */
   hydrateFromServer: (prefs) => {
     if (!prefs || typeof prefs !== 'object') return;
-    const key    = THEMES[prefs.themeKey] ? prefs.themeKey : get().themeKey;
     const isDark = typeof prefs.isDark === 'boolean' ? prefs.isDark : get().isDark;
-    const accent = prefs.customAccent || null;
     const density = prefs.density === 'compact' ? 'compact' : 'default';
-    const base = THEMES[key] || THEMES[DEFAULT_THEME];
-    applyTheme(base, isDark, accent);
-    localStorage.setItem(STORAGE_THEME, key);
+    const skin = SKINS[prefs.skin] ? prefs.skin : get().skin;
+    applyTheme(isDark, skin);
     localStorage.setItem(STORAGE_DARK, isDark ? '1' : '0');
-    if (accent) localStorage.setItem(STORAGE_ACCENT, accent); else localStorage.removeItem(STORAGE_ACCENT);
     localStorage.setItem(STORAGE_DENS, density);
-    set({ themeKey: key, isDark, customAccent: accent, density, theme: buildTheme(base, accent) });
+    localStorage.setItem(STORAGE_SKIN, skin);
+    set({ isDark, density, skin, theme: buildTheme(skin, isDark) });
   },
 }));
 

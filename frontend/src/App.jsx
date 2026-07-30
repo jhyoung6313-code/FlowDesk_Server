@@ -86,7 +86,21 @@ export default function App() {
   const currentTheme = useThemeStore((s) => s.theme);
   const isDark = useThemeStore((s) => s.isDark);
   const density = useThemeStore((s) => s.density);
+  const skin = useThemeStore((s) => s.skin);
   const hydrateTheme = useThemeStore((s) => s.hydrateFromServer);
+
+  // 스킨별 AntD 라운드 토큰 (CSS 변수로 못 잡는 체크박스·스위치 등 컴포넌트용)
+  const SKIN_RADII = {
+    default: { borderRadius: 10, borderRadiusLG: 14, borderRadiusSM: 8 },
+    brutal:  { borderRadius: 10, borderRadiusLG: 14, borderRadiusSM: 8 },
+    clay:    { borderRadius: 16, borderRadiusLG: 24, borderRadiusSM: 12 },
+    mono:    { borderRadius: 0,  borderRadiusLG: 0,  borderRadiusSM: 0 },
+    glass:   { borderRadius: 13, borderRadiusLG: 20, borderRadiusSM: 10 },
+    pop:     { borderRadius: 13, borderRadiusLG: 20, borderRadiusSM: 10 },
+    slick:   { borderRadius: 9,  borderRadiusLG: 13, borderRadiusSM: 7 },
+    paper:   { borderRadius: 8,  borderRadiusLG: 10, borderRadiusSM: 6 },
+  };
+  const skinRadii = SKIN_RADII[skin] || SKIN_RADII.default;
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const socketRef = useChatSocket(user ? token : null);
@@ -144,9 +158,9 @@ export default function App() {
         token: {
           colorPrimary:       c.accentMid,
           colorLink:          c.accentMid,
-          borderRadius:       10,
-          borderRadiusLG:     14,
-          borderRadiusSM:     8,
+          borderRadius:       skinRadii.borderRadius,
+          borderRadiusLG:     skinRadii.borderRadiusLG,
+          borderRadiusSM:     skinRadii.borderRadiusSM,
           fontFamily:         "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', sans-serif",
           fontSize:           13,
           // 라이트는 흰 배경/짙은 텍스트 고정. 다크는 거의-검정 대신 부드러운 슬레이트 톤으로 상향

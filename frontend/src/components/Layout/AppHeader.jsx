@@ -27,7 +27,7 @@ import useNotificationStore from '../../store/notificationStore';
 import useThemeStore from '../../store/themeStore';
 import useChatStore from '../../store/chatStore';
 import useUnreadStore from '../../store/unreadStore';
-import { THEME_LIST } from '../../utils/themes';
+import { SKIN_LIST } from '../../utils/skins';
 import { NOTIFICATION_LABELS } from '../../utils/colors';
 import { calcDday, getDdayColor } from '../../utils/dday';
 
@@ -45,7 +45,19 @@ function FlowdeskIcon({ size = 20, color }) {
 }
 
 /* ── 테마 피커 팝오버 내용 ── */
-function ThemePicker({ themeKey, setTheme, isDark, toggleDark, customAccent, setCustomAccent, density, setDensity, onClose }) {
+/* 스킨(형태) 미리보기 미니 썸네일 */
+const SKIN_PREVIEW = {
+  default: { radius: 8,  border: '1px solid #e2e0da', shadow: '0 2px 5px rgba(0,0,0,0.10)', bg: '#ffffff' },
+  brutal:  { radius: 7,  border: '2px solid #111',     shadow: '3px 3px 0 #111',            bg: '#ffde59' },
+  clay:    { radius: 13, border: 'none',               shadow: '0 5px 12px rgba(90,90,130,.25)', bg: '#ffffff' },
+  mono:    { radius: 0,  border: '1.5px solid #111',   shadow: 'none',                      bg: '#ffffff' },
+  glass:   { radius: 11, border: '1px solid rgba(120,92,255,.3)', shadow: '0 6px 16px rgba(90,70,180,.25)', bg: 'linear-gradient(135deg,#c9bcff,#ffc2e0)' },
+  pop:     { radius: 12, border: 'none',               shadow: '0 4px 0 #d8cfff',           bg: '#7c5cff' },
+  slick:   { radius: 7,  border: '1px solid #2a2d38',  shadow: 'none',                      bg: '#12131a' },
+  paper:   { radius: 6,  border: '1px solid #e2d8c4',  shadow: 'none',                      bg: '#fbf7ee' },
+};
+
+function ThemePicker({ isDark, toggleDark, density, setDensity, skin, setSkin, onClose }) {
   return (
     <div style={{ width: 280, padding: '4px 0' }}>
       {/* ── 라이트/다크 모드 토글 ── */}
@@ -83,130 +95,43 @@ function ThemePicker({ themeKey, setTheme, isDark, toggleDark, customAccent, set
         ))}
       </div>
 
+      {/* ── 디자인 스킨 (형태 + 강조색) ── */}
       <div style={{
-        fontSize: 12,
-        fontWeight: 700,
-        color: '#94a3b8',
-        letterSpacing: '0.6px',
-        textTransform: 'uppercase',
-        marginBottom: 12,
-        padding: '0 2px',
+        fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.6px',
+        textTransform: 'uppercase', marginBottom: 12, padding: '0 2px',
       }}>
-        테마 선택
+        디자인 스킨
       </div>
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: 8,
-      }}>
-        {THEME_LIST.map((t) => {
-          const active = themeKey === t.key && !customAccent;
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+        {SKIN_LIST.map((s) => {
+          const on = skin === s.key;
+          const pv = SKIN_PREVIEW[s.key] || SKIN_PREVIEW.default;
           return (
             <div
-              key={t.key}
-              onClick={() => { setTheme(t.key); onClose(); }}
+              key={s.key}
+              onClick={() => setSkin(s.key)}
               style={{
-                borderRadius: 12,
-                padding: '10px 12px',
-                cursor: 'pointer',
-                border: active
-                  ? `2px solid ${t.colors.accentMid}`
-                  : '2px solid #e2e8f0',
-                background: active
-                  ? `rgba(${t.colors.accentRgb},0.06)`
-                  : '#fafafa',
-                transition: 'all 0.18s',
-                position: 'relative',
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 7,
-              }}
-              onMouseEnter={(e) => {
-                if (!active) {
-                  e.currentTarget.style.border = `2px solid ${t.colors.accentMid}44`;
-                  e.currentTarget.style.background = '#f1f5f9';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!active) {
-                  e.currentTarget.style.border = '2px solid #e2e8f0';
-                  e.currentTarget.style.background = '#fafafa';
-                }
+                borderRadius: 12, padding: '11px 12px', cursor: 'pointer',
+                border: on ? '2px solid var(--fd-accent-mid, #3b82f6)' : '2px solid #e2e8f0',
+                background: on ? 'rgba(var(--fd-accent-rgb,59,130,246),0.06)' : '#fafafa',
+                transition: 'all 0.18s', display: 'flex', flexDirection: 'column', gap: 9,
               }}
             >
-              {/* 컬러 스와치 */}
-              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                {t.swatches.map((c, i) => (
-                  <div key={i} style={{
-                    width: i === 0 ? 18 : 14,
-                    height: i === 0 ? 18 : 14,
-                    borderRadius: '50%',
-                    background: c,
-                    boxShadow: '0 0 0 1.5px rgba(0,0,0,0.1)',
-                  }} />
-                ))}
-                {active && (
-                  <CheckOutlined style={{
-                    marginLeft: 'auto',
-                    fontSize: 11,
-                    color: t.colors.accentMid,
-                    fontWeight: 700,
-                  }} />
-                )}
+              {/* 미니 카드 미리보기 */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div style={{
+                  width: 34, height: 24, flexShrink: 0,
+                  borderRadius: pv.radius, border: pv.border, boxShadow: pv.shadow, background: pv.bg,
+                }} />
+                {on && <CheckOutlined style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--fd-accent-mid,#3b82f6)' }} />}
               </div>
-              {/* 이름 */}
               <div>
-                <div style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: '#1e293b',
-                  lineHeight: 1.3,
-                }}>
-                  {t.name}
-                </div>
-                <div style={{
-                  fontSize: 11,
-                  color: '#94a3b8',
-                  marginTop: 1,
-                }}>
-                  {t.desc}
-                </div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', lineHeight: 1.3 }}>{s.name}</div>
+                <div style={{ fontSize: 10.5, color: '#94a3b8', marginTop: 1 }}>{s.desc}</div>
               </div>
             </div>
           );
         })}
-      </div>
-
-      {/* ── 커스텀 강조색 ── */}
-      <div style={{
-        fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.6px',
-        textTransform: 'uppercase', margin: '18px 0 10px', padding: '0 2px',
-      }}>
-        커스텀 강조색
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0 2px' }}>
-        <label style={{
-          position: 'relative', width: 34, height: 34, borderRadius: 9, cursor: 'pointer',
-          border: `2px solid ${customAccent ? customAccent : '#e2e8f0'}`,
-          background: customAccent || '#ffffff', flexShrink: 0,
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          {!customAccent && <BgColorsOutlined style={{ color: '#94a3b8', fontSize: 15 }} />}
-          <input
-            type="color"
-            value={customAccent || '#3b82f6'}
-            onChange={(e) => setCustomAccent(e.target.value)}
-            style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
-          />
-        </label>
-        <span style={{ fontSize: 12, color: '#64748b', flex: 1 }}>
-          {customAccent ? `직접 지정 · ${customAccent}` : '색을 눌러 직접 지정'}
-        </span>
-        {customAccent && (
-          <Button size="small" type="text" onClick={() => setCustomAccent(null)} style={{ fontSize: 12 }}>
-            프리셋으로
-          </Button>
-        )}
       </div>
 
       {/* ── 화면 밀도 ── */}
@@ -368,13 +293,13 @@ export default function AppHeader({ collapsed, onCollapse }) {
   const totalUnread = useChatStore((s) => s.totalUnread);
   const boardUnread = useUnreadStore((s) => s.boardUnread);
   const playbookUnread = useUnreadStore((s) => s.playbookUnread);
-  const { themeKey, theme, setTheme } = useThemeStore();
+  const theme = useThemeStore((s) => s.theme);
   const isDark = useThemeStore((s) => s.isDark);
   const toggleDark = useThemeStore((s) => s.toggleDark);
-  const customAccent = useThemeStore((s) => s.customAccent);
-  const setCustomAccent = useThemeStore((s) => s.setCustomAccent);
   const density = useThemeStore((s) => s.density);
   const setDensity = useThemeStore((s) => s.setDensity);
+  const skin = useThemeStore((s) => s.skin);
+  const setSkin = useThemeStore((s) => s.setSkin);
   const [themeOpen, setThemeOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [approvalPending, setApprovalPending] = useState(0);
@@ -635,14 +560,12 @@ export default function AppHeader({ collapsed, onCollapse }) {
           }}}
           content={
             <ThemePicker
-              themeKey={themeKey}
-              setTheme={setTheme}
               isDark={isDark}
               toggleDark={toggleDark}
-              customAccent={customAccent}
-              setCustomAccent={setCustomAccent}
               density={density}
               setDensity={setDensity}
+              skin={skin}
+              setSkin={setSkin}
               onClose={() => setThemeOpen(false)}
             />
           }

@@ -75,9 +75,9 @@ function DashBlock({ editing, onHide, D, children }) {
       height: '100%', display: 'flex', flexDirection: 'column',
       // 편집 중엔 overflow visible 로 두어 우하단 리사이즈 핸들이 가려지지 않게 한다.
       overflow: editing ? 'visible' : 'hidden',
-      background: D.cardBg, borderRadius: 14,
-      border: `1px solid ${editing ? '#93c5fd' : D.cardBor}`,
-      boxShadow: editing ? '0 2px 10px rgba(59,130,246,.12)' : 'none',
+      background: D.cardBg, borderRadius: 'var(--fd-sk-radius-lg, 14px)',
+      border: `var(--fd-sk-border-w, 1px) solid ${editing ? '#93c5fd' : D.cardBor}`,
+      boxShadow: editing ? '0 2px 10px rgba(59,130,246,.12)' : 'var(--fd-sk-shadow, none)',
     }}>
       {editing && (
         <div className="dash-drag-handle" style={{
@@ -104,6 +104,7 @@ function DashBlock({ editing, onHide, D, children }) {
 export default function DashboardPage() {
   const navigate   = useNavigate();
   const isDark     = useThemeStore((s) => s.isDark);
+  const skin       = useThemeStore((s) => s.skin);
   const user       = useAuthStore((s) => s.user);
   const calVer     = useTaskStore((s) => s.calendarVersion);
   const { addTask, editTask, fetchTasks } = useTaskStore();
@@ -273,32 +274,34 @@ export default function DashboardPage() {
     overdue,
   }), [active, overdue]);
 
-  /* ── 색상 (라이트/다크) ── */
+  /* ── 색상 (라이트/다크) ──
+     표면/테두리/배경은 스킨 CSS 변수를 참조해 스킨(형태 테마)에 자동 반응한다.
+     텍스트/의미색은 라이트·다크 값 유지. */
   const D = isDark ? {
-    pageBg:   '#181b24',
-    navBg:    '#1e222c',
-    border:   'rgba(255,255,255,.1)',
+    pageBg:   'var(--fd-sk-page-bg, #181b24)',
+    navBg:    'var(--fd-sk-card-bg, #1e222c)',
+    border:   'var(--fd-sk-border-color, rgba(255,255,255,.1))',
     text1:    '#e8e8ee',
     text2:    '#94a3b8',
-    colBg:    '#20242f',           // 컬럼: 페이지보다 한 단계 위
-    cardBg:   '#2b313d',           // 카드: 솔리드 elevated 로 또렷하게 구분
-    cardBor:  'rgba(255,255,255,.1)',
-    addBor:   'rgba(255,255,255,.14)',
+    colBg:    'var(--fd-sk-surface-sunken, #20242f)',   // 컬럼: 페이지보다 한 단계 위
+    cardBg:   'var(--fd-sk-card-bg, #2b313d)',          // 카드: 솔리드 elevated 로 또렷하게 구분
+    cardBor:  'var(--fd-sk-border-color, rgba(255,255,255,.1))',
+    addBor:   'var(--fd-sk-border-color, rgba(255,255,255,.14))',
     addTxt:   '#94a3b8',
-    stripBg:  '#1e222c',
+    stripBg:  'var(--fd-sk-surface-sunken, #1e222c)',
   } : {
     // Notion Warm 기준에 맞춘 대시보드 중립 팔레트 (의미색 틴트는 컬럼/위젯에서 유지)
-    pageBg:   '#f4f4f2',
-    navBg:    '#ffffff',
-    border:   '#e9e7e2',
+    pageBg:   'var(--fd-sk-page-bg, #f4f4f2)',
+    navBg:    'var(--fd-sk-card-bg, #ffffff)',
+    border:   'var(--fd-sk-border-color, #e9e7e2)',
     text1:    '#37352f',
     text2:    '#a8a29a',
-    colBg:    '#f2f1ec',
-    cardBg:   '#ffffff',
-    cardBor:  '#e9e7e2',
-    addBor:   '#dcd8d0',
+    colBg:    'var(--fd-sk-surface-sunken, #f2f1ec)',
+    cardBg:   'var(--fd-sk-card-bg, #ffffff)',
+    cardBor:  'var(--fd-sk-border-color, #e9e7e2)',
+    addBor:   'var(--fd-sk-border-color, #dcd8d0)',
     addTxt:   '#a8a29a',
-    stripBg:  '#ffffff',
+    stripBg:  'var(--fd-sk-card-bg, #ffffff)',
   };
 
   if (loading) {
@@ -373,7 +376,8 @@ export default function DashboardPage() {
   /* ── 위젯 공통 스타일 ── */
   const wHoverBg = isDark ? 'rgba(255,255,255,.04)' : '#F8FAFC';
   const wCard = {
-    background: D.cardBg, border: `1px solid ${D.cardBor}`, borderRadius: 14,
+    background: D.cardBg, border: `var(--fd-sk-border-w, 1px) solid ${D.cardBor}`, borderRadius: 'var(--fd-sk-radius-lg, 14px)',
+    boxShadow: 'var(--fd-sk-shadow, none)',
     display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%', minHeight: 0,
   };
   const wHead = {
@@ -407,20 +411,40 @@ export default function DashboardPage() {
     .slice(0, 4);
 
   /* 히어로 전용 스타일 */
-  const heroCard = { background: D.cardBg, border: `1px solid ${D.cardBor}`, borderRadius: 12, boxShadow: '0 1px 2px rgba(55,53,47,.05), 0 1px 3px rgba(55,53,47,.04)', padding: 16, display: 'flex', flexDirection: 'column', minHeight: 0 };
+  const heroCard = { background: D.cardBg, border: `var(--fd-sk-border-w, 1px) solid ${D.cardBor}`, borderRadius: 'var(--fd-sk-radius-lg, 12px)', boxShadow: 'var(--fd-sk-shadow, 0 1px 2px rgba(55,53,47,.05), 0 1px 3px rgba(55,53,47,.04))', padding: 16, display: 'flex', flexDirection: 'column', minHeight: 0 };
   const heroHd   = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 };
   const heroHdT  = { fontSize: 13, fontWeight: 700, color: D.text1, display: 'flex', alignItems: 'center', gap: 7 };
-  const secTitle = { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 700, color: D.text1, marginBottom: 10 };
-  const kpiTile  = (variant) => ({
-    borderRadius: 12, padding: 12, border: '1px solid',
-    display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 3, minWidth: 0,
-    ...(variant === 'accent' ? { background: isDark ? 'rgba(22,163,74,.12)' : 'linear-gradient(140deg,#e7f5ec,#f2fbf5)', borderColor: isDark ? 'rgba(22,163,74,.3)' : '#bfe6cd' }
-      : variant === 'risk' ? { background: isDark ? 'rgba(199,58,47,.12)' : 'linear-gradient(140deg,#fdf3f1,#fdf8f6)', borderColor: isDark ? 'rgba(199,58,47,.3)' : '#f7ddd6' }
-      : { background: D.cardBg, borderColor: D.cardBor }),
-  });
-  const kpiLbl   = { fontSize: 11.5, color: D.text2, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-  const kpiBig   = (c) => ({ fontSize: 26, fontWeight: 800, lineHeight: 1, marginTop: 6, color: c });
-  const kpiSub   = { fontSize: 10.5, color: D.text3 ?? D.text2, marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+  const secTitle = { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 'var(--fd-sk-font-weight-hd, 700)', color: D.text1, marginBottom: 10,
+    ...(skin === 'mono' ? { textTransform: 'uppercase', letterSpacing: '0.12em' } : {}) };
+  /* ── KPI 타일: 스킨별 표현 (flat=브루탈·grad=클레이·line=모노·tint=기본) ── */
+  const KPI_MODE = { default: 'tint', brutal: 'flat', clay: 'grad', mono: 'line', glass: 'grad', pop: 'flat', slick: 'tint', paper: 'tint' }[skin] || 'tint';
+  const kpiBgVar = (variant) => (variant === 'accent' ? 'var(--fd-sk-kpi-a)' : variant === 'risk' ? 'var(--fd-sk-kpi-b)' : variant === 'info' ? 'var(--fd-sk-kpi-c)' : null);
+  const kpiColored = (v) => v === 'accent' || v === 'risk' || v === 'info';
+  const kpiTile  = (variant) => {
+    const base = { borderRadius: 'var(--fd-sk-radius-lg, 12px)', padding: 12, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 3, minWidth: 0, cursor: 'pointer' };
+    const bg = kpiBgVar(variant);
+    if (KPI_MODE === 'flat') // 브루탈: 솔리드 컬러 블록 + 검정 테두리 + 하드 그림자
+      return { ...base, background: kpiColored(variant) ? bg : D.cardBg, border: 'var(--fd-sk-border-w, 2.5px) solid var(--fd-sk-border-color, #111)', boxShadow: 'var(--fd-sk-shadow-sm, 2px 2px 0 #111)' };
+    if (KPI_MODE === 'grad') // 클레이: 그라데이션 + 말랑 그림자 + 테두리 없음
+      return { ...base, background: kpiColored(variant) ? bg : D.cardBg, border: 'none', boxShadow: 'var(--fd-sk-shadow-sm)' };
+    if (KPI_MODE === 'line') // 모노: 흰/다크 카드 + 헤어라인 + 좌측 컬러 바
+      return { ...base, background: D.cardBg, border: '1px solid var(--fd-sk-border-color, #ececec)', borderLeft: kpiColored(variant) ? `3px solid ${variant === 'accent' ? '#12b886' : variant === 'risk' ? '#f0392b' : '#3b82f6'}` : '1px solid var(--fd-sk-border-color, #ececec)', boxShadow: 'none' };
+    // tint(기본): 연한 틴트 배경 + 컬러 숫자
+    return { ...base, border: 'var(--fd-sk-border-w, 1px) solid',
+      ...(variant === 'accent' ? { background: kpiBgVar('accent'), borderColor: isDark ? 'rgba(22,163,74,.3)' : '#bfe6cd' }
+        : variant === 'risk' ? { background: kpiBgVar('risk'), borderColor: isDark ? 'rgba(199,58,47,.3)' : '#f7ddd6' }
+        : { background: D.cardBg, borderColor: D.cardBor }) };
+  };
+  const kpiTxtColor = (variant) => {
+    if (KPI_MODE === 'flat' || KPI_MODE === 'grad') return kpiColored(variant) ? 'var(--fd-sk-kpi-txt)' : D.text1;
+    // tint/line: 의미색 숫자
+    return variant === 'accent' ? '#15803d' : variant === 'risk' ? '#c73a2f' : variant === 'info' ? '#2563eb' : D.text1;
+  };
+  const kpiMuted = (variant) => ((KPI_MODE === 'flat' || KPI_MODE === 'grad') && kpiColored(variant)) ? 'var(--fd-sk-kpi-txt)' : D.text2;
+  const kpiLbl   = (variant) => ({ fontSize: 11.5, color: kpiMuted(variant), fontWeight: 700, opacity: (KPI_MODE === 'flat' || KPI_MODE === 'grad') && kpiColored(variant) ? 0.92 : 1, display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+    ...(KPI_MODE === 'line' ? { textTransform: 'uppercase', letterSpacing: '0.1em' } : {}) });
+  const kpiBig   = (variant) => ({ fontSize: 28, fontWeight: 900, lineHeight: 1, marginTop: 6, letterSpacing: '-1px', fontFamily: 'var(--fd-sk-font-num)', color: kpiTxtColor(variant) });
+  const kpiSub   = (variant) => ({ fontSize: 10.5, color: kpiMuted(variant), opacity: (KPI_MODE === 'flat' || KPI_MODE === 'grad') && kpiColored(variant) ? 0.8 : 1, marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' });
   const qbtn     = (green) => ({
     background: green ? '#16a34a' : D.cardBg, color: green ? '#fff' : D.text2,
     border: `1px solid ${green ? '#16a34a' : D.cardBor}`, borderRadius: 8, padding: '6px 8px',
@@ -525,28 +549,28 @@ export default function DashboardPage() {
           {/* ② KPI 타일 — 좁으면 세로 1열로 리플로우, 넓으면 2열 (상단 정렬·넘치면 스크롤) */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))', gridAutoRows: 'min-content', gap: 12, minHeight: 0, alignContent: 'start', overflowY: 'auto' }}>
             <div style={kpiTile('accent')} onClick={() => navigate('/tasks')}>
-              <div style={kpiLbl}>🔥 오늘 마감</div>
+              <div style={kpiLbl('accent')}>🔥 오늘 마감</div>
               <div style={{ minWidth: 0 }}>
-                <div style={kpiBig('#15803d')}>{dueTodayCount}</div>
-                <div style={kpiSub}>오늘 처리 권장</div>
+                <div style={kpiBig('accent')}>{dueTodayCount}</div>
+                <div style={kpiSub('accent')}>오늘 처리 권장</div>
               </div>
             </div>
             <div style={kpiTile('risk')} onClick={() => navigate('/tasks?status=overdue')}>
-              <div style={kpiLbl}>⚠ 지연·초과</div>
+              <div style={kpiLbl('risk')}>⚠ 지연·초과</div>
               <div style={{ minWidth: 0 }}>
-                <div style={kpiBig('#c73a2f')}>{overdue.length}</div>
-                <div style={kpiSub}>{atRisk[0] ? `${atRisk[0].title}` : '위험 업무 없음'}</div>
+                <div style={kpiBig('risk')}>{overdue.length}</div>
+                <div style={kpiSub('risk')}>{atRisk[0] ? `${atRisk[0].title}` : '위험 업무 없음'}</div>
               </div>
             </div>
-            <div style={kpiTile()} onClick={() => navigate('/mail')}>
-              <div style={kpiLbl}>✉️ 미확인 메일</div>
+            <div style={kpiTile('info')} onClick={() => navigate('/mail')}>
+              <div style={kpiLbl('info')}>✉️ 미확인 메일</div>
               <div style={{ minWidth: 0 }}>
-                <div style={kpiBig(D.text1)}>{unreadCount}</div>
-                <div style={kpiSub}>받은편지함</div>
+                <div style={kpiBig('info')}>{unreadCount}</div>
+                <div style={kpiSub('info')}>받은편지함</div>
               </div>
             </div>
             <div style={kpiTile()}>
-              <div style={kpiLbl}>⚡ 빠른 실행</div>
+              <div style={kpiLbl()}>⚡ 빠른 실행</div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 10 }}>
                 <span style={qbtn(true)} onClick={() => { setSelectedTask(null); setFormStatus('pending'); setFormOpen(true); }}>+ 업무</span>
                 <span style={qbtn()} onClick={() => navigate('/memos')}>메모</span>
@@ -602,10 +626,10 @@ export default function DashboardPage() {
             minWidth: 0,
             maxHeight: 380,
             background: col.colBg,
-            borderRadius: 12,
+            borderRadius: 'var(--fd-sk-radius-lg, 12px)',
             display: 'flex',
             flexDirection: 'column',
-            border: `1px solid ${col.borderColor}`,
+            border: `var(--fd-sk-border-w, 1px) solid ${col.borderColor}`,
             overflow: 'hidden',
           }}>
             {/* 열 헤더 */}
@@ -644,9 +668,10 @@ export default function DashboardPage() {
                     onClick={() => { setSelectedTask(task); setFormOpen(true); }}
                     style={{
                       background: D.cardBg,
-                      borderRadius: 9,
+                      borderRadius: 'var(--fd-sk-radius, 9px)',
                       padding: '11px 13px',
-                      border: `1px solid ${late ? '#FECACA' : D.cardBor}`,
+                      border: `var(--fd-sk-border-w, 1px) solid ${late ? '#FECACA' : D.cardBor}`,
+                      boxShadow: 'var(--fd-sk-shadow-sm, none)',
                       cursor: 'pointer',
                       position: 'relative',
                       overflow: 'hidden',

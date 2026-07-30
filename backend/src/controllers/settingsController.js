@@ -123,8 +123,8 @@ const getThemePrefs = async (req, res, next) => {
 const updateThemePrefs = async (req, res, next) => {
   try {
     const key = `theme_prefs_${req.user.id}`;
-    const { themeKey, isDark, customAccent, density } = req.body;
-    const value = JSON.stringify({ themeKey, isDark, customAccent, density });
+    const { themeKey, isDark, customAccent, density, skin } = req.body;
+    const value = JSON.stringify({ themeKey, isDark, customAccent, density, skin });
     await prisma.appSetting.upsert({
       where: { key },
       create: { key, value },
