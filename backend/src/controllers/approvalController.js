@@ -54,7 +54,7 @@ async function sendApprovalNotification(userId, type, documentId, message, actor
 // GET /api/approvals  (query: tab=mine|pending|all, status, page, limit)
 const list = async (req, res, next) => {
   try {
-    const { tab = 'mine', status, page = 1, limit = 20, q, formTypeId, from, to } = req.query;
+    const { tab = 'mine', status, page = 1, limit = 20, q, formTypeId, templateId, from, to } = req.query;
     const userId = req.user.id;
 
     let where = { delYn: '0' };
@@ -69,8 +69,9 @@ const list = async (req, res, next) => {
         { creator: { displayName: { contains: kw, mode: 'insensitive' } } },
       ];
     }
-    // 양식종류 필터
-    if (formTypeId) where.template = { formTypeId: Number(formTypeId) };
+    // 양식(템플릿) / 양식종류 필터 — 트리 노드 선택 연동
+    if (templateId) where.templateId = Number(templateId);
+    else if (formTypeId) where.template = { formTypeId: Number(formTypeId) };
     // 기안일 기간 필터
     if (from || to) {
       where.createdAt = {};
@@ -117,6 +118,85 @@ const list = async (req, res, next) => {
     ]);
 
     res.json({ total, documents });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/approvals/tree  (query: tab, status, q, from, to)
+// 결재종류(트리) → 양식 계층 + 현재 탭 가시성 기준 문서 건수 롤업
+const tree = async (req, res, next) => {
+  try {
+    const { tab = 'mine', status, q, from, to } = req.query;
+    const userId = req.user.id;
+
+    // 목록과 동일한 가시성/필터 조건 (양식·종류 필터만 제외)
+    let where = { delYn: '0' };
+    if (status) where.status = status;
+    if (q && String(q).trim()) {
+      const kw = String(q).trim();
+      where.OR = [
+        { title: { contains: kw, mode: 'insensitive' } },
+        { docNo: { contains: kw, mode: 'insensitive' } },
+        { creator: { displayName: { contains: kw, mode: 'insensitive' } } },
+      ];
+    }
+    if (from || to) {
+      where.createdAt = {};
+      if (from) where.createdAt.gte = new Date(from);
+      if (to) { const d = new Date(to); d.setHours(23, 59, 59, 999); where.createdAt.lte = d; }
+    }
+    if (tab === 'mine') {
+      where.createdBy = userId;
+    } else if (tab === 'pending') {
+      where.steps = { some: { approverId: userId, status: 'pending', type: { not: 'reference' } } };
+      where.status = 'pending';
+    } else if (tab === 'reference') {
+      where.steps = { some: { approverId: userId, type: 'reference' } };
+      where.status = { not: 'draft' };
+    } else if (tab === 'all' && req.user.role === 'admin') {
+      // 필터 없음
+    } else {
+      where.createdBy = userId;
+    }
+
+    const [formTypes, templates, grouped] = await Promise.all([
+      prisma.approvalFormType.findMany({
+        where: { isActive: true },
+        orderBy: [{ order: 'asc' }, { id: 'asc' }],
+        select: { id: true, name: true, icon: true, color: true, parentId: true },
+      }),
+      prisma.approvalTemplate.findMany({
+        where: { isActive: true },
+        orderBy: { name: 'asc' },
+        select: { id: true, name: true, formTypeId: true, code: true },
+      }),
+      prisma.approvalDocument.groupBy({ by: ['templateId'], where, _count: { _all: true } }),
+    ]);
+
+    const countByTemplate = Object.fromEntries(grouped.map((g) => [g.templateId, g._count._all]));
+    const templatesByType = {};
+    for (const t of templates) {
+      (templatesByType[t.formTypeId] ||= []).push({ id: t.id, name: t.name, code: t.code, count: countByTemplate[t.id] || 0 });
+    }
+
+    const nodeById = {};
+    formTypes.forEach((ft) => { nodeById[ft.id] = { ...ft, templates: templatesByType[ft.id] || [], children: [] }; });
+    const roots = [];
+    formTypes.forEach((ft) => {
+      const node = nodeById[ft.id];
+      if (ft.parentId && nodeById[ft.parentId]) nodeById[ft.parentId].children.push(node);
+      else roots.push(node);
+    });
+    const rollup = (node) => {
+      let sum = node.templates.reduce((a, t) => a + t.count, 0);
+      node.children.forEach((c) => { sum += rollup(c); });
+      node.count = sum;
+      return sum;
+    };
+    roots.forEach(rollup);
+
+    res.json({ tree: roots });
   } catch (err) {
     next(err);
   }
@@ -802,7 +882,7 @@ const pendingCount = async (req, res, next) => {
 };
 
 module.exports = {
-  list, get, create, update, submit, approve, reject, cancel, delegate, resubmit, resume, remove, pendingCount,
+  list, tree, get, create, update, submit, approve, reject, cancel, delegate, resubmit, resume, remove, pendingCount,
   uploadAttachment, downloadAttachment, removeAttachment,
   listComments, createComment, updateComment, removeComment,
 };

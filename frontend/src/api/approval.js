@@ -18,6 +18,7 @@ export const deleteApprovalTemplate = (id) => api.delete(`/approval-templates/${
 
 // ── 결재 문서 ──────────────────────────────────────────────────
 export const getApprovals = (params) => api.get('/approvals', { params }).then(r => r.data);
+export const getApprovalTree = (params) => api.get('/approvals/tree', { params }).then(r => r.data);
 export const getApproval = (id) => api.get(`/approvals/${id}`).then(r => r.data);
 export const createApproval = (data) => api.post('/approvals', data).then(r => r.data);
 export const updateApproval = (id, data) => api.put(`/approvals/${id}`, data).then(r => r.data);

@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Tabs, Button, Space, Typography, Tag, Select, message, Popconfirm,
-  theme as antTheme, Badge, Tooltip, Avatar, Pagination, Empty, Spin, Drawer, Grid, Input, Modal,
+  theme as antTheme, Badge, Tooltip, Avatar, Pagination, Empty, Spin, Drawer, Grid, Input, Modal, Tree,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined, CloseCircleOutlined, FileDoneOutlined, ClockCircleOutlined, CopyOutlined, FireOutlined, CheckOutlined } from '@ant-design/icons';
-import { getApprovals, deleteApproval, cancelApproval, getApprovalFormTypes, approveApproval, rejectApproval } from '../../api/approval';
+import { PlusOutlined, DeleteOutlined, CloseCircleOutlined, FileDoneOutlined, ClockCircleOutlined, CopyOutlined, FireOutlined, CheckOutlined, FolderOutlined, FileTextOutlined, AppstoreOutlined } from '@ant-design/icons';
+import { getApprovals, getApprovalTree, deleteApproval, cancelApproval, approveApproval, rejectApproval } from '../../api/approval';
 import DocumentForm from './DocumentForm';
 import DocumentDetail from './DocumentDetail';
 import SpellTextArea from '../../components/common/SpellTextArea';
@@ -48,12 +48,16 @@ export default function ApprovalPage() {
   const [q, setQ] = useState('');
   const [qInput, setQInput] = useState('');
   const [formTypeId, setFormTypeId] = useState(undefined);
-  const [formTypes, setFormTypes] = useState([]);
+  const [templateId, setTemplateId] = useState(undefined);
+  // ── 결재종류 트리 ──
+  const [tree, setTree] = useState([]);
+  const [treeKey, setTreeKey] = useState('all');       // 선택 노드 키
+  const [treeExpanded, setTreeExpanded] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('approval_tree_expanded') || '[]'); } catch { return []; }
+  });
   const [bulkLoading, setBulkLoading] = useState(false);
   const [rejectModal, setRejectModal] = useState(null); // { id } | null
   const [rejectReason, setRejectReason] = useState('');
-
-  useEffect(() => { getApprovalFormTypes().then(setFormTypes).catch(() => {}); }, []);
 
   // 내 차례(승인 대기) 여부
   const isMyPendingTurn = (d) => d.status === 'pending'
@@ -64,14 +68,67 @@ export default function ApprovalPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getApprovals({ tab, status: statusFilter, page, limit: 20, q: q || undefined, formTypeId });
+      const data = await getApprovals({ tab, status: statusFilter, page, limit: 20, q: q || undefined, formTypeId, templateId });
       setDocuments(data.documents || []);
       setTotal(data.total || 0);
     } catch { message.error('목록을 불러오지 못했습니다.'); }
     finally { setLoading(false); }
-  }, [tab, statusFilter, page, q, formTypeId]);
+  }, [tab, statusFilter, page, q, formTypeId, templateId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // 트리(결재종류→양식 + 건수)는 탭·상태·검색 변경 시 갱신 (선택/페이지와 무관)
+  useEffect(() => {
+    getApprovalTree({ tab, status: statusFilter, q: q || undefined })
+      .then(d => setTree(d.tree || [])).catch(() => {});
+  }, [tab, statusFilter, q]);
+
+  // 트리 노드 선택 → 목록 필터 (formType/template)
+  const onTreeSelect = (keys) => {
+    const key = keys[0] || 'all';
+    setTreeKey(key);
+    setPage(1);
+    if (key === 'all') { setFormTypeId(undefined); setTemplateId(undefined); }
+    else if (key.startsWith('ft-')) { setFormTypeId(Number(key.slice(3))); setTemplateId(undefined); }
+    else if (key.startsWith('tpl-')) { setTemplateId(Number(key.slice(4))); setFormTypeId(undefined); }
+  };
+  const onTreeExpand = (keys) => {
+    setTreeExpanded(keys);
+    localStorage.setItem('approval_tree_expanded', JSON.stringify(keys));
+  };
+
+  // API 트리 → AntD Tree treeData (건수 배지 포함)
+  const buildTreeData = useCallback((nodes) => nodes.map((ft) => ({
+    key: `ft-${ft.id}`,
+    icon: <FolderOutlined style={{ color: ft.color || token.colorPrimary }} />,
+    title: (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        {ft.icon ? <span>{ft.icon}</span> : null}
+        <span>{ft.name}</span>
+        <span style={{ fontSize: 11, color: token.colorTextTertiary }}>{ft.count}</span>
+      </span>
+    ),
+    children: [
+      ...buildTreeData(ft.children || []),
+      ...(ft.templates || []).map((tp) => ({
+        key: `tpl-${tp.id}`,
+        icon: <FileTextOutlined style={{ color: token.colorTextTertiary }} />,
+        isLeaf: true,
+        title: (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span>{tp.name}</span>
+            <span style={{ fontSize: 11, color: token.colorTextTertiary }}>{tp.count}</span>
+          </span>
+        ),
+      })),
+    ],
+  })), [token]);
+
+  const treeData = [
+    { key: 'all', icon: <AppstoreOutlined style={{ color: token.colorPrimary }} />, isLeaf: true,
+      title: <span style={{ fontWeight: 600 }}>전체</span> },
+    ...buildTreeData(tree),
+  ];
 
   const handleDelete = async (id) => {
     try { await deleteApproval(id); message.success('삭제되었습니다.'); load(); }
@@ -285,16 +342,6 @@ export default function ApprovalPage() {
             onSearch={v => { setQ((v || '').trim()); setPage(1); }}
           />
           <Select
-            allowClear placeholder="양식종류"
-            style={{ width: 116 }} size="small"
-            value={formTypeId}
-            onChange={v => { setFormTypeId(v); setPage(1); }}
-          >
-            {formTypes.map(t => (
-              <Select.Option key={t.id} value={t.id}>{t.icon} {t.name}</Select.Option>
-            ))}
-          </Select>
-          <Select
             allowClear placeholder="상태 필터"
             style={{ width: 116 }} size="small"
             value={statusFilter}
@@ -310,6 +357,28 @@ export default function ApprovalPage() {
         </Space>
       </div>
 
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+      {/* ── 좌측: 결재 종류 트리 ── */}
+      <div style={{
+        width: 230, flexShrink: 0,
+        background: token.colorBgContainer, borderRadius: token.borderRadiusLG,
+        border: `1px solid ${token.colorBorderSecondary}`, padding: '10px 6px',
+        maxHeight: 'calc(100vh - 180px)', overflow: 'auto',
+      }}>
+        <div style={{ fontSize: 'var(--fd-fs-caption, 12px)', fontWeight: 700, color: token.colorTextTertiary, padding: '2px 8px 8px', letterSpacing: 0.2 }}>결재 종류</div>
+        <Tree
+          blockNode
+          showIcon
+          treeData={treeData}
+          selectedKeys={[treeKey]}
+          expandedKeys={treeExpanded}
+          onSelect={onTreeSelect}
+          onExpand={onTreeExpand}
+        />
+      </div>
+
+      {/* ── 우측: 탭 + 목록 ── */}
+      <div style={{ flex: 1, minWidth: 0 }}>
       <Tabs
         activeKey={tab}
         onChange={k => { setTab(k); setPage(1); }}
@@ -355,6 +424,8 @@ export default function ApprovalPage() {
           </div>
         )}
       </div>
+      </div>{/* 우측 콘텐츠 끝 */}
+      </div>{/* 2-pane 끝 */}
 
       {/* 결재 기안/수정 Drawer */}
       <Drawer
