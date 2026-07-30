@@ -109,7 +109,7 @@ export default function MemoWidget() {
       arrow={false}
       overlayStyle={{ zIndex: 1050 }}
       styles={{ body: {
-        background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 16,
+        background: 'var(--fd-surface)', border: 'var(--fd-sk-border-w, 1px) solid var(--fd-border)', borderRadius: 'var(--fd-sk-radius-lg, 16px)',
         boxShadow: '0 16px 48px rgba(0,0,0,0.2)', padding: '16px',
       }}}
       content={panel}
