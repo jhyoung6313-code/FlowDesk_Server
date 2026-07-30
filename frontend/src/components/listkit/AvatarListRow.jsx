@@ -62,7 +62,7 @@ export default function AvatarListRow({
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, margin: '2px 0' }}>
           {subjectPrefix}
-          <Text style={{ fontSize: 12.5, fontWeight: unread ? 700 : 400, color: token.colorText, flex: 1, minWidth: 0 }} ellipsis={{ tooltip: typeof subject === 'string' ? subject : undefined }}>
+          <Text style={{ fontSize: 12, fontWeight: unread ? 700 : 400, color: token.colorText, flex: 1, minWidth: 0 }} ellipsis={{ tooltip: typeof subject === 'string' ? subject : undefined }}>
             {subject}
           </Text>
           {subjectSuffix}

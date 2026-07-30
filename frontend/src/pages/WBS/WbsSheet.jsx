@@ -582,7 +582,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
           <div style={{ paddingLeft: record.level * 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {cfg.label ? (
-                <span style={{ flexShrink: 0, background: cfg.labelBg, color: '#fff', fontSize: 10, fontWeight: 700, lineHeight: 1, padding: '2px 4px', borderRadius: 3, letterSpacing: 0.5 }}>
+                <span style={{ flexShrink: 0, background: cfg.labelBg, color: '#fff', fontSize: 12, fontWeight: 700, lineHeight: 1, padding: '2px 4px', borderRadius: 3, letterSpacing: 0.5 }}>
                   {cfg.label}
                 </span>
               ) : (
@@ -600,12 +600,12 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
                     style={{
                       flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 2,
                       background: '#ff4d4f', color: '#fff',
-                      fontSize: 10, fontWeight: 700, lineHeight: 1,
+                      fontSize: 12, fontWeight: 700, lineHeight: 1,
                       padding: '2px 5px', borderRadius: 8,
                       cursor: 'pointer', whiteSpace: 'nowrap',
                     }}
                   >
-                    <ExclamationCircleOutlined style={{ fontSize: 9 }} />
+                    <ExclamationCircleOutlined style={{ fontSize: 12 }} />
                     이슈 {activeIssues.length}
                   </span>
                 </Tooltip>
@@ -625,7 +625,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
                 onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
                 onMouseLeave={(e) => e.currentTarget.style.opacity = 0.55}
               >
-                <PlusOutlined style={{ fontSize: 9 }} />
+                <PlusOutlined style={{ fontSize: 12 }} />
                 {childLabel} 추가
               </div>
             )}
@@ -678,7 +678,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
       title: (
         <div>
           <div>계획진척률</div>
-          <div style={{ fontSize: 9, color: '#1890ff', fontWeight: 400 }}>━ 파란선</div>
+          <div style={{ fontSize: 12, color: '#1890ff', fontWeight: 400 }}>━ 파란선</div>
         </div>
       ),
       dataIndex: 'plannedProgress',
@@ -699,7 +699,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
       title: (
         <div>
           <div>실적진척률</div>
-          <div style={{ fontSize: 9, color: '#52c41a', fontWeight: 400 }}>▓ 컬러바</div>
+          <div style={{ fontSize: 12, color: '#52c41a', fontWeight: 400 }}>▓ 컬러바</div>
         </div>
       ),
       dataIndex: 'actualProgress',
@@ -804,7 +804,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
                 style={{ color: '#52c41a', padding: '0 4px' }}
               >
                 <PlusCircleOutlined />
-                <DownOutlined style={{ fontSize: 9, marginLeft: 2 }} />
+                <DownOutlined style={{ fontSize: 12, marginLeft: 2 }} />
               </Button>
             </Dropdown>
             <Popconfirm title="이 항목과 하위 항목이 모두 삭제됩니다." onConfirm={() => handleDelete(record.id)}>

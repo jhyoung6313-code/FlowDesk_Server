@@ -635,7 +635,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
                 borderRadius: 99,
                 background: '#ff4d4f',
                 border: `2px solid ${RAIL.bg}`,
-                fontSize: 9,
+                fontSize: 12,
                 fontWeight: 700,
                 color: '#fff',
                 display: 'flex',

@@ -186,7 +186,7 @@ function SectionHeader({ label, open, onToggle, onAdd, addTitle }) {
         style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}
       >
         <span style={{
-          fontSize: 9, color: '#aaa', display: 'inline-block',
+          fontSize: 12, color: '#aaa', display: 'inline-block',
           transform: open ? 'rotate(90deg)' : 'none',
           transition: 'transform 0.15s',
         }}>▶</span>
@@ -263,7 +263,7 @@ function RoomItem({ room, isActive, myId, onClick, onlineUserIds, onToggleFavori
           }}>
             {name}
           </span>
-          {room.isMuted && <BellFilled style={{ fontSize: 9, color: '#d0d0d0' }} />}
+          {room.isMuted && <BellFilled style={{ fontSize: 12, color: '#d0d0d0' }} />}
         </div>
         {preview && (
           <div style={{ fontSize: 12, color: '#bbb', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
@@ -272,7 +272,7 @@ function RoomItem({ room, isActive, myId, onClick, onlineUserIds, onToggleFavori
         )}
       </div>
       <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-        {last && <span style={{ fontSize: 10, color: '#ccc' }}>{dayjs(last.createdAt).format('HH:mm')}</span>}
+        {last && <span style={{ fontSize: 12, color: '#ccc' }}>{dayjs(last.createdAt).format('HH:mm')}</span>}
         <Tooltip title={room.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}>
           <button
             type="button"
@@ -408,7 +408,7 @@ function MessageBubble({ msg, prevMsg, myId, onReact, onEdit, onDelete, onPin, o
       {/* 아바타 / 그룹 타임스탬프 */}
       <div style={{ width: 36, flexShrink: 0, marginRight: isMine ? 0 : 10, marginLeft: isMine ? 10 : 0, display: 'flex', alignItems: isGrouped ? 'center' : 'flex-start', justifyContent: 'center', paddingTop: isGrouped ? 0 : 2 }}>
         {isGrouped ? (
-          <span style={{ fontSize: 10, color: '#ccc', opacity: hover ? 1 : 0, transition: 'opacity 0.12s', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 12, color: '#ccc', opacity: hover ? 1 : 0, transition: 'opacity 0.12s', whiteSpace: 'nowrap' }}>
             {dayjs(msg.createdAt).format('HH:mm')}
           </span>
         ) : (
@@ -448,7 +448,7 @@ function MessageBubble({ msg, prevMsg, myId, onReact, onEdit, onDelete, onPin, o
             />
           )}
           {msg.fileUrl && <FileAttachment msg={msg} />}
-          {msg.editedAt && <span style={{ fontSize: 10, color: '#999', marginLeft: 4 }}>(수정됨)</span>}
+          {msg.editedAt && <span style={{ fontSize: 12, color: '#999', marginLeft: 4 }}>(수정됨)</span>}
           {/* 링크 미리보기 */}
           {msg.content && (() => {
             const plain = msg.content.replace(/<[^>]*>/g, ' ');
@@ -468,13 +468,13 @@ function MessageBubble({ msg, prevMsg, myId, onReact, onEdit, onDelete, onPin, o
                   <span><UserAvatar user={m.user} size={14} /></span>
                 </Tooltip>
               ))}
-              {readers.length > 5 && <span style={{ fontSize: 9, color: '#aaa' }}>+{readers.length - 5}</span>}
+              {readers.length > 5 && <span style={{ fontSize: 12, color: '#aaa' }}>+{readers.length - 5}</span>}
             </div>
           );
         })()}
 
         {!isGrouped && isMine && (
-          <span style={{ fontSize: 10, color: '#bbb', marginTop: 3 }}>{fmtTime(msg.createdAt)}</span>
+          <span style={{ fontSize: 12, color: '#bbb', marginTop: 3 }}>{fmtTime(msg.createdAt)}</span>
         )}
 
         {/* 이모지 반응 */}
@@ -1697,11 +1697,11 @@ export default function ChatPage() {
                   <div style={{ minWidth: 0 }}>
                     <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--fd-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.user?.displayName}</div>
                     {hasStatus ? (
-                      <div style={{ fontSize: 10, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: 12, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {m.user.statusEmoji} {m.user.statusText}
                       </div>
                     ) : (
-                      <div style={{ fontSize: 10, color: isOnline ? '#52c41a' : '#bbb' }}>{isOnline ? '온라인' : '오프라인'}</div>
+                      <div style={{ fontSize: 12, color: isOnline ? '#52c41a' : '#bbb' }}>{isOnline ? '온라인' : '오프라인'}</div>
                     )}
                   </div>
                 </div>
@@ -1757,7 +1757,7 @@ export default function ChatPage() {
                         }
                         <div style={{ minWidth: 0 }}>
                           <div style={{ fontSize: 12, color: 'var(--fd-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{m.fileName || '파일'}</div>
-                          <div style={{ fontSize: 10, color: '#bbb' }}>{m.sender?.displayName} · {dayjs(m.createdAt).format('MM/DD')}</div>
+                          <div style={{ fontSize: 12, color: '#bbb' }}>{m.sender?.displayName} · {dayjs(m.createdAt).format('MM/DD')}</div>
                         </div>
                       </a>
                     );
@@ -1818,7 +1818,7 @@ export default function ChatPage() {
                 >
                   <div style={{ width: 32, flexShrink: 0, marginRight: 8, display: 'flex', alignItems: isGrouped ? 'center' : 'flex-start', justifyContent: 'center', paddingTop: isGrouped ? 0 : 2 }}>
                     {isGrouped
-                      ? <span style={{ fontSize: 9, color: '#ddd', whiteSpace: 'nowrap' }}>{dayjs(msg.createdAt).format('HH:mm')}</span>
+                      ? <span style={{ fontSize: 12, color: '#ddd', whiteSpace: 'nowrap' }}>{dayjs(msg.createdAt).format('HH:mm')}</span>
                       : <UserAvatar user={msg.sender} size={28} />
                     }
                   </div>
@@ -1826,7 +1826,7 @@ export default function ChatPage() {
                     {!isGrouped && (
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 2 }}>
                         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--fd-text-primary)' }}>{msg.sender?.displayName}</span>
-                        <span style={{ fontSize: 10, color: '#c0c0c0' }}>{fmtTime(msg.createdAt)}</span>
+                        <span style={{ fontSize: 12, color: '#c0c0c0' }}>{fmtTime(msg.createdAt)}</span>
                       </div>
                     )}
                     {msg.isDeleted

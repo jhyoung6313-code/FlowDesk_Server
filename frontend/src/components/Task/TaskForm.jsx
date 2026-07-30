@@ -449,7 +449,7 @@ export default function TaskForm({ open, task, onClose, onSubmit, initialStatus 
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                     <Space size={6}>
-                      <Avatar size={20} style={{ backgroundColor: getAvatarColor(c.userId), fontSize: 10 }}>
+                      <Avatar size={20} style={{ backgroundColor: getAvatarColor(c.userId), fontSize: 12 }}>
                         {c.user?.displayName?.slice(0, 1)}
                       </Avatar>
                       <Typography.Text strong style={{ fontSize: 12 }}>{c.user?.displayName}</Typography.Text>

@@ -68,8 +68,8 @@ export default function HolidayManager({ open, onClose }) {
             display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px',
             borderBottom: '1px solid #F1F5F9',
           }}>
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#DC2626', width: 92 }}>{dayjs(h.date).format('YYYY-MM-DD')}</span>
-            <span style={{ fontSize: 10.5, fontWeight: 700, padding: '1px 7px', borderRadius: 5, background: '#FEE2E2', color: '#DC2626' }}>{TYPE_LABEL[h.type] || h.type}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: '#DC2626', width: 92 }}>{dayjs(h.date).format('YYYY-MM-DD')}</span>
+            <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 7px', borderRadius: 5, background: '#FEE2E2', color: '#DC2626' }}>{TYPE_LABEL[h.type] || h.type}</span>
             <span style={{ flex: 1, fontSize: 13, color: '#0F172A' }}>{h.name}</span>
             <Popconfirm title="삭제할까요?" okText="삭제" cancelText="취소" onConfirm={() => handleDelete(h.id)} okButtonProps={{ danger: true }}>
               <Button size="small" danger type="text">삭제</Button>

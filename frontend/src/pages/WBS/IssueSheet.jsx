@@ -343,8 +343,8 @@ export default function IssueSheet({ projectId, issues, onRefresh, wbsTasks = []
         return (
           <div style={{ color: over ? '#ff4d4f' : soon ? '#fa8c16' : undefined }}>
             <EditableCell value={val} type="date" onChange={(v) => handleUpdate(record.id, 'targetDate', v)} />
-            {over && <div style={{ fontSize: 10, color: '#ff4d4f' }}>지연</div>}
-            {!over && soon && <div style={{ fontSize: 10, color: '#fa8c16' }}>임박</div>}
+            {over && <div style={{ fontSize: 12, color: '#ff4d4f' }}>지연</div>}
+            {!over && soon && <div style={{ fontSize: 12, color: '#fa8c16' }}>임박</div>}
           </div>
         );
       },

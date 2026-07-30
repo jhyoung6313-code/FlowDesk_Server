@@ -103,7 +103,7 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
     && dayjs(card.dueDate).isBefore(dayjs(), 'day');
 
   const chipStyle = (color) => ({
-    fontSize: 10, fontWeight: 600,
+    fontSize: 12, fontWeight: 600,
     padding: '2px 8px', borderRadius: 10,
     background: `${color}15`, color,
     border: `1px solid ${color}25`,
@@ -163,7 +163,7 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
           )}
           {/* 카드번호 */}
           {card.cardNumber && (
-            <span style={{ position: 'absolute', bottom: 8, left: 12, fontSize: 10, color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace', background: 'rgba(0,0,0,0.2)', padding: '1px 5px', borderRadius: 4 }}>
+            <span style={{ position: 'absolute', bottom: 8, left: 12, fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace', background: 'rgba(0,0,0,0.2)', padding: '1px 5px', borderRadius: 4 }}>
               #{card.cardNumber}
             </span>
           )}
@@ -193,7 +193,7 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
               const pv = card.properties?.find(p => p.propertyId === prop.id);
               if (!pv?.value) return null;
               return (
-                <span key={prop.id} style={{ fontSize: 10, padding: '2px 7px', borderRadius: 10, background: 'var(--fd-surface-sunken)', color: 'var(--fd-text-secondary)', border: '1px solid var(--fd-border)', display: 'inline-block' }}>
+                <span key={prop.id} style={{ fontSize: 12, padding: '2px 7px', borderRadius: 10, background: 'var(--fd-surface-sunken)', color: 'var(--fd-text-secondary)', border: '1px solid var(--fd-border)', display: 'inline-block' }}>
                   <PropertyValue property={prop} value={pv.value} />
                 </span>
               );
@@ -204,13 +204,13 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {card.dueDate && (
-                <span style={{ fontSize: 10, color: overdue ? '#ff4d4f' : '#bbb', display: 'flex', alignItems: 'center', gap: 3 }}>
-                  <CalendarOutlined style={{ fontSize: 9 }} />
+                <span style={{ fontSize: 12, color: overdue ? '#ff4d4f' : '#bbb', display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <CalendarOutlined style={{ fontSize: 12 }} />
                   {dayjs(card.dueDate).format('MM/DD')}
                 </span>
               )}
               {(card.checklists ?? []).length > 0 && (
-                <span style={{ fontSize: 10, color: '#bbb' }}>
+                <span style={{ fontSize: 12, color: '#bbb' }}>
                   ☑ {card.checklists.filter(c => c.checked).length}/{card.checklists.length}
                 </span>
               )}
@@ -218,7 +218,7 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
             <Avatar.Group max={{ count: 3 }} size={20}>
               {assignees.map(a => (
                 <Tooltip key={a.id} title={a.user?.displayName}>
-                  <Avatar size={20} style={{ backgroundColor: getAvatarColor(a.userId ?? a.user?.id), fontSize: 10 }}>
+                  <Avatar size={20} style={{ backgroundColor: getAvatarColor(a.userId ?? a.user?.id), fontSize: 12 }}>
                     {a.user?.displayName?.slice(0, 1)}
                   </Avatar>
                 </Tooltip>

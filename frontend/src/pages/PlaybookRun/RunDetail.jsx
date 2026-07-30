@@ -224,7 +224,7 @@ function StepCard({ step, runStatus, users, onAction, runId, onUpdate }) {
               )}
               {step.assignee && (
                 <Tooltip title={step.assignee.displayName}>
-                  <Avatar size="small" style={{ backgroundColor: step.assignee.avatarColor || '#1677ff', fontSize: 10 }}>
+                  <Avatar size="small" style={{ backgroundColor: step.assignee.avatarColor || '#1677ff', fontSize: 12 }}>
                     {step.assignee.displayName?.slice(0, 1)}
                   </Avatar>
                 </Tooltip>
@@ -578,7 +578,7 @@ function UpdatesTab({ run, onRefresh }) {
                 <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
                   <Space size={4}>
                     <Text strong style={{ fontSize: 12 }}>{u.creator?.displayName}</Text>
-                    {u.type === 'alert' && <Tag color="red" style={{ fontSize: 10 }}>경고</Tag>}
+                    {u.type === 'alert' && <Tag color="red" style={{ fontSize: 12 }}>경고</Tag>}
                   </Space>
                   <Text type="secondary" style={{ fontSize: 12 }}>
                     {dayjs(u.createdAt).format('MM/DD HH:mm')}
@@ -1065,7 +1065,7 @@ export default function RunDetailPage() {
           <Descriptions.Item label="Owner">
             {run.owner && (
               <Space size={4}>
-                <Avatar size="small" style={{ backgroundColor: run.owner.avatarColor || '#1677ff', fontSize: 10 }}>
+                <Avatar size="small" style={{ backgroundColor: run.owner.avatarColor || '#1677ff', fontSize: 12 }}>
                   {run.owner.displayName?.slice(0, 1)}
                 </Avatar>
                 {run.owner.displayName}

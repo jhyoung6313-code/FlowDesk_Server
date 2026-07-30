@@ -184,7 +184,7 @@ export default function PlaybookWorkspace() {
                                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--fd-text-primary)' }} title={run.name}>
                                   {run.name}
                                 </span>
-                                <Tag color={st.color === '#bfbfbf' ? 'default' : undefined} style={{ fontSize: 10, margin: 0, padding: '0 6px', lineHeight: '16px', color: st.color, borderColor: st.color, background: 'transparent' }}>
+                                <Tag color={st.color === '#bfbfbf' ? 'default' : undefined} style={{ fontSize: 12, margin: 0, padding: '0 6px', lineHeight: '16px', color: st.color, borderColor: st.color, background: 'transparent' }}>
                                   {st.label}
                                 </Tag>
                               </div>

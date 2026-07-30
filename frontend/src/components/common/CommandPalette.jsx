@@ -271,7 +271,7 @@ export default function CommandPalette() {
                         </div>
                       )}
                     </div>
-                    <Tag color={GROUP_COLORS[g.key]} style={{ fontSize: 10, margin: 0 }}>{g.label}</Tag>
+                    <Tag color={GROUP_COLORS[g.key]} style={{ fontSize: 12, margin: 0 }}>{g.label}</Tag>
                   </div>
                 );
               })}

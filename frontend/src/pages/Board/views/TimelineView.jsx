@@ -120,11 +120,11 @@ export default function TimelineView({ board, cards, onEditCard }) {
               onClick={() => onEditCard?.(card)}
             >
               {card.cardNumber && (
-                <Text style={{ fontSize: 10, color: '#bfbfbf', flexShrink: 0 }}>#{card.cardNumber}</Text>
+                <Text style={{ fontSize: 12, color: '#bfbfbf', flexShrink: 0 }}>#{card.cardNumber}</Text>
               )}
               <Tag
                 color={STATUS_COLORS[card.status]}
-                style={{ fontSize: 10, margin: 0, flexShrink: 0 }}
+                style={{ fontSize: 12, margin: 0, flexShrink: 0 }}
               >
                 {STATUS_LABELS[card.status] ?? card.status}
               </Tag>
@@ -177,7 +177,7 @@ export default function TimelineView({ board, cards, onEditCard }) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 10,
+                    fontSize: 12,
                     color: isToday ? '#1677ff' : isWeekend ? '#ff4d4f' : '#8c8c8c',
                     fontWeight: isToday ? 700 : 400,
                     borderRight: '1px solid var(--fd-border)',
@@ -288,7 +288,7 @@ export default function TimelineView({ board, cards, onEditCard }) {
                       <Avatar
                         key={a.id}
                         size={16}
-                        style={{ backgroundColor: getAvatarColor(a.userId), fontSize: 9, flexShrink: 0, zIndex: 1 }}
+                        style={{ backgroundColor: getAvatarColor(a.userId), fontSize: 12, flexShrink: 0, zIndex: 1 }}
                       >
                         {a.user?.displayName?.slice(0, 1)}
                       </Avatar>

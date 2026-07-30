@@ -73,7 +73,7 @@ function DualGauge({ planned, actual }) {
         <span style={{ fontSize: 18, fontWeight: 800, color: compColor, lineHeight: 1 }}>
           {Math.round(actual)}%
         </span>
-        <span style={{ fontSize: 10, color: '#999', marginTop: 2 }}>실적</span>
+        <span style={{ fontSize: 12, color: '#999', marginTop: 2 }}>실적</span>
       </div>
     </div>
   );

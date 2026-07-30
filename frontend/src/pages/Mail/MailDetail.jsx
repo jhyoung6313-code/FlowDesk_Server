@@ -234,7 +234,7 @@ export default function MailDetail({ mailId, folder, labels = [], onBack, onRefr
                     <Text style={{ fontSize: 12, fontWeight: active ? 600 : 400, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {t.from?.displayName} · {t.subject}
                     </Text>
-                    {t.attachmentCount > 0 && <PaperClipOutlined style={{ fontSize: 10, color: token.colorTextSecondary }} />}
+                    {t.attachmentCount > 0 && <PaperClipOutlined style={{ fontSize: 12, color: token.colorTextSecondary }} />}
                     <Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>{dayjs(t.createdAt).format('MM.DD HH:mm')}</Text>
                   </div>
                 );
@@ -295,7 +295,7 @@ export default function MailDetail({ mailId, folder, labels = [], onBack, onRefr
                         ? <CheckCircleFilled style={{ color: '#52c41a', fontSize: 13 }} />
                         : <ClockCircleOutlined style={{ color: token.colorTextQuaternary, fontSize: 13 }} />}
                       <Text style={{ fontSize: 12 }}>{r.user?.displayName}</Text>
-                      <Tag style={{ fontSize: 10, margin: 0, padding: '0 4px', lineHeight: '16px' }}>
+                      <Tag style={{ fontSize: 12, margin: 0, padding: '0 4px', lineHeight: '16px' }}>
                         {r.type === 'to' ? '받는사람' : r.type === 'cc' ? '참조' : '숨은참조'}
                       </Tag>
                     </Space>

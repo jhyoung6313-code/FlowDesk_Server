@@ -325,7 +325,7 @@ function KanbanCard({ task, isDark, dragging, canEdit, canDelete, onEdit, onDele
         <Tag color="blue" style={{ fontSize: 12, marginTop: 4 }}>{task.part.name}</Tag>
       )}
       {overdue && (
-        <Tag color="default" style={{ fontSize: 10, marginTop: 4 }}>
+        <Tag color="default" style={{ fontSize: 12, marginTop: 4 }}>
           {task.status === 'in_progress' ? '진행중' : task.status === 'hold' ? '보류' : '대기'}
         </Tag>
       )}
@@ -341,7 +341,7 @@ function KanbanCard({ task, isDark, dragging, canEdit, canDelete, onEdit, onDele
             const uid = a.userId ?? a.user?.id;
             return (
               <Tooltip key={uid} title={a.user?.displayName}>
-                <Avatar size={20} style={{ backgroundColor: getAvatarColor(uid), fontSize: 10 }}>
+                <Avatar size={20} style={{ backgroundColor: getAvatarColor(uid), fontSize: 12 }}>
                   {a.user?.displayName?.slice(0, 1)}
                 </Avatar>
               </Tooltip>
@@ -349,7 +349,7 @@ function KanbanCard({ task, isDark, dragging, canEdit, canDelete, onEdit, onDele
           })}
           {task.extraAssignees?.map((e) => (
             <Tooltip key={`x-${e.id}`} title={e.name}>
-              <Avatar size={20} style={{ backgroundColor: '#8c8c8c', fontSize: 10 }}>
+              <Avatar size={20} style={{ backgroundColor: '#8c8c8c', fontSize: 12 }}>
                 {e.name?.slice(0, 1)}
               </Avatar>
             </Tooltip>

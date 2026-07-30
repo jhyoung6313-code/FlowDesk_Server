@@ -215,7 +215,7 @@ function ColumnHeader({ col, count, wipLimit, onAddCard }) {
         <div style={{ width: 8, height: 8, borderRadius: '50%', background: col.color, flexShrink: 0 }} />
         <Text strong style={{ fontSize: 12, color: 'var(--fd-text-primary)', letterSpacing: 0.2 }}>{col.label}</Text>
         <span style={{
-          fontSize: 10, fontWeight: 700,
+          fontSize: 12, fontWeight: 700,
           padding: '1px 6px', borderRadius: 8,
           background: overWip ? '#fff2f0' : `${col.color}15`,
           color: overWip ? '#ff4d4f' : col.color,
@@ -451,7 +451,7 @@ function BoardCard({ card, dragging, visibleProps, onDragStart, onEdit, onDelete
   const isBlocked = (card.dependsOn ?? []).some(d => d.blocking?.status !== 'done');
 
   const chipStyle = (color) => ({
-    fontSize: 10, fontWeight: 600,
+    fontSize: 12, fontWeight: 600,
     padding: '1px 7px', borderRadius: 10,
     background: `${color}18`, color,
     border: `1px solid ${color}30`,
@@ -501,7 +501,7 @@ function BoardCard({ card, dragging, visibleProps, onDragStart, onEdit, onDelete
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
             {card.cardNumber && (
-              <span style={{ fontSize: 10, color: '#ccc', fontFamily: 'monospace' }}>#{card.cardNumber}</span>
+              <span style={{ fontSize: 12, color: '#ccc', fontFamily: 'monospace' }}>#{card.cardNumber}</span>
             )}
             {isBlocked && <Tooltip title="선행 카드 완료 필요"><span style={{ fontSize: 12 }}>⛔</span></Tooltip>}
           </div>
@@ -531,7 +531,7 @@ function BoardCard({ card, dragging, visibleProps, onDragStart, onEdit, onDelete
               const pv = card.properties?.find(p => p.propertyId === prop.id);
               if (!pv?.value) return null;
               return (
-                <span key={prop.id} style={{ fontSize: 10, padding: '1px 6px', borderRadius: 10, background: 'var(--fd-surface-sunken)', color: 'var(--fd-text-secondary)', border: '1px solid var(--fd-border)', display: 'inline-block' }}>
+                <span key={prop.id} style={{ fontSize: 12, padding: '1px 6px', borderRadius: 10, background: 'var(--fd-surface-sunken)', color: 'var(--fd-text-secondary)', border: '1px solid var(--fd-border)', display: 'inline-block' }}>
                   <PropertyValue property={prop} value={pv.value} />
                 </span>
               );
@@ -543,8 +543,8 @@ function BoardCard({ card, dragging, visibleProps, onDragStart, onEdit, onDelete
         {card.progress > 0 && (
           <div style={{ marginBottom: 8 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
-              <span style={{ fontSize: 10, color: '#bbb' }}>진행도</span>
-              <span style={{ fontSize: 10, fontWeight: 600, color: card.progress === 100 ? '#52c41a' : '#1677ff' }}>{card.progress}%</span>
+              <span style={{ fontSize: 12, color: '#bbb' }}>진행도</span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: card.progress === 100 ? '#52c41a' : '#1677ff' }}>{card.progress}%</span>
             </div>
             <div style={{ height: 4, background: 'var(--fd-surface-muted)', borderRadius: 2, overflow: 'hidden' }}>
               <div style={{ height: '100%', width: `${card.progress}%`, background: card.progress === 100 ? '#52c41a' : '#1677ff', borderRadius: 2 }} />
@@ -556,29 +556,29 @@ function BoardCard({ card, dragging, visibleProps, onDragStart, onEdit, onDelete
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
             {(card.startDate || card.dueDate) && (
-              <span style={{ fontSize: 10, color: overdue ? '#ff4d4f' : '#bbb', display: 'flex', alignItems: 'center', gap: 3 }}>
-                <CalendarOutlined style={{ fontSize: 9 }} />
+              <span style={{ fontSize: 12, color: overdue ? '#ff4d4f' : '#bbb', display: 'flex', alignItems: 'center', gap: 3 }}>
+                <CalendarOutlined style={{ fontSize: 12 }} />
                 {card.dueDate ? dayjs(card.dueDate).format('MM/DD') : dayjs(card.startDate).format('MM/DD')}
               </span>
             )}
             {totalCheck > 0 && (
               <Tooltip title={`체크리스트 ${checkedCount}/${totalCheck}`}>
-                <span style={{ fontSize: 10, color: checkedCount === totalCheck ? '#52c41a' : '#bbb', display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <CheckSquareOutlined style={{ fontSize: 9 }} /> {checkedCount}/{totalCheck}
+                <span style={{ fontSize: 12, color: checkedCount === totalCheck ? '#52c41a' : '#bbb', display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <CheckSquareOutlined style={{ fontSize: 12 }} /> {checkedCount}/{totalCheck}
                 </span>
               </Tooltip>
             )}
             {(card.comments ?? []).length > 0 && (
               <Tooltip title={`댓글 ${card.comments.length}개`}>
-                <span style={{ fontSize: 10, color: '#bbb', display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <CommentOutlined style={{ fontSize: 9 }} /> {card.comments.length}
+                <span style={{ fontSize: 12, color: '#bbb', display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <CommentOutlined style={{ fontSize: 12 }} /> {card.comments.length}
                 </span>
               </Tooltip>
             )}
             {(card.attachments ?? []).length > 0 && (
               <Tooltip title={`첨부파일 ${card.attachments.length}개`}>
-                <span style={{ fontSize: 10, color: '#bbb', display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <PaperClipOutlined style={{ fontSize: 9 }} /> {card.attachments.length}
+                <span style={{ fontSize: 12, color: '#bbb', display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <PaperClipOutlined style={{ fontSize: 12 }} /> {card.attachments.length}
                 </span>
               </Tooltip>
             )}
@@ -586,7 +586,7 @@ function BoardCard({ card, dragging, visibleProps, onDragStart, onEdit, onDelete
           <Avatar.Group max={{ count: 3 }} size={20}>
             {assignees.map(a => (
               <Tooltip key={a.id} title={a.user?.displayName}>
-                <Avatar size={20} style={{ backgroundColor: getAvatarColor(a.userId ?? a.user?.id), fontSize: 10 }}>
+                <Avatar size={20} style={{ backgroundColor: getAvatarColor(a.userId ?? a.user?.id), fontSize: 12 }}>
                   {a.user?.displayName?.slice(0, 1)}
                 </Avatar>
               </Tooltip>

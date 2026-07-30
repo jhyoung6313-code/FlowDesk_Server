@@ -224,7 +224,7 @@ export default function MailPage() {
         time={timeStr}
         subject={row.subject || '(제목 없음)'}
         subjectPrefix={row.priority === 'urgent'
-          ? <Tag color="red" style={{ fontSize: 10, margin: 0, padding: '0 4px', lineHeight: '16px', flexShrink: 0 }}>긴급</Tag>
+          ? <Tag color="red" style={{ fontSize: 12, margin: 0, padding: '0 4px', lineHeight: '16px', flexShrink: 0 }}>긴급</Tag>
           : null}
         subjectSuffix={row.attachments?.length > 0
           ? <PaperClipOutlined style={{ fontSize: 12, color: token.colorTextTertiary, flexShrink: 0 }} />

@@ -236,7 +236,7 @@ export default function WbsPage() {
         <span>
           간트차트
           {flatTasks.some((t) => t.startDate && t.endDate) && (
-            <span style={{ marginLeft: 4, fontSize: 10, color: '#52c41a' }}>●</span>
+            <span style={{ marginLeft: 4, fontSize: 12, color: '#52c41a' }}>●</span>
           )}
         </span>
       ),

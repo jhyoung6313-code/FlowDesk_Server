@@ -134,7 +134,7 @@ function StatsTab() {
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={stats.bottlenecks} layout="vertical">
                   <XAxis type="number" tick={{ fontSize: 12 }} unit="분" />
-                  <YAxis type="category" dataKey="title" tick={{ fontSize: 10 }} width={140} />
+                  <YAxis type="category" dataKey="title" tick={{ fontSize: 12 }} width={140} />
                   <RechartTooltip formatter={(v) => `${v}분`} />
                   <Bar dataKey="avgMins" fill="#1677ff" radius={[0, 4, 4, 0]} />
                 </BarChart>

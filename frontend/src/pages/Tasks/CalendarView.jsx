@@ -317,7 +317,7 @@ export default function CalendarView({ isActive }) {
         </span>
         {task.dueDate && task.status !== 'done' && (
           <span style={{
-            fontSize: 10,
+            fontSize: 12,
             fontWeight: 700,
             background: 'rgba(255,255,255,0.25)',
             borderRadius: 3,

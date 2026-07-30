@@ -105,13 +105,13 @@ export default function ScheduleMonthModal({ open, initialDate, isDark, onClose,
                 }}>{d.date()}</span>
                 {holiday && !outMonth && (
                   <span title={holiday} style={{
-                    fontSize: 10, fontWeight: 700, color: '#DC2626',
+                    fontSize: 12, fontWeight: 700, color: '#DC2626',
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   }}>{holiday}</span>
                 )}
               </div>
               {dayEvents.slice(0, 3).map((ev) => <Pill key={ev.id} ev={ev} day={d} onClick={onPickEvent} />)}
-              {dayEvents.length > 3 && <span style={{ fontSize: 10, color: T.text2, fontWeight: 600, paddingLeft: 3 }}>+{dayEvents.length - 3}</span>}
+              {dayEvents.length > 3 && <span style={{ fontSize: 12, color: T.text2, fontWeight: 600, paddingLeft: 3 }}>+{dayEvents.length - 3}</span>}
             </div>
           );
         })}
@@ -130,7 +130,7 @@ function Pill({ ev, day, onClick }) {
       onClick={(e) => { e.stopPropagation(); onClick?.(ev); }}
       title={eventShortLabel(ev)}
       style={{
-        fontSize: 10.5, fontWeight: 600, lineHeight: 1.3,
+        fontSize: 12, fontWeight: 600, lineHeight: 1.3,
         padding: g.showLabel ? '2px 6px' : '2px 4px',
         marginLeft: g.marginLeft, marginRight: g.marginRight,
         borderTopLeftRadius: g.borderTopLeftRadius, borderBottomLeftRadius: g.borderBottomLeftRadius,

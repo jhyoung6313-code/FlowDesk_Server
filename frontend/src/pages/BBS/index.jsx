@@ -327,7 +327,7 @@ export default function BbsPage() {
             color: isTop ? token.colorTextHeading : undefined,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{cat.name}</span>
-          {cat.writeRole === 'admin' && <LockOutlined style={{ fontSize: 10, color: token.colorWarning, flexShrink: 0 }} />}
+          {cat.writeRole === 'admin' && <LockOutlined style={{ fontSize: 12, color: token.colorWarning, flexShrink: 0 }} />}
         </Space>
         {isAdmin && (
           <Space size={2} className="cat-actions" style={{ flexShrink: 0 }} onClick={e => e.stopPropagation()}>

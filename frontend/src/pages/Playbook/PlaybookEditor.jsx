@@ -219,7 +219,7 @@ function StepCard({ step, phaseId, users, onUpdate, onDelete }) {
                 >
                   옵션 추가
                 </Button>
-                <Text type="secondary" style={{ fontSize: 10, display: 'block', marginTop: 2 }}>
+                <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 2 }}>
                   "이동할 스텝 순서": 해당 번호 이전 스텝이 자동으로 스킵됩니다
                 </Text>
               </Col>
@@ -842,7 +842,7 @@ export default function PlaybookEditor({ embedded = false, embeddedId = null, on
                   title={
                     <Space size={4}>
                       {s.name}
-                      {!s.isActive && <Tag color="default" style={{ fontSize: 10 }}>비활성</Tag>}
+                      {!s.isActive && <Tag color="default" style={{ fontSize: 12 }}>비활성</Tag>}
                     </Space>
                   }
                   description={
@@ -905,7 +905,7 @@ export default function PlaybookEditor({ embedded = false, embeddedId = null, on
                     title={h.name}
                     description={
                       <div>
-                        <div style={{ fontSize: 10, fontFamily: 'monospace', color: 'var(--fd-text-secondary)', wordBreak: 'break-all' }}>
+                        <div style={{ fontSize: 12, fontFamily: 'monospace', color: 'var(--fd-text-secondary)', wordBreak: 'break-all' }}>
                           POST {url}
                         </div>
                         <Button

@@ -127,7 +127,7 @@ function ThemePicker({ isDark, toggleDark, density, setDensity, skin, setSkin, o
               </div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', lineHeight: 1.3 }}>{s.name}</div>
-                <div style={{ fontSize: 10.5, color: '#94a3b8', marginTop: 1 }}>{s.desc}</div>
+                <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 1 }}>{s.desc}</div>
               </div>
             </div>
           );
@@ -262,7 +262,7 @@ function NotificationPopup({ onClose }) {
                       <Typography.Text strong style={{ fontSize: 12 }}>
                         {item.task?.title || item.message || NOTIFICATION_LABELS[item.type] || item.type}
                       </Typography.Text>
-                      <Tag color={NOTIFICATION_COLORS[item.type]} style={{ fontSize: 10, padding: '0 4px', lineHeight: '16px' }}>
+                      <Tag color={NOTIFICATION_COLORS[item.type]} style={{ fontSize: 12, padding: '0 4px', lineHeight: '16px' }}>
                         {NOTIFICATION_LABELS[item.type]}
                       </Tag>
                       {item.task?.dueDate && (
@@ -507,7 +507,7 @@ export default function AppHeader({ collapsed, onCollapse }) {
             <SearchOutlined />
             <span style={{ fontSize: 12 }}>검색</span>
             <kbd style={{
-              fontSize: 10, padding: '1px 5px', borderRadius: 4,
+              fontSize: 12, padding: '1px 5px', borderRadius: 4,
               border: `1px solid ${surf.iconBorder}`, background: surf.track, color: surf.iconColor,
             }}>Ctrl F</kbd>
           </div>

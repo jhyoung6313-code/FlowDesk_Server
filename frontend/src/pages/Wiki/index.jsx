@@ -191,7 +191,7 @@ export default function WikiPage() {
           ) : spaces.map((space) => (
             <div key={space.id} style={{ marginBottom: 10 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 6px', fontWeight: 600, fontSize: 12, color: 'var(--fd-text-secondary)' }}>
-                <span>{space.icon || '📁'} {space.name} {space.visibility === 'private' && <span style={{ fontSize: 10 }}>🔒</span>}</span>
+                <span>{space.icon || '📁'} {space.name} {space.visibility === 'private' && <span style={{ fontSize: 12 }}>🔒</span>}</span>
                 <Dropdown
                   trigger={['click']}
                   menu={{ items: [

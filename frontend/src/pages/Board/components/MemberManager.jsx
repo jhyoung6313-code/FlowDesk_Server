@@ -151,7 +151,7 @@ export default function MemberManager({
         <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4, fontWeight: 600 }}>역할 안내</Text>
         {ROLE_OPTIONS.map(r => (
           <div key={r.value} style={{ display: 'flex', gap: 6, marginBottom: 2 }}>
-            <Tag color={r.color} style={{ fontSize: 10, margin: 0 }}>{r.label}</Tag>
+            <Tag color={r.color} style={{ fontSize: 12, margin: 0 }}>{r.label}</Tag>
             <Text type="secondary" style={{ fontSize: 12 }}>{r.desc}</Text>
           </div>
         ))}

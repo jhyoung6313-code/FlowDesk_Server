@@ -34,7 +34,7 @@ export default function PropertyValue({ property, value, card }) {
     if (!creator) return <Text type="secondary">—</Text>;
     return (
       <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-        <Avatar size={16} style={{ backgroundColor: creator.avatarColor || '#1677ff', fontSize: 9 }}>
+        <Avatar size={16} style={{ backgroundColor: creator.avatarColor || '#1677ff', fontSize: 12 }}>
           {creator.displayName?.[0]}
         </Avatar>
         <Text style={{ fontSize: 12 }}>{creator.displayName}</Text>
@@ -89,7 +89,7 @@ export default function PropertyValue({ property, value, card }) {
       <Avatar.Group max={{ count: 3 }} size="small">
         {users.map(u => (
           <Tooltip key={u.id ?? u} title={u.displayName ?? u}>
-            <Avatar size={16} style={{ backgroundColor: u.avatarColor || '#1677ff', fontSize: 9 }}>
+            <Avatar size={16} style={{ backgroundColor: u.avatarColor || '#1677ff', fontSize: 12 }}>
               {(u.displayName ?? u)?.[0]}
             </Avatar>
           </Tooltip>

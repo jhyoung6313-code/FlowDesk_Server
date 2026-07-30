@@ -386,10 +386,10 @@ export default function DashboardPage() {
   };
   const wIco  = { width: 28, height: 28, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, flexShrink: 0 };
   const wTtl  = { fontSize: 13, fontWeight: 700, flex: 1, color: D.text1 };
-  const wBadge= { fontSize: 10.5, fontWeight: 700, padding: '2px 9px', borderRadius: 20 };
+  const wBadge= { fontSize: 12, fontWeight: 700, padding: '2px 9px', borderRadius: 20 };
   const wMore = { fontSize: 12, color: D.text2, cursor: 'pointer', whiteSpace: 'nowrap' };
   const wBody = { flex: 1, overflowY: 'auto', padding: '4px 0' };
-  const wEmpty= { padding: '36px 16px', textAlign: 'center', color: D.text2, fontSize: 12.5 };
+  const wEmpty= { padding: '36px 16px', textAlign: 'center', color: D.text2, fontSize: 12 };
   const wRow  = { display: 'flex', gap: 10, padding: '9px 15px', cursor: 'pointer', borderBottom: `1px solid ${D.border}` };
   const ell   = { whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
 
@@ -444,7 +444,7 @@ export default function DashboardPage() {
   const kpiLbl   = (variant) => ({ fontSize: 12, color: kpiMuted(variant), fontWeight: 700, opacity: (KPI_MODE === 'flat' || KPI_MODE === 'grad') && kpiColored(variant) ? 0.92 : 1, display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
     ...(KPI_MODE === 'line' ? { textTransform: 'uppercase', letterSpacing: '0.1em' } : {}) });
   const kpiBig   = (variant) => ({ fontSize: 28, fontWeight: 900, lineHeight: 1, marginTop: 6, letterSpacing: '-1px', fontFamily: 'var(--fd-sk-font-num)', color: kpiTxtColor(variant) });
-  const kpiSub   = (variant) => ({ fontSize: 10.5, color: kpiMuted(variant), opacity: (KPI_MODE === 'flat' || KPI_MODE === 'grad') && kpiColored(variant) ? 0.8 : 1, marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' });
+  const kpiSub   = (variant) => ({ fontSize: 12, color: kpiMuted(variant), opacity: (KPI_MODE === 'flat' || KPI_MODE === 'grad') && kpiColored(variant) ? 0.8 : 1, marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' });
   const qbtn     = (green) => ({
     background: green ? '#16a34a' : D.cardBg, color: green ? '#fff' : D.text2,
     border: `1px solid ${green ? '#16a34a' : D.cardBor}`, borderRadius: 8, padding: '6px 8px',
@@ -522,7 +522,7 @@ export default function DashboardPage() {
               <span style={{ background: '#16a34a', color: '#fff', borderRadius: 20, fontSize: 12, fontWeight: 700, padding: '1px 9px' }}>{todayPriorities.length}</span>
             </div>
             {todayPriorities.length === 0 ? (
-              <div style={{ flex: 1, minHeight: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', color: D.text2, fontSize: 12.5 }}>오늘 집중할 우선 업무가 없습니다 🎉</div>
+              <div style={{ flex: 1, minHeight: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', color: D.text2, fontSize: 12 }}>오늘 집중할 우선 업무가 없습니다 🎉</div>
             ) : todayPriorities.map((t) => {
               const late = isOverdue(t.dueDate, t.status);
               const prio = t.priority ? PRIO[t.priority] : null;
@@ -532,7 +532,7 @@ export default function DashboardPage() {
                   style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: `1px solid ${D.border}`, cursor: 'pointer' }}>
                   <span style={{ width: 16, height: 16, borderRadius: 5, flexShrink: 0, border: `1.6px solid ${done ? '#16a34a' : D.text2}`, background: done ? '#16a34a' : 'transparent', color: '#fff', fontSize: 12, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{done ? '✓' : ''}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 600, fontSize: 12.5, color: D.text1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
+                    <div style={{ fontWeight: 600, fontSize: 12, color: D.text1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
                     <div style={{ color: D.text2, fontSize: 12, marginTop: 2, display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
                       {t.part && <span style={{ background: D.stripBg, border: `1px solid ${D.border}`, borderRadius: 6, padding: '1px 6px', color: D.text2 }}>{t.part.name}</span>}
                       {prio && <span style={{ background: prio.bg, color: prio.color, borderRadius: 20, padding: '1px 8px', fontWeight: 600 }}>{prio.label}</span>}
@@ -645,7 +645,7 @@ export default function DashboardPage() {
                 flex: 1,
               }}>{col.label}</span>
               <span style={{
-                fontSize: 10, fontWeight: 700,
+                fontSize: 12, fontWeight: 700,
                 padding: '1px 7px', borderRadius: 7,
                 background: col.cntBg, color: col.cntC,
               }}>{col.tasks.length}</span>
@@ -697,7 +697,7 @@ export default function DashboardPage() {
 
                     {/* 제목 */}
                     <div style={{
-                      fontSize: 12.5,
+                      fontSize: 12,
                       fontWeight: task.status === 'done' ? 400 : 600,
                       color: task.status === 'done' ? D.text2 : D.text1,
                       lineHeight: 1.3, marginBottom: 8,
@@ -711,20 +711,20 @@ export default function DashboardPage() {
                       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginBottom: 9 }}>
                         {task.part && (
                           <span style={{
-                            fontSize: 9.5, fontWeight: 600, padding: '2px 7px', borderRadius: 5,
+                            fontSize: 12, fontWeight: 600, padding: '2px 7px', borderRadius: 5,
                             background: isDark ? 'rgba(59,130,246,.1)' : '#EFF6FF',
                             color: isDark ? '#60A5FA' : '#3B82F6',
                           }}>{task.part.name}</span>
                         )}
                         {prio && (
                           <span style={{
-                            fontSize: 9.5, fontWeight: 600, padding: '2px 7px', borderRadius: 5,
+                            fontSize: 12, fontWeight: 600, padding: '2px 7px', borderRadius: 5,
                             background: prio.bg, color: prio.color,
                           }}>{prio.label}</span>
                         )}
                         {late && dy > 0 && (
                           <span style={{
-                            fontSize: 9.5, fontWeight: 600, padding: '2px 7px', borderRadius: 5,
+                            fontSize: 12, fontWeight: 600, padding: '2px 7px', borderRadius: 5,
                             background: '#FEE2E2', color: '#DC2626',
                           }}>{dy}일 초과</span>
                         )}
@@ -740,21 +740,21 @@ export default function DashboardPage() {
                               width: 20, height: 20, borderRadius: '50%',
                               background: nameColor(name), color: '#fff',
                               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                              fontSize: 8, fontWeight: 700, border: `1.5px solid ${D.cardBg}`,
+                              fontSize: 12, fontWeight: 700, border: `1.5px solid ${D.cardBg}`,
                             }}>{name.charAt(0)}</span>
                           </div>
                         ))}
                       </div>
                       {task.dueDate && (
                         <span style={{
-                          fontSize: 10,
+                          fontSize: 12,
                           color: late ? '#EF4444' : D.text2,
                           display: 'flex', alignItems: 'center', gap: 3,
                           fontWeight: late ? 700 : 400,
                         }}>
                           {late
-                            ? <span style={{ fontSize: 9 }}>⚠</span>
-                            : <span style={{ fontSize: 9, opacity: .6 }}>🕐</span>}
+                            ? <span style={{ fontSize: 12 }}>⚠</span>
+                            : <span style={{ fontSize: 12, opacity: .6 }}>🕐</span>}
                           {dayjs(task.dueDate).format('MM/DD')}
                         </span>
                       )}
@@ -791,7 +791,7 @@ export default function DashboardPage() {
                   e.currentTarget.style.background = 'transparent';
                 }}
               >
-                <span style={{ fontSize: 10 }}>+</span> 업무 추가
+                <span style={{ fontSize: 12 }}>+</span> 업무 추가
               </div>
             )}
           </div>
@@ -840,13 +840,13 @@ export default function DashboardPage() {
                   }}>{m.from?.displayName?.charAt(0) || '?'}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <span style={{ ...ell, flex: 1, fontSize: 12.5, fontWeight: m.isRead ? 500 : 800, color: D.text1 }}>
+                      <span style={{ ...ell, flex: 1, fontSize: 12, fontWeight: m.isRead ? 500 : 800, color: D.text1 }}>
                         {m.from?.displayName || '-'}
                       </span>
-                      <span style={{ fontSize: 10.5, color: D.text2, flexShrink: 0 }}>{dayjs(m.createdAt).fromNow()}</span>
+                      <span style={{ fontSize: 12, color: D.text2, flexShrink: 0 }}>{dayjs(m.createdAt).fromNow()}</span>
                     </div>
-                    <div style={{ ...ell, fontSize: 12.5, marginTop: 2, fontWeight: m.isRead ? 400 : 700, color: m.isRead ? D.text2 : D.text1 }}>
-                      {m.priority === 'urgent' && <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: '#FEE2E2', color: '#DC2626', marginRight: 5 }}>긴급</span>}
+                    <div style={{ ...ell, fontSize: 12, marginTop: 2, fontWeight: m.isRead ? 400 : 700, color: m.isRead ? D.text2 : D.text1 }}>
+                      {m.priority === 'urgent' && <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 5px', borderRadius: 4, background: '#FEE2E2', color: '#DC2626', marginRight: 5 }}>긴급</span>}
                       {m.subject || '(제목 없음)'}
                     </div>
                   </div>
@@ -918,7 +918,7 @@ export default function DashboardPage() {
                             return (
                               <Checkbox key={c.id} value={c.id} disabled={isAdminPinned}>
                                 {c.icon ? `${c.icon} ` : ''}{c.name}
-                                {isAdminPinned && <span style={{ fontSize: 10, color: D.text2, marginLeft: 4 }}>(관리자 지정)</span>}
+                                {isAdminPinned && <span style={{ fontSize: 12, color: D.text2, marginLeft: 4 }}>(관리자 지정)</span>}
                               </Checkbox>
                             );
                           })}
@@ -950,10 +950,10 @@ export default function DashboardPage() {
                   onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                 >
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ ...ell, fontSize: 12.5, fontWeight: p.isPinned ? 700 : 600, color: D.text1 }}>
+                    <div style={{ ...ell, fontSize: 12, fontWeight: p.isPinned ? 700 : 600, color: D.text1 }}>
                       {p.isPinned && <span style={{ marginRight: 4 }}>📌</span>}{p.title}
                     </div>
-                    <div style={{ fontSize: 10.5, color: D.text2, marginTop: 4, display: 'flex', gap: 9 }}>
+                    <div style={{ fontSize: 12, color: D.text2, marginTop: 4, display: 'flex', gap: 9 }}>
                       <span>{p.creator?.displayName || '-'}</span>
                       <span>{dayjs(p.createdAt).format('MM/DD')}</span>
                       <span>👁 {p.viewCount ?? 0}</span>
@@ -985,13 +985,13 @@ export default function DashboardPage() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       {d.template?.formType?.name && (
-                        <span style={{ fontSize: 9.5, fontWeight: 700, padding: '1px 7px', borderRadius: 5, background: isDark ? 'rgba(217,119,6,.15)' : '#FFFBEB', color: '#D97706', border: `1px solid ${isDark ? 'rgba(217,119,6,.3)' : '#FDE68A'}` }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, padding: '1px 7px', borderRadius: 5, background: isDark ? 'rgba(217,119,6,.15)' : '#FFFBEB', color: '#D97706', border: `1px solid ${isDark ? 'rgba(217,119,6,.3)' : '#FDE68A'}` }}>
                           {d.template.formType.name}
                         </span>
                       )}
                     </div>
-                    <div style={{ ...ell, fontSize: 12.5, fontWeight: 600, color: D.text1, marginTop: 6 }}>{d.title}</div>
-                    <div style={{ fontSize: 10.5, color: D.text2, marginTop: 4 }}>
+                    <div style={{ ...ell, fontSize: 12, fontWeight: 600, color: D.text1, marginTop: 6 }}>{d.title}</div>
+                    <div style={{ fontSize: 12, color: D.text2, marginTop: 4 }}>
                       기안: {d.creator?.displayName || '-'} · {dayjs(d.createdAt).fromNow()}
                       {d.totalSteps ? ` · ${d.currentStep}/${d.totalSteps} 단계` : ''}
                     </div>

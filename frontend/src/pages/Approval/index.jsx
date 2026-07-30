@@ -229,7 +229,7 @@ export default function ApprovalPage() {
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, minWidth: 0 }}>
             {doc.isUrgent && (
-              <Tag color="error" style={{ margin: 0, fontSize: 10, lineHeight: '16px', flexShrink: 0, padding: '0 5px' }}>
+              <Tag color="error" style={{ margin: 0, fontSize: 12, lineHeight: '16px', flexShrink: 0, padding: '0 5px' }}>
                 <FireOutlined /> 긴급
               </Tag>
             )}
@@ -357,28 +357,7 @@ export default function ApprovalPage() {
         </Space>
       </div>
 
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-      {/* ── 좌측: 결재 종류 트리 ── */}
-      <div style={{
-        width: 230, flexShrink: 0,
-        background: token.colorBgContainer, borderRadius: token.borderRadiusLG,
-        border: `1px solid ${token.colorBorderSecondary}`, padding: '10px 6px',
-        maxHeight: 'calc(100vh - 180px)', overflow: 'auto',
-      }}>
-        <div style={{ fontSize: 'var(--fd-fs-caption, 12px)', fontWeight: 700, color: token.colorTextTertiary, padding: '2px 8px 8px', letterSpacing: 0.2 }}>결재 종류</div>
-        <Tree
-          blockNode
-          showIcon
-          treeData={treeData}
-          selectedKeys={[treeKey]}
-          expandedKeys={treeExpanded}
-          onSelect={onTreeSelect}
-          onExpand={onTreeExpand}
-        />
-      </div>
-
-      {/* ── 우측: 탭 + 목록 ── */}
-      <div style={{ flex: 1, minWidth: 0 }}>
+      {/* 탭 (상단 전체 폭) */}
       <Tabs
         activeKey={tab}
         onChange={k => { setTab(k); setPage(1); }}
@@ -407,24 +386,45 @@ export default function ApprovalPage() {
         </div>
       )}
 
-      <div style={{ background: token.colorBgContainer, borderRadius: token.borderRadiusLG, border: `1px solid ${token.colorBorderSecondary}`, overflow: 'hidden' }}>
-        {loading ? (
-          <div style={{ padding: 60, textAlign: 'center' }}><Spin /></div>
-        ) : documents.length === 0 ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="문서가 없습니다." style={{ padding: '48px 0' }} />
-        ) : (
-          <>
-            {renderHeader()}
-            {documents.map(renderDoc)}
-          </>
-        )}
-        {total > 20 && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 16px' }}>
-            <Pagination current={page} pageSize={20} total={total} onChange={setPage} showSizeChanger={false} size="small" />
-          </div>
-        )}
-      </div>
-      </div>{/* 우측 콘텐츠 끝 */}
+      {/* ── 트리 | 결재내역 그리드 (같은 높이로 나란히) ── */}
+      <div style={{ display: 'flex', gap: 16, alignItems: 'stretch' }}>
+        {/* 좌측: 결재 종류 트리 */}
+        <div style={{
+          width: 230, flexShrink: 0, alignSelf: 'stretch',
+          background: token.colorBgContainer, borderRadius: token.borderRadiusLG,
+          border: `1px solid ${token.colorBorderSecondary}`, padding: '10px 6px',
+          overflow: 'auto',
+        }}>
+          <div style={{ fontSize: 'var(--fd-fs-caption, 12px)', fontWeight: 700, color: token.colorTextTertiary, padding: '2px 8px 8px', letterSpacing: 0.2 }}>결재 종류</div>
+          <Tree
+            blockNode
+            showIcon
+            treeData={treeData}
+            selectedKeys={[treeKey]}
+            expandedKeys={treeExpanded}
+            onSelect={onTreeSelect}
+            onExpand={onTreeExpand}
+          />
+        </div>
+
+        {/* 우측: 결재내역 그리드 */}
+        <div style={{ flex: 1, minWidth: 0, background: token.colorBgContainer, borderRadius: token.borderRadiusLG, border: `1px solid ${token.colorBorderSecondary}`, overflow: 'hidden' }}>
+          {loading ? (
+            <div style={{ padding: 60, textAlign: 'center' }}><Spin /></div>
+          ) : documents.length === 0 ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="문서가 없습니다." style={{ padding: '48px 0' }} />
+          ) : (
+            <>
+              {renderHeader()}
+              {documents.map(renderDoc)}
+            </>
+          )}
+          {total > 20 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 16px' }}>
+              <Pagination current={page} pageSize={20} total={total} onChange={setPage} showSizeChanger={false} size="small" />
+            </div>
+          )}
+        </div>
       </div>{/* 2-pane 끝 */}
 
       {/* 결재 기안/수정 Drawer */}
