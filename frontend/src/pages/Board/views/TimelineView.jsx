@@ -93,7 +93,7 @@ export default function TimelineView({ board, cards, onEditCard }) {
   if (curMonth) months.push({ label: curMonth, span: count });
 
   return (
-    <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 240px)', border: '1px solid var(--fd-border)', borderRadius: 8 }}>
+    <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 'calc(100vh - 240px)', border: 'var(--fd-sk-border-w, 1px) solid var(--fd-border)', borderRadius: 'var(--fd-sk-radius-lg, 8px)' }}>
       <div style={{ display: 'flex', minWidth: LEFT_WIDTH + totalWidth }}>
         {/* 고정 왼쪽 열 */}
         <div style={{ width: LEFT_WIDTH, flexShrink: 0, position: 'sticky', left: 0, zIndex: 10, background: 'var(--fd-surface)', borderRight: '1px solid var(--fd-border)' }}>

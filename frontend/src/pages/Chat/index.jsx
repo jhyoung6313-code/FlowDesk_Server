@@ -1354,7 +1354,7 @@ export default function ChatPage() {
   );
 
   return (
-    <div style={{ display: 'flex', height: '100%', background: 'var(--fd-surface)', borderRadius: 12, overflow: 'hidden', border: '1px solid var(--fd-border)' }}>
+    <div style={{ display: 'flex', height: '100%', background: 'var(--fd-surface)', borderRadius: 'var(--fd-sk-radius-lg, 12px)', overflow: 'hidden', border: 'var(--fd-sk-border-w, 1px) solid var(--fd-border)' }}>
 
       {/* ══ 왼쪽 사이드바 ══ */}
       <div style={{ width: 252, minWidth: 252, borderRight: '1px solid var(--fd-border)', display: 'flex', flexDirection: 'column', background: 'var(--fd-surface-sunken)' }}>
