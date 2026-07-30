@@ -25,10 +25,10 @@ export default function StatusBar() {
     return () => clearInterval(t);
   }, []);
 
-  const bg     = isDark ? '#141414' : '#ffffff';
-  const border = isDark ? '#303030' : '#e9e7e2';
-  const t2     = isDark ? 'rgba(255,255,255,0.55)' : '#8a827a';
-  const t1     = isDark ? 'rgba(255,255,255,0.85)' : '#37352f';
+  const bg     = 'var(--fd-sk-card-bg, ' + (isDark ? '#141414' : '#ffffff') + ')';
+  const border = 'var(--fd-sk-border-color, ' + (isDark ? '#303030' : '#e9e7e2') + ')';
+  const t2     = 'var(--fd-text-secondary, ' + (isDark ? 'rgba(255,255,255,0.55)' : '#8a827a') + ')';
+  const t1     = 'var(--fd-text-primary, ' + (isDark ? 'rgba(255,255,255,0.85)' : '#37352f') + ')';
 
   const item = { display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' };
   const clickable = { ...item, cursor: 'pointer' };

@@ -280,7 +280,7 @@ export default function LedgerPage() {
   const pieData = summary?.categoryBreakdown?.filter((c) => c.amount > 0) || [];
   const budgetData = summary?.budgetSummary || [];
 
-  const cardStyle = { background: isDark ? '#2a2a2a' : '#fff', borderRadius: 10 };
+  const cardStyle = { background: 'var(--fd-sk-card-bg, ' + (isDark ? '#2a2a2a' : '#fff') + ')', borderRadius: 'var(--fd-sk-radius-lg, 10px)' };
   const thisMonth = summary?.thisMonth || { income: 0, expense: 0, balance: 0 };
 
   /* ── 테이블 컬럼 ── */

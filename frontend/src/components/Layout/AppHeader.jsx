@@ -325,8 +325,8 @@ export default function AppHeader({ collapsed, onCollapse }) {
   // ── 라이트/다크 표면 팔레트 (셸 전용) ──
   // 라이트: Notion Warm 뉴트럴 셸 — 흰 헤더 + 웜 그레이 트랙/테두리 (강조색은 활성 상태에만)
   const surf = {
-    headerBg:     isDark ? '#141414' : '#ffffff',
-    headerBorder: isDark ? '#303030' : '#e9e7e2',
+    headerBg:     'var(--fd-sk-card-bg, ' + (isDark ? '#141414' : '#ffffff') + ')',
+    headerBorder: 'var(--fd-sk-border-color, ' + (isDark ? '#303030' : '#e9e7e2') + ')',
     track:        isDark ? 'rgba(255,255,255,0.06)' : '#f3f2ee',
     linkText:     isDark ? 'rgba(255,255,255,0.72)' : '#6b6459',
     linkHover:    isDark ? 'rgba(255,255,255,0.95)' : '#37352f',
@@ -433,7 +433,7 @@ export default function AppHeader({ collapsed, onCollapse }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
-        borderBottom: `1px solid ${surf.headerBorder}`,
+        borderBottom: `var(--fd-sk-border-w, 1px) solid ${surf.headerBorder}`,
         height: 52,
         lineHeight: 'normal',
         position: 'sticky',

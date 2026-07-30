@@ -191,9 +191,9 @@ export default function KanbanView() {
                 onDragLeave={() => setDragOverCol(null)}
               >
                 <div className="kanban-column" style={{
-                  background: isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc',
-                  border: `1px solid ${isOver ? col.dot : (isDark ? 'rgba(255,255,255,0.07)' : '#e2e8f0')}`,
-                  borderRadius: 8,
+                  background: 'var(--fd-sk-surface-sunken, ' + (isDark ? 'rgba(255,255,255,0.03)' : '#f8fafc') + ')',
+                  border: `var(--fd-sk-border-w, 1px) solid ${isOver ? col.dot : 'var(--fd-sk-border-color, ' + (isDark ? 'rgba(255,255,255,0.07)' : '#e2e8f0') + ')'}`,
+                  borderRadius: 'var(--fd-sk-radius-lg, 8px)',
                   minHeight: 200,
                   padding: '10px 8px',
                   transition: 'border-color 0.15s',
@@ -279,13 +279,13 @@ function KanbanCard({ task, isDark, dragging, canEdit, canDelete, onEdit, onDele
       style={{
         cursor: 'grab',
         opacity: dragging ? 0.4 : 1,
-        background: isDark ? '#1a1927' : '#ffffff',
+        background: 'var(--fd-sk-card-bg, ' + (isDark ? '#1a1927' : '#ffffff') + ')',
         border: overdue
           ? (isDark ? '1px solid rgba(239,68,68,0.35)' : '1px solid #fca5a5')
-          : (isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid var(--fd-border)'),
+          : `var(--fd-sk-border-w, 1px) solid var(--fd-sk-border-color, ${isDark ? 'rgba(255,255,255,0.08)' : '#e9e7e2'})`,
         borderLeft: overdue ? '2px solid #ef4444' : '2px solid transparent',
-        boxShadow: isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.04)',
-        borderRadius: 6,
+        boxShadow: 'var(--fd-sk-shadow-sm, ' + (isDark ? 'none' : '0 1px 2px rgba(0,0,0,0.04)') + ')',
+        borderRadius: 'var(--fd-sk-radius, 6px)',
         userSelect: 'none',
         transition: 'border-color 0.12s, box-shadow 0.12s',
       }}
