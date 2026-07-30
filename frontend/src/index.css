@@ -878,6 +878,22 @@ span.ant-typography-secondary {
   background: transparent !important;
 }
 
+/* ── 입력 텍스트 세로 중앙 보정 ──
+   affix 래퍼(검색/allowClear 등)에 툴바가 강제한 height·line-height 때문에
+   내부 input 글자가 아래로 쏠리는 문제 방지. 래퍼를 flex 중앙 정렬하고
+   내부 input 의 세로 패딩·라인하이트를 정규화한다. 모든 스킨/전역 공통. */
+:root[data-skin] .ant-input-affix-wrapper {
+  display: inline-flex !important;
+  align-items: center !important;
+}
+:root[data-skin] .ant-input-affix-wrapper > .ant-input,
+:root[data-skin] .ant-input-affix-wrapper > input.ant-input {
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  line-height: normal !important;
+  height: auto !important;
+}
+
 /* ── 통계 숫자: 스킨 폰트(모노 스킨에서 등폭) ── */
 :root[data-skin] .ant-statistic-content-value,
 :root[data-skin] .ant-statistic-content { font-family: var(--fd-sk-font-num) !important; }
