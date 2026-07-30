@@ -389,6 +389,28 @@ span.ant-typography-secondary {
 :root:not([data-dark="true"]) .ant-table-tbody > tr:hover > td {
   background: #f7f6f3 !important;
 }
+/* 그리드 내부 모든 텍스트를 13으로 강제 통일 (헤더·셀·링크·태그·배지·셀렉트) —
+   아이콘(.anticon)·아바타는 제외해 크기 유지 */
+:root .ant-table-thead > tr > th,
+:root .ant-table-tbody > tr > td,
+:root .ant-table-tbody > tr > td .ant-typography,
+:root .ant-table-tbody > tr > td a,
+:root .ant-table-tbody > tr > td .ant-tag,
+:root .ant-table-tbody > tr > td .ant-select-selection-item,
+:root .ant-table-tbody > tr > td .ant-select-selection-placeholder,
+:root .ant-table-tbody > tr > td span:not(.anticon):not(.ant-avatar-string) {
+  font-size: 13px !important;
+}
+/* 상세 패널(Descriptions) 라벨·값·태그도 13으로 통일 (아이콘·아바타 제외) */
+:root .ant-descriptions-item-label,
+:root .ant-descriptions-item-content,
+:root .ant-descriptions-item-content .ant-typography,
+:root .ant-descriptions-item-content .ant-tag,
+:root .ant-descriptions-item-content a,
+:root .ant-descriptions-item-content .ant-select-selection-item,
+:root .ant-descriptions-item-content span:not(.anticon):not(.ant-avatar-string) {
+  font-size: 13px !important;
+}
 :root:not([data-dark="true"]) .ant-table-tbody > tr > td {
   border-bottom: 1px solid #f1efea !important;
   color: var(--fd-text-primary) !important;
