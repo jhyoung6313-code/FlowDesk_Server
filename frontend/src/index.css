@@ -894,6 +894,17 @@ span.ant-typography-secondary {
   height: auto !important;
 }
 
+/* ── Input.Search 검색 버튼 = 입력창과 동일 높이 ──
+   검색 버튼(돋보기)이 입력창보다 커 보이던 문제. 그룹 높이(=입력창 높이)에
+   맞춰 stretch 시키고 스킨 그림자를 제거해 정확히 일치시킨다. 전역 공통. */
+:root[data-skin] .ant-input-search .ant-input-group { align-items: stretch !important; }
+:root[data-skin] .ant-input-search .ant-input-search-button {
+  height: 100% !important;
+  min-height: 0 !important;
+  box-shadow: none !important;
+  transform: none !important;
+}
+
 /* ── 통계 숫자: 스킨 폰트(모노 스킨에서 등폭) ── */
 :root[data-skin] .ant-statistic-content-value,
 :root[data-skin] .ant-statistic-content { font-family: var(--fd-sk-font-num) !important; }
