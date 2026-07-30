@@ -106,7 +106,7 @@ export default function TagsPage() {
             display: 'inline-block', width: 18, height: 18,
             borderRadius: 4, backgroundColor: v, border: '1px solid var(--fd-border)',
           }} />
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>{v}</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 13 }}>{v}</Typography.Text>
         </Space>
       ),
     },

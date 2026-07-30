@@ -190,8 +190,8 @@ export default function WikiPage() {
             </Empty>
           ) : spaces.map((space) => (
             <div key={space.id} style={{ marginBottom: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 6px', fontWeight: 600, fontSize: 12, color: 'var(--fd-text-secondary)' }}>
-                <span>{space.icon || '📁'} {space.name} {space.visibility === 'private' && <span style={{ fontSize: 12 }}>🔒</span>}</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 6px', fontWeight: 600, fontSize: 13, color: 'var(--fd-text-secondary)' }}>
+                <span>{space.icon || '📁'} {space.name} {space.visibility === 'private' && <span style={{ fontSize: 13 }}>🔒</span>}</span>
                 <Dropdown
                   trigger={['click']}
                   menu={{ items: [
@@ -205,7 +205,7 @@ export default function WikiPage() {
               </div>
               {space.docs.length === 0 ? (
                 <div style={{ padding: '2px 10px' }}>
-                  <Button size="small" type="text" icon={<PlusOutlined />} style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }} onClick={() => handleAddDoc(space.id)}>문서 추가</Button>
+                  <Button size="small" type="text" icon={<PlusOutlined />} style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }} onClick={() => handleAddDoc(space.id)}>문서 추가</Button>
                 </div>
               ) : (
                 <Tree
@@ -244,7 +244,7 @@ export default function WikiPage() {
                     {doc.title}
                     <SensitivityTag value={doc.sensitivity} style={{ marginLeft: 8 }} />
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }}>
+                  <div style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }}>
                     {doc.creator?.displayName} · {dayjs(doc.updatedAt).format('YYYY-MM-DD HH:mm')} 수정
                   </div>
                 </div>
@@ -306,7 +306,7 @@ export default function WikiPage() {
                         >
                           <List.Item.Meta
                             avatar={<Avatar style={{ background: c.author?.avatarColor || '#1677ff' }}>{c.author?.displayName?.[0]}</Avatar>}
-                            title={<span>{c.author?.displayName} <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--fd-text-secondary)' }}>{dayjs(c.createdAt).format('MM-DD HH:mm')}</span></span>}
+                            title={<span>{c.author?.displayName} <span style={{ fontWeight: 400, fontSize: 13, color: 'var(--fd-text-secondary)' }}>{dayjs(c.createdAt).format('MM-DD HH:mm')}</span></span>}
                             description={<span style={{ whiteSpace: 'pre-wrap' }}>{c.content}</span>}
                           />
                         </List.Item>

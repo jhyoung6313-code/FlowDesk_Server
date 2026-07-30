@@ -148,7 +148,7 @@ export default function TimeTracker({ taskId, currentUser }) {
               <Text strong style={{ color: '#1677ff' }}>타이머 실행 중</Text>
               <Tag color="blue">{elapsed}</Tag>
             </Space>
-            <Text type="secondary" style={{ fontSize: 12 }}>
+            <Text type="secondary" style={{ fontSize: 13 }}>
               시작: {dayjs(running.startTime).format('HH:mm:ss')}
             </Text>
             <Input
@@ -216,12 +216,12 @@ export default function TimeTracker({ taskId, currentUser }) {
                   }
                   title={
                     <Space>
-                      <Text style={{ fontSize: 12 }}>
+                      <Text style={{ fontSize: 13 }}>
                         {dayjs(entry.startTime).format('MM/DD HH:mm')}
                         {entry.endTime && ` ~ ${dayjs(entry.endTime).format('HH:mm')}`}
                       </Text>
                       {entry.duration != null && (
-                        <Tag color="blue" style={{ fontSize: 12 }}>
+                        <Tag color="blue" style={{ fontSize: 13 }}>
                           {formatSeconds(entry.duration)}
                         </Tag>
                       )}
@@ -229,11 +229,11 @@ export default function TimeTracker({ taskId, currentUser }) {
                   }
                   description={
                     <Space direction="vertical" size={0}>
-                      <Text type="secondary" style={{ fontSize: 12 }}>
+                      <Text type="secondary" style={{ fontSize: 13 }}>
                         {entry.user?.displayName}
                       </Text>
                       {entry.note && (
-                        <Text style={{ fontSize: 12 }}>{entry.note}</Text>
+                        <Text style={{ fontSize: 13 }}>{entry.note}</Text>
                       )}
                     </Space>
                   }

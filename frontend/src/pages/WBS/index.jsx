@@ -236,7 +236,7 @@ export default function WbsPage() {
         <span>
           간트차트
           {flatTasks.some((t) => t.startDate && t.endDate) && (
-            <span style={{ marginLeft: 4, fontSize: 12, color: '#52c41a' }}>●</span>
+            <span style={{ marginLeft: 4, fontSize: 13, color: '#52c41a' }}>●</span>
           )}
         </span>
       ),
@@ -317,8 +317,8 @@ export default function WbsPage() {
                   ]}
                 >
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 12 }}>{snap.name}</div>
-                    <div style={{ fontSize: 12, color: '#aaa' }}>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{snap.name}</div>
+                    <div style={{ fontSize: 13, color: '#aaa' }}>
                       {dayjs(snap.createdAt).format('YYYY-MM-DD HH:mm')}
                     </div>
                   </div>
@@ -421,7 +421,7 @@ export default function WbsPage() {
                 {' ~ '}
                 {project.endDate ? dayjs(project.endDate).format('YYYY.MM.DD') : ''}
                 {project.endDate && (
-                  <span style={{ marginLeft: 8, fontSize: 12, color: dayjs().isAfter(dayjs(project.endDate)) ? '#ff4d4f' : '#52c41a' }}>
+                  <span style={{ marginLeft: 8, fontSize: 13, color: dayjs().isAfter(dayjs(project.endDate)) ? '#ff4d4f' : '#52c41a' }}>
                     (D{dayjs().isAfter(dayjs(project.endDate))
                       ? `+${dayjs().diff(dayjs(project.endDate), 'day')}`
                       : `-${dayjs(project.endDate).diff(dayjs(), 'day')}`})
@@ -453,7 +453,7 @@ export default function WbsPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <HistoryOutlined style={{ color: '#722ed1' }} />
             <span style={{ fontWeight: 600, color: '#722ed1' }}>기준선 비교: {compareSnap.name}</span>
-            <span style={{ fontSize: 12, color: '#aaa' }}>{dayjs(compareSnap.createdAt).format('YYYY-MM-DD HH:mm')} 저장</span>
+            <span style={{ fontSize: 13, color: '#aaa' }}>{dayjs(compareSnap.createdAt).format('YYYY-MM-DD HH:mm')} 저장</span>
             <div style={{ flex: 1 }} />
             {flatTasks.slice(0, 5).map((t) => {
               const snap = compareSnap.data.find((d) => d.id === t.id);
@@ -461,7 +461,7 @@ export default function WbsPage() {
               const delta = (Number(t.actualProgress) || 0) - snap.actualProgress;
               if (delta === 0) return null;
               return (
-                <Tag key={t.id} color={delta > 0 ? 'green' : 'red'} style={{ fontSize: 12 }}>
+                <Tag key={t.id} color={delta > 0 ? 'green' : 'red'} style={{ fontSize: 13 }}>
                   {t.name}: {delta > 0 ? '+' : ''}{delta.toFixed(0)}%
                 </Tag>
               );
@@ -504,7 +504,7 @@ export default function WbsPage() {
           onPressEnter={handleSaveSnap}
           prefix={<HistoryOutlined style={{ color: '#aaa' }} />}
         />
-        <div style={{ marginTop: 8, fontSize: 12, color: '#aaa' }}>
+        <div style={{ marginTop: 8, fontSize: 13, color: '#aaa' }}>
           최대 10개까지 저장 (브라우저 로컬 저장)
         </div>
       </Modal>

@@ -19,7 +19,7 @@ export default function DetailEmpty({ icon = <InboxOutlined />, title = '항목�
         <span style={{ fontSize: 40, color: token.colorPrimary, lineHeight: 0 }}>{icon}</span>
       </div>
       <Text style={{ fontSize: 15, fontWeight: 600, color: token.colorTextSecondary }}>{title}</Text>
-      {hint && <Text type="secondary" style={{ fontSize: 12 }}>{hint}</Text>}
+      {hint && <Text type="secondary" style={{ fontSize: 13 }}>{hint}</Text>}
     </div>
   );
 }

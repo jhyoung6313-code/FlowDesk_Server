@@ -282,7 +282,7 @@ export default function CalendarView({ isActive }) {
 
     if (props.type === 'note') {
       return (
-        <div style={{ padding: '1px 4px', overflow: 'hidden', fontSize: 12, fontWeight: 500 }}>
+        <div style={{ padding: '1px 4px', overflow: 'hidden', fontSize: 13, fontWeight: 500 }}>
           📝 {props.content}
         </div>
       );
@@ -306,7 +306,7 @@ export default function CalendarView({ isActive }) {
         borderRadius: 3,
       }}>
         <span style={{
-          fontSize: 12,
+          fontSize: 13,
           fontWeight: 600,
           whiteSpace: 'nowrap',
           overflow: 'hidden',
@@ -317,7 +317,7 @@ export default function CalendarView({ isActive }) {
         </span>
         {task.dueDate && task.status !== 'done' && (
           <span style={{
-            fontSize: 12,
+            fontSize: 13,
             fontWeight: 700,
             background: 'rgba(255,255,255,0.25)',
             borderRadius: 3,
@@ -484,7 +484,7 @@ export default function CalendarView({ isActive }) {
         {selectedNote && (
           <div style={{ padding: '8px 0' }}>
             <Typography.Text>{selectedNote.content}</Typography.Text>
-            <div style={{ marginTop: 8, color: '#8c8c8c', fontSize: 12 }}>
+            <div style={{ marginTop: 8, color: '#8c8c8c', fontSize: 13 }}>
               등록자: {selectedNote.creator?.displayName}
             </div>
           </div>

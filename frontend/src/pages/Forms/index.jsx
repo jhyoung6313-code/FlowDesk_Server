@@ -213,7 +213,7 @@ export default function FormsPage() {
                 <List.Item>
                   <Card size="small" style={{ borderRadius: 10 }}
                     title={<Space><Tag color={STATUS[f.status]?.color}>{STATUS[f.status]?.label}</Tag>{f.title}</Space>}
-                    extra={<Typography.Text type="secondary" style={{ fontSize: 12 }}>{dayjs(f.createdAt).format('MM/DD')}</Typography.Text>}
+                    extra={<Typography.Text type="secondary" style={{ fontSize: 13 }}>{dayjs(f.createdAt).format('MM/DD')}</Typography.Text>}
                   >
                     <Space size={4} wrap style={{ marginBottom: 8 }}>
                       {f.anonymous && <Tag>익명</Tag>}

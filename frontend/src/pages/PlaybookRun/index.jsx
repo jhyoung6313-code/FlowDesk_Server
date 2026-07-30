@@ -33,7 +33,7 @@ const STATUS_MAP = {
 };
 
 function StepProgress({ steps }) {
-  if (!steps?.length) return <span style={{ color: '#bbb', fontSize: 12 }}>-</span>;
+  if (!steps?.length) return <span style={{ color: '#bbb', fontSize: 13 }}>-</span>;
   const done = steps.filter((s) => ['done', 'skipped', 'rejected'].includes(s.status)).length;
   const pct = Math.round((done / steps.length) * 100);
   return (
@@ -98,8 +98,8 @@ function StatsTab() {
           <Card title="상태별 런 수" size="small">
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={stats.byStatus}>
-                <XAxis dataKey="status" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
+                <XAxis dataKey="status" tick={{ fontSize: 13 }} />
+                <YAxis tick={{ fontSize: 13 }} />
                 <RechartTooltip />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                   {stats.byStatus.map((s) => (
@@ -114,8 +114,8 @@ function StatsTab() {
           <Card title="심각도별 런 수" size="small">
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={stats.bySeverity}>
-                <XAxis dataKey="severity" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
+                <XAxis dataKey="severity" tick={{ fontSize: 13 }} />
+                <YAxis tick={{ fontSize: 13 }} />
                 <RechartTooltip />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                   {stats.bySeverity.map((s) => (
@@ -133,8 +133,8 @@ function StatsTab() {
             ) : (
               <ResponsiveContainer width="100%" height={180}>
                 <BarChart data={stats.bottlenecks} layout="vertical">
-                  <XAxis type="number" tick={{ fontSize: 12 }} unit="분" />
-                  <YAxis type="category" dataKey="title" tick={{ fontSize: 12 }} width={140} />
+                  <XAxis type="number" tick={{ fontSize: 13 }} unit="분" />
+                  <YAxis type="category" dataKey="title" tick={{ fontSize: 13 }} width={140} />
                   <RechartTooltip formatter={(v) => `${v}분`} />
                   <Bar dataKey="avgMins" fill="#1677ff" radius={[0, 4, 4, 0]} />
                 </BarChart>
@@ -232,7 +232,7 @@ export default function RunListPage() {
       title: 'Playbook',
       dataIndex: 'playbook',
       key: 'playbook',
-      render: (pb) => pb ? <Tag>{pb.name}</Tag> : <span style={{ color: '#aaa', fontSize: 12 }}>독립 Run</span>,
+      render: (pb) => pb ? <Tag>{pb.name}</Tag> : <span style={{ color: '#aaa', fontSize: 13 }}>독립 Run</span>,
     },
     {
       title: '상태',
@@ -254,7 +254,7 @@ export default function RunListPage() {
       key: 'owner',
       render: (owner) => owner ? (
         <Tooltip title={owner.displayName}>
-          <Avatar size="small" style={{ backgroundColor: owner.avatarColor || '#1677ff', fontSize: 12 }}>
+          <Avatar size="small" style={{ backgroundColor: owner.avatarColor || '#1677ff', fontSize: 13 }}>
             {owner.displayName?.slice(0, 1)}
           </Avatar>
         </Tooltip>
@@ -274,7 +274,7 @@ export default function RunListPage() {
         if (!d) return <span style={{ color: '#ccc' }}>-</span>;
         const isOver = dayjs(d).isBefore(dayjs());
         return (
-          <span style={{ color: isOver ? '#ff4d4f' : 'inherit', fontSize: 12 }}>
+          <span style={{ color: isOver ? '#ff4d4f' : 'inherit', fontSize: 13 }}>
             {isOver && <ClockCircleOutlined style={{ marginRight: 4 }} />}
             {dayjs(d).format('MM/DD HH:mm')}
           </span>

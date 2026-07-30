@@ -161,7 +161,7 @@ function DateDivider({ date }) {
     <div style={{ display: 'flex', alignItems: 'center', margin: '24px 20px 12px', gap: 12 }}>
       <div style={{ flex: 1, height: 1, background: 'var(--fd-border)' }} />
       <span style={{
-        fontSize: 12, color: '#aaa', fontWeight: 600, whiteSpace: 'nowrap',
+        fontSize: 13, color: '#aaa', fontWeight: 600, whiteSpace: 'nowrap',
         padding: '3px 10px', background: 'var(--fd-surface)', borderRadius: 20,
         border: '1px solid var(--fd-border)', letterSpacing: 0.3,
       }}>
@@ -186,11 +186,11 @@ function SectionHeader({ label, open, onToggle, onAdd, addTitle }) {
         style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 5 }}
       >
         <span style={{
-          fontSize: 12, color: '#aaa', display: 'inline-block',
+          fontSize: 13, color: '#aaa', display: 'inline-block',
           transform: open ? 'rotate(90deg)' : 'none',
           transition: 'transform 0.15s',
         }}>▶</span>
-        <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: 0.8, color: '#999', textTransform: 'uppercase' }}>
+        <span style={{ fontSize: 13, fontWeight: 700, letterSpacing: 0.8, color: '#999', textTransform: 'uppercase' }}>
           {label}
         </span>
       </span>
@@ -263,16 +263,16 @@ function RoomItem({ room, isActive, myId, onClick, onlineUserIds, onToggleFavori
           }}>
             {name}
           </span>
-          {room.isMuted && <BellFilled style={{ fontSize: 12, color: '#d0d0d0' }} />}
+          {room.isMuted && <BellFilled style={{ fontSize: 13, color: '#d0d0d0' }} />}
         </div>
         {preview && (
-          <div style={{ fontSize: 12, color: '#bbb', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          <div style={{ fontSize: 13, color: '#bbb', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {preview}
           </div>
         )}
       </div>
       <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-        {last && <span style={{ fontSize: 12, color: '#ccc' }}>{dayjs(last.createdAt).format('HH:mm')}</span>}
+        {last && <span style={{ fontSize: 13, color: '#ccc' }}>{dayjs(last.createdAt).format('HH:mm')}</span>}
         <Tooltip title={room.isFavorite ? '즐겨찾기 해제' : '즐겨찾기 추가'}>
           <button
             type="button"
@@ -280,7 +280,7 @@ function RoomItem({ room, isActive, myId, onClick, onlineUserIds, onToggleFavori
             style={{
               background: 'transparent', border: 'none', cursor: 'pointer', padding: '1px 2px',
               color: room.isFavorite ? '#faad14' : '#d9d9d9',
-              fontSize: 12, display: 'flex', alignItems: 'center',
+              fontSize: 13, display: 'flex', alignItems: 'center',
               transition: 'color 0.15s',
             }}
             onMouseEnter={(e) => { e.currentTarget.style.color = '#faad14'; }}
@@ -312,7 +312,7 @@ function FileAttachment({ msg }) {
             style={{ width: CHAT_IMAGE_THUMB_W, height: CHAT_IMAGE_THUMB_H, borderRadius: 8, display: 'block', objectFit: 'cover', border: '1px solid var(--fd-border)', cursor: 'zoom-in' }}
           />
         </a>
-        {fileName && <div style={{ fontSize: 12, color: '#aaa', marginTop: 3 }}>{fileName}</div>}
+        {fileName && <div style={{ fontSize: 13, color: '#aaa', marginTop: 3 }}>{fileName}</div>}
       </div>
     );
   }
@@ -327,7 +327,7 @@ function FileAttachment({ msg }) {
       <FileTypeIcon type={fileType} size={22} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontWeight: 500 }}>{fileName || '파일'}</div>
-        {fileSize && <div style={{ fontSize: 12, color: '#999' }}>{fmtSize(fileSize)}</div>}
+        {fileSize && <div style={{ fontSize: 13, color: '#999' }}>{fmtSize(fileSize)}</div>}
       </div>
       <DownloadOutlined style={{ fontSize: 13, color: '#bbb', flexShrink: 0 }} />
     </a>
@@ -408,7 +408,7 @@ function MessageBubble({ msg, prevMsg, myId, onReact, onEdit, onDelete, onPin, o
       {/* 아바타 / 그룹 타임스탬프 */}
       <div style={{ width: 36, flexShrink: 0, marginRight: isMine ? 0 : 10, marginLeft: isMine ? 10 : 0, display: 'flex', alignItems: isGrouped ? 'center' : 'flex-start', justifyContent: 'center', paddingTop: isGrouped ? 0 : 2 }}>
         {isGrouped ? (
-          <span style={{ fontSize: 12, color: '#ccc', opacity: hover ? 1 : 0, transition: 'opacity 0.12s', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 13, color: '#ccc', opacity: hover ? 1 : 0, transition: 'opacity 0.12s', whiteSpace: 'nowrap' }}>
             {dayjs(msg.createdAt).format('HH:mm')}
           </span>
         ) : (
@@ -423,12 +423,12 @@ function MessageBubble({ msg, prevMsg, myId, onReact, onEdit, onDelete, onPin, o
             <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--fd-text-primary)' }}>
               {msg.sender?.displayName}
             </span>
-            <span style={{ fontSize: 12, color: '#c0c0c0' }}>{fmtTime(msg.createdAt)}</span>
+            <span style={{ fontSize: 13, color: '#c0c0c0' }}>{fmtTime(msg.createdAt)}</span>
           </div>
         )}
 
         {msg.forwardedFromId && (
-          <div style={{ fontSize: 12, color: '#aaa', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+          <div style={{ fontSize: 13, color: '#aaa', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
             <RetweetOutlined /> 전달된 메시지
           </div>
         )}
@@ -448,7 +448,7 @@ function MessageBubble({ msg, prevMsg, myId, onReact, onEdit, onDelete, onPin, o
             />
           )}
           {msg.fileUrl && <FileAttachment msg={msg} />}
-          {msg.editedAt && <span style={{ fontSize: 12, color: '#999', marginLeft: 4 }}>(수정됨)</span>}
+          {msg.editedAt && <span style={{ fontSize: 13, color: '#999', marginLeft: 4 }}>(수정됨)</span>}
           {/* 링크 미리보기 */}
           {msg.content && (() => {
             const plain = msg.content.replace(/<[^>]*>/g, ' ');
@@ -468,13 +468,13 @@ function MessageBubble({ msg, prevMsg, myId, onReact, onEdit, onDelete, onPin, o
                   <span><UserAvatar user={m.user} size={14} /></span>
                 </Tooltip>
               ))}
-              {readers.length > 5 && <span style={{ fontSize: 12, color: '#aaa' }}>+{readers.length - 5}</span>}
+              {readers.length > 5 && <span style={{ fontSize: 13, color: '#aaa' }}>+{readers.length - 5}</span>}
             </div>
           );
         })()}
 
         {!isGrouped && isMine && (
-          <span style={{ fontSize: 12, color: '#bbb', marginTop: 3 }}>{fmtTime(msg.createdAt)}</span>
+          <span style={{ fontSize: 13, color: '#bbb', marginTop: 3 }}>{fmtTime(msg.createdAt)}</span>
         )}
 
         {/* 이모지 반응 */}
@@ -494,7 +494,7 @@ function MessageBubble({ msg, prevMsg, myId, onReact, onEdit, onDelete, onPin, o
                   onMouseEnter={(e) => { e.currentTarget.style.background = '#e6f4ff'; e.currentTarget.style.borderColor = '#91caff'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = '#f5f5f5'; e.currentTarget.style.borderColor = '#e8e8e8'; }}
                 >
-                  {r.emoji} <span style={{ fontSize: 12, color: 'var(--fd-text-secondary)', fontWeight: 600 }}>{r.users.length}</span>
+                  {r.emoji} <span style={{ fontSize: 13, color: 'var(--fd-text-secondary)', fontWeight: 600 }}>{r.users.length}</span>
                 </button>
               </Tooltip>
             ))}
@@ -506,7 +506,7 @@ function MessageBubble({ msg, prevMsg, myId, onReact, onEdit, onDelete, onPin, o
           <button
             type="button"
             onClick={() => onOpenThread(msg)}
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#1677ff', fontSize: 12, marginTop: 5, padding: '2px 0', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'inherit' }}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#1677ff', fontSize: 13, marginTop: 5, padding: '2px 0', display: 'flex', alignItems: 'center', gap: 5, fontFamily: 'inherit' }}
           >
             <RetweetOutlined /><span style={{ fontWeight: 600 }}>{replyCount}개의 답글</span>
           </button>
@@ -692,7 +692,7 @@ function FormatToolbar({ editorRef, fontSize, setFontSize, fontFamily, setFontFa
     }
   };
 
-  const btn = { width: 26, height: 26, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid transparent', borderRadius: 4, background: 'transparent', cursor: 'pointer', fontSize: 12, color: 'var(--fd-text-secondary)', flexShrink: 0 };
+  const btn = { width: 26, height: 26, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid transparent', borderRadius: 4, background: 'transparent', cursor: 'pointer', fontSize: 13, color: 'var(--fd-text-secondary)', flexShrink: 0 };
   const sep = { width: 1, height: 14, background: '#e0e0e0', margin: '0 3px', flexShrink: 0 };
 
   return (
@@ -702,10 +702,10 @@ function FormatToolbar({ editorRef, fontSize, setFontSize, fontFamily, setFontFa
       <Tooltip title="다시 실행"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); exec('redo'); }}><RedoOutlined /></button></Tooltip>
       <div style={sep} />
       {/* 폰트/크기 */}
-      <select value={fontFamily} onChange={(e) => { editorRef.current?.focus(); applySpan('fontFamily', e.target.value, setFontFamily); }} style={{ height: 24, fontSize: 12, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: 'var(--fd-surface)', width: 78 }}>
+      <select value={fontFamily} onChange={(e) => { editorRef.current?.focus(); applySpan('fontFamily', e.target.value, setFontFamily); }} style={{ height: 24, fontSize: 13, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: 'var(--fd-surface)', width: 78 }}>
         {FONT_FAMILIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
       </select>
-      <select value={fontSize} onChange={(e) => { editorRef.current?.focus(); applySpan('fontSize', e.target.value, setFontSize); }} style={{ height: 24, fontSize: 12, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: 'var(--fd-surface)', width: 54 }}>
+      <select value={fontSize} onChange={(e) => { editorRef.current?.focus(); applySpan('fontSize', e.target.value, setFontSize); }} style={{ height: 24, fontSize: 13, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', cursor: 'pointer', background: 'var(--fd-surface)', width: 54 }}>
         {FONT_SIZES.map((s) => <option key={s} value={s}>{s}px</option>)}
       </select>
       <div style={sep} />
@@ -726,7 +726,7 @@ function FormatToolbar({ editorRef, fontSize, setFontSize, fontFamily, setFontFa
       <div style={sep} />
       {/* 색상 / 형광펜 */}
       <PalettePicker title="글자 색상" icon={<FontColorsOutlined style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }} />} current={fontColor} onPick={(c) => applySpan('color', c, setFontColor)} />
-      <PalettePicker title="형광펜" icon={<span style={{ fontSize: 12, fontWeight: 700, color: 'var(--fd-text-secondary)' }}>H</span>} current={hiliteColor} onPick={(c) => applySpan('backgroundColor', c, setHiliteColor)} />
+      <PalettePicker title="형광펜" icon={<span style={{ fontSize: 13, fontWeight: 700, color: 'var(--fd-text-secondary)' }}>H</span>} current={hiliteColor} onPick={(c) => applySpan('backgroundColor', c, setHiliteColor)} />
       <div style={sep} />
       {/* 링크 */}
       <Tooltip title="링크 삽입"><button type="button" style={btn} onMouseDown={(e) => { e.preventDefault(); insertLink(); }}><LinkOutlined /></button></Tooltip>
@@ -739,14 +739,14 @@ function FormatToolbar({ editorRef, fontSize, setFontSize, fontFamily, setFontFa
         arrow={false}
         content={
           <div style={{ width: 180 }}>
-            <div style={{ marginBottom: 8, fontSize: 12, fontWeight: 600 }}>표 삽입</div>
+            <div style={{ marginBottom: 8, fontSize: 13, fontWeight: 600 }}>표 삽입</div>
             <Space direction="vertical" style={{ width: '100%' }} size={6}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, width: 20 }}>행</span>
+                <span style={{ fontSize: 13, width: 20 }}>행</span>
                 <InputNumber min={1} max={20} value={tRows} onChange={(v) => setTRows(v || 1)} size="small" style={{ flex: 1 }} />
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, width: 20 }}>열</span>
+                <span style={{ fontSize: 13, width: 20 }}>열</span>
                 <InputNumber min={1} max={10} value={tCols} onChange={(v) => setTCols(v || 1)} size="small" style={{ flex: 1 }} />
               </div>
               <Button type="primary" size="small" block onClick={() => { insertTable(tRows, tCols); setTableOpen(false); }}>삽입</Button>
@@ -1386,7 +1386,7 @@ export default function ChatPage() {
           <button
             type="button"
             onClick={() => setShowArchived((v) => !v)}
-            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: showArchived ? '#1677ff' : '#bbb', fontSize: 12, display: 'flex', alignItems: 'center', gap: 4, padding: 0, fontFamily: 'inherit' }}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: showArchived ? '#1677ff' : '#bbb', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4, padding: 0, fontFamily: 'inherit' }}
           >
             <FolderOutlined /> {showArchived ? '활성 채널 보기' : '보관된 채널 보기'}
           </button>
@@ -1404,7 +1404,7 @@ export default function ChatPage() {
                 {expandFav && (
                   favRooms.length > 0
                     ? favRooms.map(renderRoomItem)
-                    : <div style={{ fontSize: 12, color: '#ccc', padding: '4px 18px' }}>별표로 즐겨찾기를 추가하세요.</div>
+                    : <div style={{ fontSize: 13, color: '#ccc', padding: '4px 18px' }}>별표로 즐겨찾기를 추가하세요.</div>
                 )}
               </div>
 
@@ -1421,7 +1421,7 @@ export default function ChatPage() {
                   {expandChannel && (
                     channelRooms.length > 0
                       ? channelRooms.map(renderRoomItem)
-                      : <div style={{ fontSize: 12, color: '#ccc', padding: '4px 18px' }}>채널이 없습니다.</div>
+                      : <div style={{ fontSize: 13, color: '#ccc', padding: '4px 18px' }}>채널이 없습니다.</div>
                   )}
                 </div>
               )}
@@ -1438,7 +1438,7 @@ export default function ChatPage() {
                 {expandDM && (
                   dmRooms.length > 0
                     ? dmRooms.map(renderRoomItem)
-                    : <div style={{ fontSize: 12, color: '#ccc', padding: '4px 18px' }}>대화가 없습니다.</div>
+                    : <div style={{ fontSize: 13, color: '#ccc', padding: '4px 18px' }}>대화가 없습니다.</div>
                 )}
               </div>
             </>
@@ -1480,17 +1480,17 @@ export default function ChatPage() {
                     const other = activeRoom.members?.find((m) => m.userId !== user.id);
                     const online = other ? onlineUserIds.has(other.userId) : false;
                     return (
-                      <div style={{ fontSize: 12, color: online ? '#52c41a' : '#ccc', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <div style={{ fontSize: 13, color: online ? '#52c41a' : '#ccc', display: 'flex', alignItems: 'center', gap: 4 }}>
                         <span style={{ width: 6, height: 6, borderRadius: '50%', background: online ? '#52c41a' : '#d9d9d9', display: 'inline-block' }} />
                         {online ? '온라인' : '오프라인'}
                       </div>
                     );
                   })()}
                   {activeRoom?.type !== 'direct' && activeRoom?.description && (
-                    <div style={{ fontSize: 12, color: '#bbb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeRoom.description}</div>
+                    <div style={{ fontSize: 13, color: '#bbb', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{activeRoom.description}</div>
                   )}
                   {activeRoom?.type !== 'direct' && !activeRoom?.description && (
-                    <div style={{ fontSize: 12, color: '#ccc' }}>멤버 {activeRoom?.members?.length || 0}명</div>
+                    <div style={{ fontSize: 13, color: '#ccc' }}>멤버 {activeRoom?.members?.length || 0}명</div>
                   )}
                 </div>
               </div>
@@ -1556,7 +1556,7 @@ export default function ChatPage() {
                       <span key={i} style={{ width: 4, height: 4, borderRadius: '50%', background: '#aaa', animation: `typingBounce 1.2s ease-in-out ${i * 0.2}s infinite`, display: 'inline-block' }} />
                     ))}
                   </span>
-                  <span style={{ fontSize: 12, color: '#aaa' }}>{names}님이 입력 중...</span>
+                  <span style={{ fontSize: 13, color: '#aaa' }}>{names}님이 입력 중...</span>
                 </div>
               );
             })()}
@@ -1565,7 +1565,7 @@ export default function ChatPage() {
             {editingMsg && (
               <div style={{ padding: '7px 14px', background: '#fffbe6', borderTop: '1px solid #ffe58f', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <EditOutlined style={{ color: '#faad14' }} />
-                <span style={{ fontSize: 12, color: '#888' }}>메시지 수정 중</span>
+                <span style={{ fontSize: 13, color: '#888' }}>메시지 수정 중</span>
                 <Input value={editContent} onChange={(e) => setEditContent(e.target.value)} onPressEnter={handleEditSave} size="small" style={{ flex: 1 }} />
                 <Button size="small" type="primary" icon={<CheckOutlined />} onClick={handleEditSave}>저장</Button>
                 <Button size="small" icon={<CloseOutlined />} onClick={() => setEditingMsg(null)}>취소</Button>
@@ -1593,8 +1593,8 @@ export default function ChatPage() {
                       : <FileTypeIcon type={pendingFile.type} size={22} />
                     }
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pendingFile.name}</div>
-                      <div style={{ fontSize: 12, color: '#aaa' }}>{fmtSize(pendingFile.size)}</div>
+                      <div style={{ fontSize: 13, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{pendingFile.name}</div>
+                      <div style={{ fontSize: 13, color: '#aaa' }}>{fmtSize(pendingFile.size)}</div>
                     </div>
                     <Button type="text" size="small" icon={<CloseOutlined />} onClick={() => setPendingFile(null)} style={{ color: '#aaa' }} />
                   </div>
@@ -1682,7 +1682,7 @@ export default function ChatPage() {
 
           {/* 멤버 섹션 */}
           <div style={{ padding: '14px 14px 8px' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
               멤버 {activeRoom?.members?.length || 0}명
             </div>
             {(activeRoom?.members || []).map((m) => {
@@ -1695,13 +1695,13 @@ export default function ChatPage() {
                     <span style={{ width: 7, height: 7, borderRadius: '50%', background: isOnline ? '#52c41a' : '#d9d9d9', border: '1.5px solid #fafbfc', position: 'absolute', bottom: 0, right: 0, display: 'block' }} />
                   </div>
                   <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--fd-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.user?.displayName}</div>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fd-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.user?.displayName}</div>
                     {hasStatus ? (
-                      <div style={{ fontSize: 12, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      <div style={{ fontSize: 13, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {m.user.statusEmoji} {m.user.statusText}
                       </div>
                     ) : (
-                      <div style={{ fontSize: 12, color: isOnline ? '#52c41a' : '#bbb' }}>{isOnline ? '온라인' : '오프라인'}</div>
+                      <div style={{ fontSize: 13, color: isOnline ? '#52c41a' : '#bbb' }}>{isOnline ? '온라인' : '오프라인'}</div>
                     )}
                   </div>
                 </div>
@@ -1713,11 +1713,11 @@ export default function ChatPage() {
 
           {/* 고정 메시지 섹션 */}
           <div style={{ padding: '10px 14px' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>고정 메시지</div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>고정 메시지</div>
             <button
               type="button"
               onClick={handleOpenPinned}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid var(--fd-border)', borderRadius: 7, padding: '6px 10px', cursor: 'pointer', width: '100%', color: 'var(--fd-text-secondary)', fontSize: 12, transition: 'background 0.12s' }}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: '1px solid var(--fd-border)', borderRadius: 7, padding: '6px 10px', cursor: 'pointer', width: '100%', color: 'var(--fd-text-secondary)', fontSize: 13, transition: 'background 0.12s' }}
               onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
             >
@@ -1734,11 +1734,11 @@ export default function ChatPage() {
             const fileMsgs = allMsgs.filter((m) => m.fileUrl && !m.isDeleted);
             return (
               <div style={{ padding: '10px 14px 14px' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: '#999', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
                   공유 파일 {fileMsgs.length > 0 ? `(${fileMsgs.length})` : ''}
                 </div>
                 {fileMsgs.length === 0 ? (
-                  <div style={{ fontSize: 12, color: '#ccc' }}>공유된 파일이 없습니다.</div>
+                  <div style={{ fontSize: 13, color: '#ccc' }}>공유된 파일이 없습니다.</div>
                 ) : (
                   fileMsgs.slice(0, 10).map((m) => {
                     const isImage = m.fileType?.startsWith('image/');
@@ -1756,8 +1756,8 @@ export default function ChatPage() {
                           : <FileOutlined style={{ fontSize: 24, color: '#1677ff', flexShrink: 0 }} />
                         }
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontSize: 12, color: 'var(--fd-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{m.fileName || '파일'}</div>
-                          <div style={{ fontSize: 12, color: '#bbb' }}>{m.sender?.displayName} · {dayjs(m.createdAt).format('MM/DD')}</div>
+                          <div style={{ fontSize: 13, color: 'var(--fd-text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{m.fileName || '파일'}</div>
+                          <div style={{ fontSize: 13, color: '#bbb' }}>{m.sender?.displayName} · {dayjs(m.createdAt).format('MM/DD')}</div>
                         </div>
                       </a>
                     );
@@ -1785,7 +1785,7 @@ export default function ChatPage() {
                 <div style={{ flex: 1 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 3 }}>
                     <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--fd-text-primary)' }}>{threadData.parent.sender?.displayName}</span>
-                    <span style={{ fontSize: 12, color: '#c0c0c0' }}>{fmtTime(threadData.parent.createdAt)}</span>
+                    <span style={{ fontSize: 13, color: '#c0c0c0' }}>{fmtTime(threadData.parent.createdAt)}</span>
                   </div>
                   {threadData.parent.content && (
                     <div dangerouslySetInnerHTML={{ __html: highlightMentions(threadData.parent.content) }} style={{ fontSize: 13, color: 'var(--fd-text-primary)', wordBreak: 'break-word', lineHeight: 1.6 }} />
@@ -1798,7 +1798,7 @@ export default function ChatPage() {
           {/* 답글 수 헤더 */}
           {threadData.replies.length > 0 && (
             <div style={{ padding: '8px 16px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <span style={{ fontSize: 12, color: '#888', fontWeight: 600 }}>{threadData.replies.length}개의 답글</span>
+              <span style={{ fontSize: 13, color: '#888', fontWeight: 600 }}>{threadData.replies.length}개의 답글</span>
               <div style={{ flex: 1, height: 1, background: 'var(--fd-border)' }} />
             </div>
           )}
@@ -1818,7 +1818,7 @@ export default function ChatPage() {
                 >
                   <div style={{ width: 32, flexShrink: 0, marginRight: 8, display: 'flex', alignItems: isGrouped ? 'center' : 'flex-start', justifyContent: 'center', paddingTop: isGrouped ? 0 : 2 }}>
                     {isGrouped
-                      ? <span style={{ fontSize: 12, color: '#ddd', whiteSpace: 'nowrap' }}>{dayjs(msg.createdAt).format('HH:mm')}</span>
+                      ? <span style={{ fontSize: 13, color: '#ddd', whiteSpace: 'nowrap' }}>{dayjs(msg.createdAt).format('HH:mm')}</span>
                       : <UserAvatar user={msg.sender} size={28} />
                     }
                   </div>
@@ -1826,7 +1826,7 @@ export default function ChatPage() {
                     {!isGrouped && (
                       <div style={{ display: 'flex', alignItems: 'baseline', gap: 7, marginBottom: 2 }}>
                         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--fd-text-primary)' }}>{msg.sender?.displayName}</span>
-                        <span style={{ fontSize: 12, color: '#c0c0c0' }}>{fmtTime(msg.createdAt)}</span>
+                        <span style={{ fontSize: 13, color: '#c0c0c0' }}>{fmtTime(msg.createdAt)}</span>
                       </div>
                     )}
                     {msg.isDeleted
@@ -1842,8 +1842,8 @@ export default function ChatPage() {
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 4 }}>
                         {groupReactions(msg.reactions).map((r) => (
                           <button key={r.emoji} type="button" onClick={() => handleReact(msg.id, r.emoji)}
-                            style={{ background: 'var(--fd-surface-sunken)', border: '1px solid var(--fd-border)', borderRadius: 10, padding: '1px 7px', cursor: 'pointer', fontSize: 12, display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'inherit' }}>
-                            {r.emoji} <span style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }}>{r.users.length}</span>
+                            style={{ background: 'var(--fd-surface-sunken)', border: '1px solid var(--fd-border)', borderRadius: 10, padding: '1px 7px', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 3, fontFamily: 'inherit' }}>
+                            {r.emoji} <span style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }}>{r.users.length}</span>
                           </button>
                         ))}
                       </div>
@@ -1859,7 +1859,7 @@ export default function ChatPage() {
             {threadFile && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, padding: '5px 8px', background: 'var(--fd-surface-sunken)', borderRadius: 6 }}>
                 <FileTypeIcon type={threadFile.type} size={16} />
-                <span style={{ fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{threadFile.name}</span>
+                <span style={{ fontSize: 13, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{threadFile.name}</span>
                 <Button type="text" size="small" icon={<CloseOutlined />} onClick={() => setThreadFile(null)} style={{ color: '#aaa' }} />
               </div>
             )}
@@ -1935,11 +1935,11 @@ export default function ChatPage() {
                   <Avatar icon={<GlobalOutlined />} style={{ background: '#52c41a', flexShrink: 0 }} />
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontWeight: 600, fontSize: 13 }}>{r.name}</div>
-                    {r.description && <div style={{ fontSize: 12, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.description}</div>}
-                    <div style={{ fontSize: 12, color: '#bbb' }}>멤버 {r._count?.members || 0}명</div>
+                    {r.description && <div style={{ fontSize: 13, color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.description}</div>}
+                    <div style={{ fontSize: 13, color: '#bbb' }}>멤버 {r._count?.members || 0}명</div>
                   </div>
                   {r.joined
-                    ? <span style={{ fontSize: 12, color: '#1677ff', fontWeight: 600 }}>참여 중</span>
+                    ? <span style={{ fontSize: 13, color: '#1677ff', fontWeight: 600 }}>참여 중</span>
                     : <Button size="small" type="primary" onClick={() => handleJoinPublic(r.id)}>참여</Button>
                   }
                 </div>
@@ -1958,7 +1958,7 @@ export default function ChatPage() {
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
                   <UserAvatar user={p.message.sender} size={28} />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>
+                    <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>
                       <span style={{ fontWeight: 600, color: 'var(--fd-text-primary)' }}>{p.message.sender?.displayName}</span>
                       {' · '}{dayjs(p.message.createdAt).format('MM/DD HH:mm')}
                     </div>
@@ -1978,7 +1978,7 @@ export default function ChatPage() {
           <div>
             {savedMessages.map((s) => (
               <div key={s.id} style={{ padding: '12px 0', borderBottom: '1px solid #f5f5f5' }}>
-                <div style={{ fontSize: 12, color: '#aaa', marginBottom: 4 }}>
+                <div style={{ fontSize: 13, color: '#aaa', marginBottom: 4 }}>
                   <span style={{ color: '#1677ff', fontWeight: 500 }}>{s.message.room?.name || 'DM'}</span>
                   {' · '}{s.message.sender?.displayName}
                   {' · '}{dayjs(s.message.createdAt).format('MM/DD HH:mm')}
@@ -2000,7 +2000,7 @@ export default function ChatPage() {
         {searchResults.map((msg) => (
           <div key={msg.id} style={{ padding: '10px 0', borderBottom: '1px solid #f5f5f5', cursor: 'pointer' }}
             onClick={() => { setSearchOpen(false); setActiveRoom(msg.roomId); }}>
-            <div style={{ fontSize: 12, color: '#aaa', marginBottom: 4 }}>
+            <div style={{ fontSize: 13, color: '#aaa', marginBottom: 4 }}>
               <span style={{ color: '#1677ff', fontWeight: 500 }}>{msg.room?.name || 'DM'}</span>
               {' · '}<span style={{ fontWeight: 600, color: 'var(--fd-text-primary)' }}>{msg.sender?.displayName}</span>
               {' · '}{dayjs(msg.createdAt).format('MM/DD HH:mm')}
@@ -2013,7 +2013,7 @@ export default function ChatPage() {
       {/* ══ 메시지 전달 모달 ══ */}
       <Modal title={<><ShareAltOutlined /> 메시지 전달</>} open={!!forwardMsg} onOk={handleForwardSend} onCancel={() => setForwardMsg(null)} okText="전달" cancelText="취소" okButtonProps={{ disabled: forwardTargets.length === 0 }}>
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 12, color: '#888', marginBottom: 6 }}>전달할 채팅방 선택</div>
+          <div style={{ fontSize: 13, color: '#888', marginBottom: 6 }}>전달할 채팅방 선택</div>
           <Select mode="multiple" style={{ width: '100%' }} placeholder="채팅방을 선택하세요" value={forwardTargets} onChange={setForwardTargets}
             options={rooms.filter((r) => r.id !== activeRoomId).map((r) => ({ value: r.id, label: roomDisplayName(r, user.id) }))} />
         </div>
@@ -2045,7 +2045,7 @@ export default function ChatPage() {
               <UserAvatar user={m.user} size={22} />
               <div>
                 <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fd-text-primary)' }}>{m.user.username}</div>
-                {m.user.displayName && m.user.displayName !== m.user.username && <div style={{ fontSize: 12, color: '#aaa' }}>{m.user.displayName}</div>}
+                {m.user.displayName && m.user.displayName !== m.user.username && <div style={{ fontSize: 13, color: '#aaa' }}>{m.user.displayName}</div>}
               </div>
             </div>
           ))}
@@ -2076,17 +2076,17 @@ export default function ChatPage() {
         okText="저장" cancelText="취소">
         <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div>
-            <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>이모지</div>
+            <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>이모지</div>
             <Input value={statusEmoji} onChange={(e) => setStatusEmoji(e.target.value)} placeholder="예: 🗓️ 🏖️ 💻" maxLength={4} style={{ width: 80 }} />
           </div>
           <div>
-            <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>상태 메시지</div>
+            <div style={{ fontSize: 13, color: '#888', marginBottom: 4 }}>상태 메시지</div>
             <Input value={statusText} onChange={(e) => setStatusText(e.target.value)} placeholder="예: 회의 중, 자리 비움" maxLength={50} />
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {[['🗓️', '회의 중'], ['☕', '자리 비움'], ['🏖️', '휴가 중'], ['💻', '재택 근무'], ['', '']].map(([e, t]) => (
               <Button key={e + t} size="small" onClick={() => { setStatusEmoji(e); setStatusText(t); }}
-                style={{ fontSize: 12 }}>{e} {t || '상태 초기화'}</Button>
+                style={{ fontSize: 13 }}>{e} {t || '상태 초기화'}</Button>
             ))}
           </div>
         </div>

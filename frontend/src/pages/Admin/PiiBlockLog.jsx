@@ -66,7 +66,7 @@ export default function PiiBlockLogPage() {
       width: 130,
       render: (u, rec) => (
         <Space size={4}>
-          <UserOutlined style={{ fontSize: 12, color: '#8c8c8c' }} />
+          <UserOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />
           <span style={{ fontSize: 13 }}>{u?.displayName || rec.username || '익명'}</span>
         </Space>
       ),
@@ -75,20 +75,20 @@ export default function PiiBlockLogPage() {
       title: '유형',
       dataIndex: 'piiType',
       width: 110,
-      render: (v) => <Tag color={TYPE_COLORS[v] || 'default'} style={{ fontSize: 12 }}>{v}</Tag>,
+      render: (v) => <Tag color={TYPE_COLORS[v] || 'default'} style={{ fontSize: 13 }}>{v}</Tag>,
     },
     {
       title: '마스킹',
       dataIndex: 'masked',
       width: 130,
-      render: (v) => <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v || '-'}</span>,
+      render: (v) => <span style={{ fontFamily: 'monospace', fontSize: 13 }}>{v || '-'}</span>,
     },
     {
       title: '입력 위치(필드)',
       dataIndex: 'fieldPath',
       width: 150,
       render: (v) => v
-        ? <Tooltip title={v}><Typography.Text style={{ fontSize: 12 }} ellipsis>{v}</Typography.Text></Tooltip>
+        ? <Tooltip title={v}><Typography.Text style={{ fontSize: 13 }} ellipsis>{v}</Typography.Text></Tooltip>
         : '-',
     },
     {
@@ -96,14 +96,14 @@ export default function PiiBlockLogPage() {
       dataIndex: 'endpoint',
       width: 200,
       render: (v) => v
-        ? <Tooltip title={v}><Typography.Text style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }} ellipsis>{v}</Typography.Text></Tooltip>
+        ? <Tooltip title={v}><Typography.Text style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }} ellipsis>{v}</Typography.Text></Tooltip>
         : '-',
     },
     {
       title: 'IP',
       dataIndex: 'ipAddress',
       width: 130,
-      render: (v) => <span style={{ fontSize: 12, fontFamily: 'monospace' }}>{v || '-'}</span>,
+      render: (v) => <span style={{ fontSize: 13, fontFamily: 'monospace' }}>{v || '-'}</span>,
     },
   ];
 

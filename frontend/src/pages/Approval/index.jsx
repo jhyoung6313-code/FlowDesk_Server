@@ -105,7 +105,7 @@ export default function ApprovalPage() {
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
         {ft.icon ? <span>{ft.icon}</span> : null}
         <span>{ft.name}</span>
-        <span style={{ fontSize: 12, color: token.colorTextTertiary }}>{ft.count}</span>
+        <span style={{ fontSize: 13, color: token.colorTextTertiary }}>{ft.count}</span>
       </span>
     ),
     children: [
@@ -117,7 +117,7 @@ export default function ApprovalPage() {
         title: (
           <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
             <span>{tp.name}</span>
-            <span style={{ fontSize: 12, color: token.colorTextTertiary }}>{tp.count}</span>
+            <span style={{ fontSize: 13, color: token.colorTextTertiary }}>{tp.count}</span>
           </span>
         ),
       })),
@@ -217,7 +217,7 @@ export default function ApprovalPage() {
       >
         {/* 문서번호 */}
         <div style={{
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 12, fontWeight: 700,
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 13, fontWeight: 700,
           color: doc.docNo ? token.colorPrimary : token.colorTextTertiary,
           background: doc.docNo ? token.colorPrimaryBg : token.colorFillQuaternary,
           padding: '5px 6px', borderRadius: 7, textAlign: 'center', lineHeight: 1.3, wordBreak: 'break-all',
@@ -229,7 +229,7 @@ export default function ApprovalPage() {
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, minWidth: 0 }}>
             {doc.isUrgent && (
-              <Tag color="error" style={{ margin: 0, fontSize: 12, lineHeight: '16px', flexShrink: 0, padding: '0 5px' }}>
+              <Tag color="error" style={{ margin: 0, fontSize: 13, lineHeight: '16px', flexShrink: 0, padding: '0 5px' }}>
                 <FireOutlined /> 긴급
               </Tag>
             )}
@@ -237,7 +237,7 @@ export default function ApprovalPage() {
               {doc.title}
             </span>
           </div>
-          <Text type="secondary" style={{ fontSize: 12 }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>
             {doc.template?.formType?.name && `${doc.template.formType.name} / `}{doc.template?.name}
           </Text>
         </div>
@@ -245,7 +245,7 @@ export default function ApprovalPage() {
         {/* 기안자 */}
         <div style={{ textAlign: 'center' }}>
           <Tooltip title={doc.creator?.displayName}>
-            <Avatar size={26} style={{ background: avatarColor(doc.creator?.displayName), fontSize: 12 }}>
+            <Avatar size={26} style={{ background: avatarColor(doc.creator?.displayName), fontSize: 13 }}>
               {getInitial(doc.creator?.displayName)}
             </Avatar>
           </Tooltip>
@@ -253,7 +253,7 @@ export default function ApprovalPage() {
 
         {/* 결재 진행 (텍스트 + 바) */}
         <div>
-          <Text style={{ fontSize: 12, display: 'block', marginBottom: 5, color: isMyTurn ? token.colorPrimary : token.colorTextSecondary, fontWeight: isMyTurn ? 600 : 400 }}>
+          <Text style={{ fontSize: 13, display: 'block', marginBottom: 5, color: isMyTurn ? token.colorPrimary : token.colorTextSecondary, fontWeight: isMyTurn ? 600 : 400 }}>
             {progressText(doc)}
           </Text>
           <div style={{ height: 4, borderRadius: 999, background: token.colorFillQuaternary, overflow: 'hidden' }}>
@@ -269,10 +269,10 @@ export default function ApprovalPage() {
         {/* 기한 */}
         <div style={{ textAlign: 'center' }}>
           {doc.dueDate ? (
-            <Text style={{ fontSize: 12, color: over ? token.colorError : token.colorTextSecondary, fontWeight: over ? 600 : 400 }}>
+            <Text style={{ fontSize: 13, color: over ? token.colorError : token.colorTextSecondary, fontWeight: over ? 600 : 400 }}>
               {dayjs(doc.dueDate).format('MM/DD')}{over ? ' !' : ''}
             </Text>
-          ) : <Text type="secondary" style={{ fontSize: 12 }}>-</Text>}
+          ) : <Text type="secondary" style={{ fontSize: 13 }}>-</Text>}
         </div>
 
         {/* 액션 */}
@@ -310,7 +310,7 @@ export default function ApprovalPage() {
       display: 'grid', gridTemplateColumns: GRID_COLS, gap: 14, alignItems: 'center',
       padding: '9px 16px 9px 19px', borderBottom: `1px solid ${token.colorBorderSecondary}`,
       background: token.colorFillQuaternary,
-      fontSize: 12, fontWeight: 600, color: token.colorTextTertiary, letterSpacing: 0.2,
+      fontSize: 13, fontWeight: 600, color: token.colorTextTertiary, letterSpacing: 0.2,
     }}>
       <div>문서번호</div>
       <div>제목</div>

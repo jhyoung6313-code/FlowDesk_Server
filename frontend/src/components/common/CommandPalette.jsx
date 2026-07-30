@@ -193,7 +193,7 @@ export default function CommandPalette() {
           <Tag.CheckableTag
             checked={selectedCats.length === 0}
             onChange={() => setSelectedCats([])}
-            style={{ fontSize: 12, borderRadius: 20, padding: '2px 12px' }}
+            style={{ fontSize: 13, borderRadius: 20, padding: '2px 12px' }}
           >
             전체
           </Tag.CheckableTag>
@@ -202,7 +202,7 @@ export default function CommandPalette() {
               key={c.key}
               checked={selectedCats.includes(c.key)}
               onChange={(chk) => setSelectedCats((prev) => chk ? [...prev, c.key] : prev.filter((k) => k !== c.key))}
-              style={{ fontSize: 12, borderRadius: 20, padding: '2px 12px' }}
+              style={{ fontSize: 13, borderRadius: 20, padding: '2px 12px' }}
             >
               {c.label}
             </Tag.CheckableTag>
@@ -210,7 +210,7 @@ export default function CommandPalette() {
           <Input
             size="small"
             allowClear
-            prefix={<SearchOutlined style={{ color: '#bbb', fontSize: 12 }} />}
+            prefix={<SearchOutlined style={{ color: '#bbb', fontSize: 13 }} />}
             placeholder="결과 내 재검색"
             value={refine}
             onChange={(e) => setRefine(e.target.value)}
@@ -234,7 +234,7 @@ export default function CommandPalette() {
           displayGroups.map((g) => (
             <div key={g.key} style={{ marginBottom: 6 }}>
               <div style={{
-                fontSize: 12, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase',
+                fontSize: 13, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase',
                 padding: '8px 12px 4px', letterSpacing: 0.5,
               }}>
                 {g.label}
@@ -264,14 +264,14 @@ export default function CommandPalette() {
                       </div>
                       {item.subtitle && (
                         <div style={{
-                          fontSize: 12, color: '#94a3b8',
+                          fontSize: 13, color: '#94a3b8',
                           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                         }}>
                           {item.subtitle}
                         </div>
                       )}
                     </div>
-                    <Tag color={GROUP_COLORS[g.key]} style={{ fontSize: 12, margin: 0 }}>{g.label}</Tag>
+                    <Tag color={GROUP_COLORS[g.key]} style={{ fontSize: 13, margin: 0 }}>{g.label}</Tag>
                   </div>
                 );
               })}

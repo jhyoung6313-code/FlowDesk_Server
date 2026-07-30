@@ -35,7 +35,7 @@ function KrRow({ kr, canEdit, users, onCheckin, onEdit, onDelete, onLink }) {
           {kr.autoProgress && <Tooltip title="연결 업무 완료율로 자동 계산"><Tag color="cyan" style={{ marginLeft: 6 }}>자동</Tag></Tooltip>}
           {kr._count?.links > 0 && <Tag style={{ marginLeft: 6 }}><LinkOutlined /> {kr._count.links}</Tag>}
         </div>
-        <div style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }}>
+        <div style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }}>
           {kr.metricType === 'boolean' ? '완료 여부' : `${Number(kr.currentValue)}${unit} / ${Number(kr.targetValue)}${unit}`}
           {kr.owner && <span style={{ marginLeft: 8 }}>· {kr.owner.displayName}</span>}
         </div>
@@ -65,8 +65,8 @@ function ObjectiveCard({ obj, canEdit, users, onChanged, onAddKr, onCheckin, onE
             <FlagOutlined style={{ color: progressColor(obj.progress) }} />
             <span style={{ fontWeight: 700, fontSize: 15 }}>{obj.title}</span>
           </Space>
-          {obj.description && <div style={{ color: 'var(--fd-text-secondary)', fontSize: 12, marginTop: 4 }}>{obj.description}</div>}
-          <div style={{ fontSize: 12, color: 'var(--fd-text-secondary)', marginTop: 4 }}>책임자: {obj.owner?.displayName}</div>
+          {obj.description && <div style={{ color: 'var(--fd-text-secondary)', fontSize: 13, marginTop: 4 }}>{obj.description}</div>}
+          <div style={{ fontSize: 13, color: 'var(--fd-text-secondary)', marginTop: 4 }}>책임자: {obj.owner?.displayName}</div>
         </div>
         <div style={{ textAlign: 'center', width: 120 }}>
           <Progress percent={obj.progress} strokeColor={progressColor(obj.progress)} />
@@ -84,7 +84,7 @@ function ObjectiveCard({ obj, canEdit, users, onChanged, onAddKr, onCheckin, onE
 
       <div style={{ marginTop: 10 }}>
         {obj.keyResults.length === 0
-          ? <Typography.Text type="secondary" style={{ fontSize: 12 }}>핵심결과(KR)가 없습니다.</Typography.Text>
+          ? <Typography.Text type="secondary" style={{ fontSize: 13 }}>핵심결과(KR)가 없습니다.</Typography.Text>
           : obj.keyResults.map((kr) => (
               <KrRow key={kr.id} kr={kr} canEdit={canEdit} users={users}
                 onCheckin={onCheckin} onEdit={onEditKr} onLink={onLink}
@@ -215,7 +215,7 @@ export default function OkrPage() {
         <div style={{ marginBottom: 16, padding: '12px 16px', background: 'var(--fd-surface-sunken)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 16 }}>
           <span style={{ fontWeight: 600 }}>주기 전체 진척</span>
           <Progress percent={cycleProgress} strokeColor={progressColor(cycleProgress)} style={{ flex: 1 }} />
-          <span style={{ color: 'var(--fd-text-secondary)', fontSize: 12 }}>목표 {objectives.length}개</span>
+          <span style={{ color: 'var(--fd-text-secondary)', fontSize: 13 }}>목표 {objectives.length}개</span>
         </div>
       )}
 
@@ -284,7 +284,7 @@ export default function OkrPage() {
 
       {/* KR ↔ 업무 연결 모달 */}
       <Modal title={<span><LinkOutlined /> 업무 연결 — {linkKr?.title}</span>} open={!!linkKr} onCancel={() => setLinkKr(null)} footer={<Button onClick={() => setLinkKr(null)}>닫기</Button>}>
-        <Typography.Paragraph type="secondary" style={{ fontSize: 12 }}>
+        <Typography.Paragraph type="secondary" style={{ fontSize: 13 }}>
           업무를 연결하면 KR의 <b>자동 진척</b> 옵션이 켜져 있을 때 연결 업무 완료율로 진척이 계산됩니다.
         </Typography.Paragraph>
         <Space.Compact style={{ display: 'flex', marginBottom: 12 }}>

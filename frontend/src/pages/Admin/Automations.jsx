@@ -128,7 +128,7 @@ export default function AutomationsPage() {
       render: (_, r) => (
         <Space direction="vertical" size={0}>
           <Typography.Text strong>{r.name}</Typography.Text>
-          {r.description && <Typography.Text type="secondary" style={{ fontSize: 12 }}>{r.description}</Typography.Text>}
+          {r.description && <Typography.Text type="secondary" style={{ fontSize: 13 }}>{r.description}</Typography.Text>}
         </Space>
       ),
     },
@@ -255,9 +255,9 @@ export default function AutomationsPage() {
           <Card key={log.id} size="small" style={{ marginBottom: 8 }}>
             <Space style={{ justifyContent: 'space-between', width: '100%' }}>
               <Tag color={STATUS_COLOR[log.status]}>{log.status}</Tag>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>{new Date(log.createdAt).toLocaleString('ko-KR')}</Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 13 }}>{new Date(log.createdAt).toLocaleString('ko-KR')}</Typography.Text>
             </Space>
-            {log.detail && <Typography.Paragraph style={{ margin: '8px 0 0', fontSize: 12 }}>{log.detail}</Typography.Paragraph>}
+            {log.detail && <Typography.Paragraph style={{ margin: '8px 0 0', fontSize: 13 }}>{log.detail}</Typography.Paragraph>}
           </Card>
         )) : <Empty description="실행 로그 없음" />}
       </Drawer>

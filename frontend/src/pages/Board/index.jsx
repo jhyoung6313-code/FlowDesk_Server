@@ -103,7 +103,7 @@ function UnreadBadge({ count }) {
   if (!count) return null;
   return (
     <span style={{
-      flexShrink: 0, background: '#ff4d4f', color: '#fff', fontSize: 12, fontWeight: 600,
+      flexShrink: 0, background: '#ff4d4f', color: '#fff', fontSize: 13, fontWeight: 600,
       lineHeight: '16px', minWidth: 16, height: 16, borderRadius: 8, padding: '0 5px', textAlign: 'center',
     }}>
       {count > UNREAD_MAX_DISPLAY ? `${UNREAD_MAX_DISPLAY}+` : count}
@@ -586,7 +586,7 @@ export default function BoardWorkspace() {
             borderTop: isDropHeader && dragItem?.kind === 'cat' ? '2px solid #1677ff' : '2px solid transparent',
           }}
         >
-          {isCollapsed ? <RightOutlined style={{ fontSize: 12, color: '#8c8c8c' }} /> : <DownOutlined style={{ fontSize: 12, color: '#8c8c8c' }} />}
+          {isCollapsed ? <RightOutlined style={{ fontSize: 13, color: '#8c8c8c' }} /> : <DownOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />}
           <span style={{ fontSize: 16 }}>{cat.icon || '📁'}</span>
           <span style={{ flex: 1, fontSize: 15, fontWeight: 600, color: cat.color || '#595959', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {cat.name}
@@ -734,7 +734,7 @@ export default function BoardWorkspace() {
                 <Radio.Button key={String(c.value)} value={c.value}>
                   {c.value
                     ? <span style={{ display: 'inline-block', width: 14, height: 14, borderRadius: '50%', background: c.value, verticalAlign: 'middle' }} />
-                    : <span style={{ fontSize: 12 }}>기본</span>}
+                    : <span style={{ fontSize: 13 }}>기본</span>}
                 </Radio.Button>
               ))}
             </Radio.Group>
@@ -797,7 +797,7 @@ export default function BoardWorkspace() {
                   )}
                   <div style={{ fontSize: 24, marginBottom: 6 }}>{tpl.icon}</div>
                   <div style={{ fontWeight: 600, fontSize: 13, marginBottom: 4 }}>{tpl.name}</div>
-                  <div style={{ fontSize: 12, color: '#8c8c8c' }}>{tpl.description}</div>
+                  <div style={{ fontSize: 13, color: '#8c8c8c' }}>{tpl.description}</div>
                 </div>
               </Col>
             ))}
@@ -821,7 +821,7 @@ export default function BoardWorkspace() {
                       <Radio.Button key={String(bg.value)} value={bg.value} style={{ marginBottom: 4 }}>
                         {bg.value
                           ? <span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: 4, background: bg.value, verticalAlign: 'middle' }} />
-                          : <span style={{ fontSize: 12 }}>없음</span>}
+                          : <span style={{ fontSize: 13 }}>없음</span>}
                       </Radio.Button>
                     ))}
                   </Radio.Group>
@@ -878,7 +878,7 @@ export default function BoardWorkspace() {
                     <Radio.Button key={String(bg.value)} value={bg.value} style={{ marginBottom: 4 }}>
                       {bg.value
                         ? <span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: 4, background: bg.value, verticalAlign: 'middle' }} />
-                        : <span style={{ fontSize: 12 }}>없음</span>}
+                        : <span style={{ fontSize: 13 }}>없음</span>}
                     </Radio.Button>
                   ))}
                 </Radio.Group>

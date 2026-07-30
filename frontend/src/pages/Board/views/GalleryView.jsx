@@ -50,7 +50,7 @@ function CardDisplaySelector({ properties, selectedIds, toggle, toggleAll }) {
   const someChecked = properties.some(p => selectedIds.has(p.id)) && !allChecked;
 
   if (properties.length === 0) {
-    return <Text type="secondary" style={{ fontSize: 12 }}>커스텀 속성이 없습니다.</Text>;
+    return <Text type="secondary" style={{ fontSize: 13 }}>커스텀 속성이 없습니다.</Text>;
   }
 
   return (
@@ -103,7 +103,7 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
     && dayjs(card.dueDate).isBefore(dayjs(), 'day');
 
   const chipStyle = (color) => ({
-    fontSize: 12, fontWeight: 600,
+    fontSize: 13, fontWeight: 600,
     padding: '2px 8px', borderRadius: 10,
     background: `${color}15`, color,
     border: `1px solid ${color}25`,
@@ -149,21 +149,21 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
                 onClick={(e) => { e.stopPropagation(); onEdit(); }}
                 style={{ background: 'rgba(255,255,255,0.92)', border: 'none', borderRadius: 6, cursor: 'pointer', padding: '4px 7px', display: 'flex', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}
               >
-                <EditOutlined style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }} />
+                <EditOutlined style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }} />
               </button>
               {onDelete && (
                 <button
                   onClick={(e) => { e.stopPropagation(); if (window.confirm(`"${card.title}" 카드를 삭제할까요?`)) onDelete(card.id); }}
                   style={{ background: 'rgba(255,255,255,0.92)', border: 'none', borderRadius: 6, cursor: 'pointer', padding: '4px 7px', display: 'flex', alignItems: 'center', boxShadow: '0 1px 4px rgba(0,0,0,0.12)' }}
                 >
-                  <DeleteOutlined style={{ fontSize: 12, color: '#ff4d4f' }} />
+                  <DeleteOutlined style={{ fontSize: 13, color: '#ff4d4f' }} />
                 </button>
               )}
             </div>
           )}
           {/* 카드번호 */}
           {card.cardNumber && (
-            <span style={{ position: 'absolute', bottom: 8, left: 12, fontSize: 12, color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace', background: 'rgba(0,0,0,0.2)', padding: '1px 5px', borderRadius: 4 }}>
+            <span style={{ position: 'absolute', bottom: 8, left: 12, fontSize: 13, color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace', background: 'rgba(0,0,0,0.2)', padding: '1px 5px', borderRadius: 4 }}>
               #{card.cardNumber}
             </span>
           )}
@@ -178,7 +178,7 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
 
           {/* 설명 */}
           {card.description && (
-            <div style={{ fontSize: 12, color: '#aaa', marginBottom: 8, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            <div style={{ fontSize: 13, color: '#aaa', marginBottom: 8, lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
               {card.description}
             </div>
           )}
@@ -193,7 +193,7 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
               const pv = card.properties?.find(p => p.propertyId === prop.id);
               if (!pv?.value) return null;
               return (
-                <span key={prop.id} style={{ fontSize: 12, padding: '2px 7px', borderRadius: 10, background: 'var(--fd-surface-sunken)', color: 'var(--fd-text-secondary)', border: '1px solid var(--fd-border)', display: 'inline-block' }}>
+                <span key={prop.id} style={{ fontSize: 13, padding: '2px 7px', borderRadius: 10, background: 'var(--fd-surface-sunken)', color: 'var(--fd-text-secondary)', border: '1px solid var(--fd-border)', display: 'inline-block' }}>
                   <PropertyValue property={prop} value={pv.value} />
                 </span>
               );
@@ -204,13 +204,13 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {card.dueDate && (
-                <span style={{ fontSize: 12, color: overdue ? '#ff4d4f' : '#bbb', display: 'flex', alignItems: 'center', gap: 3 }}>
-                  <CalendarOutlined style={{ fontSize: 12 }} />
+                <span style={{ fontSize: 13, color: overdue ? '#ff4d4f' : '#bbb', display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <CalendarOutlined style={{ fontSize: 13 }} />
                   {dayjs(card.dueDate).format('MM/DD')}
                 </span>
               )}
               {(card.checklists ?? []).length > 0 && (
-                <span style={{ fontSize: 12, color: '#bbb' }}>
+                <span style={{ fontSize: 13, color: '#bbb' }}>
                   ☑ {card.checklists.filter(c => c.checked).length}/{card.checklists.length}
                 </span>
               )}
@@ -218,7 +218,7 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
             <Avatar.Group max={{ count: 3 }} size={20}>
               {assignees.map(a => (
                 <Tooltip key={a.id} title={a.user?.displayName}>
-                  <Avatar size={20} style={{ backgroundColor: getAvatarColor(a.userId ?? a.user?.id), fontSize: 12 }}>
+                  <Avatar size={20} style={{ backgroundColor: getAvatarColor(a.userId ?? a.user?.id), fontSize: 13 }}>
                     {a.user?.displayName?.slice(0, 1)}
                   </Avatar>
                 </Tooltip>
@@ -268,7 +268,7 @@ export default function GalleryView({ board, cards, onAddCard, onEditCard, onDel
               style={visibleProps.length < allProperties.length ? { borderColor: '#1677ff', color: '#1677ff' } : {}}
             >
               카드 표시 항목
-              <span style={{ marginLeft: 6, fontSize: 12, color: '#888' }}>
+              <span style={{ marginLeft: 6, fontSize: 13, color: '#888' }}>
                 ({visibleProps.length}/{allProperties.length})
               </span>
             </Button>

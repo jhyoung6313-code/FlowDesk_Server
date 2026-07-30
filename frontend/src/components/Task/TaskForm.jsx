@@ -449,11 +449,11 @@ export default function TaskForm({ open, task, onClose, onSubmit, initialStatus 
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                     <Space size={6}>
-                      <Avatar size={20} style={{ backgroundColor: getAvatarColor(c.userId), fontSize: 12 }}>
+                      <Avatar size={20} style={{ backgroundColor: getAvatarColor(c.userId), fontSize: 13 }}>
                         {c.user?.displayName?.slice(0, 1)}
                       </Avatar>
-                      <Typography.Text strong style={{ fontSize: 12 }}>{c.user?.displayName}</Typography.Text>
-                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      <Typography.Text strong style={{ fontSize: 13 }}>{c.user?.displayName}</Typography.Text>
+                      <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                         {dayjs(c.createdAt).format('MM/DD HH:mm')}
                       </Typography.Text>
                     </Space>
@@ -498,8 +498,8 @@ export default function TaskForm({ open, task, onClose, onSubmit, initialStatus 
                           background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 4,
                           padding: '2px 6px', maxWidth: 320,
                         }}>
-                          <PaperClipOutlined style={{ color: '#1677ff', fontSize: 12 }} />
-                          <Typography.Text style={{ fontSize: 12, flex: 1 }} ellipsis>{att.originalName}</Typography.Text>
+                          <PaperClipOutlined style={{ color: '#1677ff', fontSize: 13 }} />
+                          <Typography.Text style={{ fontSize: 13, flex: 1 }} ellipsis>{att.originalName}</Typography.Text>
                           <Button type="text" size="small" icon={<DownloadOutlined />}
                             style={{ height: 18, padding: '0 2px' }}
                             onClick={() => downloadCommentAttachment(att)} />
@@ -524,9 +524,9 @@ export default function TaskForm({ open, task, onClose, onSubmit, initialStatus 
                   background: '#f0f5ff', border: '1px solid #adc6ff', borderRadius: 4,
                   padding: '2px 8px',
                 }}>
-                  <PaperClipOutlined style={{ color: '#1677ff', fontSize: 12 }} />
-                  <Typography.Text style={{ fontSize: 12, flex: 1 }} ellipsis>{commentFile.name}</Typography.Text>
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  <PaperClipOutlined style={{ color: '#1677ff', fontSize: 13 }} />
+                  <Typography.Text style={{ fontSize: 13, flex: 1 }} ellipsis>{commentFile.name}</Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                     {commentFile.size < 1024 * 1024
                       ? `${(commentFile.size / 1024).toFixed(1)}KB`
                       : `${(commentFile.size / (1024 * 1024)).toFixed(1)}MB`}

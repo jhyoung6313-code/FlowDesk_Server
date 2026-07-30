@@ -63,7 +63,7 @@ function CommentItem({ comment, postId, isAdmin, userId, onReload, token }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <Space size={6} style={{ marginBottom: 4 }}>
             <Text strong style={{ fontSize: 13 }}>{comment.user?.displayName}</Text>
-            <Text type="secondary" style={{ fontSize: 12 }}>
+            <Text type="secondary" style={{ fontSize: 13 }}>
               <ClockCircleOutlined style={{ marginRight: 3 }} />
               {dayjs(comment.createdAt).format('MM.DD HH:mm')}
             </Text>
@@ -93,21 +93,21 @@ function CommentItem({ comment, postId, isAdmin, userId, onReload, token }) {
 
           {comment.attachments?.map(att => (
             <div key={att.id} style={{ marginTop: 4 }}>
-              <a href={downloadBbsAttachmentUrl(postId, att.id)} download={att.originalName} style={{ fontSize: 12, color: token.colorPrimary }}>
+              <a href={downloadBbsAttachmentUrl(postId, att.id)} download={att.originalName} style={{ fontSize: 13, color: token.colorPrimary }}>
                 <PaperClipOutlined style={{ marginRight: 4 }} />{att.originalName}
               </a>
             </div>
           ))}
 
           <Space size={10} style={{ marginTop: 6 }}>
-            <Button type="link" size="small" style={{ padding: 0, fontSize: 12, height: 'auto' }} onClick={() => setReplyOpen(v => !v)}>
+            <Button type="link" size="small" style={{ padding: 0, fontSize: 13, height: 'auto' }} onClick={() => setReplyOpen(v => !v)}>
               답글
             </Button>
             {canModify && !editing && (
               <>
-                <Button type="link" size="small" style={{ padding: 0, fontSize: 12, height: 'auto' }} onClick={() => setEditing(true)}>수정</Button>
+                <Button type="link" size="small" style={{ padding: 0, fontSize: 13, height: 'auto' }} onClick={() => setEditing(true)}>수정</Button>
                 <Popconfirm title="삭제하시겠습니까?" onConfirm={handleDelete} okText="삭제" cancelText="취소">
-                  <Button type="link" size="small" danger style={{ padding: 0, fontSize: 12, height: 'auto' }}>삭제</Button>
+                  <Button type="link" size="small" danger style={{ padding: 0, fontSize: 13, height: 'auto' }}>삭제</Button>
                 </Popconfirm>
               </>
             )}
@@ -120,7 +120,7 @@ function CommentItem({ comment, postId, isAdmin, userId, onReload, token }) {
                 <Upload beforeUpload={f => { setReplyFile(f); return false; }} showUploadList={false}>
                   <Button size="small" icon={<PaperClipOutlined />}>파일</Button>
                 </Upload>
-                {replyFile && <Text style={{ fontSize: 12 }}>{replyFile.name} <Button type="link" size="small" danger onClick={() => setReplyFile(null)} style={{ padding: 0 }}>✕</Button></Text>}
+                {replyFile && <Text style={{ fontSize: 13 }}>{replyFile.name} <Button type="link" size="small" danger onClick={() => setReplyFile(null)} style={{ padding: 0 }}>✕</Button></Text>}
                 <Button size="small" type="primary" icon={<SendOutlined />} onClick={handleReply}>등록</Button>
                 <Button size="small" onClick={() => { setReplyOpen(false); setReplyFile(null); }}>취소</Button>
               </Space>
@@ -133,27 +133,27 @@ function CommentItem({ comment, postId, isAdmin, userId, onReload, token }) {
       {comment.replies?.map(reply => (
         <div key={reply.id} style={{ marginLeft: 44, marginTop: 10 }}>
           <div style={{ display: 'flex', gap: 8 }}>
-            <Avatar size={28} style={{ background: getAvatarBg(reply.user?.avatarColor), flexShrink: 0, fontSize: 12 }}>
+            <Avatar size={28} style={{ background: getAvatarBg(reply.user?.avatarColor), flexShrink: 0, fontSize: 13 }}>
               {getInitial(reply.user?.displayName)}
             </Avatar>
             <div style={{ flex: 1 }}>
               <Space size={6} style={{ marginBottom: 4 }}>
-                <Text strong style={{ fontSize: 12 }}>{reply.user?.displayName}</Text>
-                <Text type="secondary" style={{ fontSize: 12 }}>{dayjs(reply.createdAt).format('MM.DD HH:mm')}</Text>
+                <Text strong style={{ fontSize: 13 }}>{reply.user?.displayName}</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>{dayjs(reply.createdAt).format('MM.DD HH:mm')}</Text>
               </Space>
-              <div style={{ background: token.colorBgLayout, borderRadius: token.borderRadius, padding: '6px 10px', fontSize: 12, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: token.colorText }}>
+              <div style={{ background: token.colorBgLayout, borderRadius: token.borderRadius, padding: '6px 10px', fontSize: 13, lineHeight: 1.6, whiteSpace: 'pre-wrap', color: token.colorText }}>
                 {reply.content}
               </div>
               {reply.attachments?.map(att => (
                 <div key={att.id} style={{ marginTop: 2 }}>
-                  <a href={downloadBbsAttachmentUrl(postId, att.id)} download={att.originalName} style={{ fontSize: 12, color: token.colorPrimary }}>
+                  <a href={downloadBbsAttachmentUrl(postId, att.id)} download={att.originalName} style={{ fontSize: 13, color: token.colorPrimary }}>
                     <PaperClipOutlined style={{ marginRight: 4 }} />{att.originalName}
                   </a>
                 </div>
               ))}
               {(isAdmin || reply.userId === userId) && (
                 <Popconfirm title="삭제하시겠습니까?" onConfirm={async () => { await deleteBbsComment(postId, reply.id); onReload(); }} okText="삭제" cancelText="취소">
-                  <Button type="link" size="small" danger style={{ padding: 0, fontSize: 12, height: 'auto', marginTop: 4 }}>삭제</Button>
+                  <Button type="link" size="small" danger style={{ padding: 0, fontSize: 13, height: 'auto', marginTop: 4 }}>삭제</Button>
                 </Popconfirm>
               )}
             </div>
@@ -284,12 +284,12 @@ export default function PostDetail({ postId, onBack, onChanged }) {
           <div style={{ flex: 1, minWidth: 0 }}>
             <Text strong style={{ fontSize: 13 }}>{post.creator?.displayName || '-'}</Text>
             <div style={{ marginTop: 2 }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>
                 <EyeOutlined style={{ marginRight: 4 }} />조회 {post.viewCount}
               </Text>
             </div>
           </div>
-          <Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>
+          <Text type="secondary" style={{ fontSize: 13, flexShrink: 0 }}>
             <ClockCircleOutlined style={{ marginRight: 4 }} />
             {dayjs(post.createdAt).format('YYYY.MM.DD HH:mm')}
           </Text>
@@ -310,19 +310,19 @@ export default function PostDetail({ postId, onBack, onChanged }) {
           }}>
             {post.senderOrg && (
               <>
-                <Text type="secondary" style={{ fontSize: 12 }}>발신처</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>발신처</Text>
                 <Text>{post.senderOrg}</Text>
               </>
             )}
             {post.officialDueDate && (
               <>
-                <Text type="secondary" style={{ fontSize: 12 }}>공문 처리기한</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>공문 처리기한</Text>
                 <Text>{dayjs(post.officialDueDate).format('YYYY.MM.DD')}</Text>
               </>
             )}
             {post.recipientDepts?.length > 0 && (
               <>
-                <Text type="secondary" style={{ fontSize: 12 }}>수신부서</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>수신부서</Text>
                 <Space size={[4, 4]} wrap>
                   {post.recipientDepts.map(d => <Tag key={d} style={{ margin: 0 }}>{d}</Tag>)}
                 </Space>
@@ -339,7 +339,7 @@ export default function PostDetail({ postId, onBack, onChanged }) {
             border: `1px solid ${token.colorBorderSecondary}`,
             borderRadius: 8,
           }}>
-            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+            <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
               <PaperClipOutlined /> 첨부파일 ({post.attachments.length})
             </Text>
             <Space wrap>
@@ -349,13 +349,13 @@ export default function PostDetail({ postId, onBack, onChanged }) {
                   padding: '4px 10px', borderRadius: 6,
                   border: `1px solid ${token.colorBorderSecondary}`,
                   background: token.colorBgContainer,
-                  fontSize: 12,
+                  fontSize: 13,
                 }}>
                   <PaperClipOutlined style={{ color: token.colorTextTertiary }} />
                   <a href={downloadBbsAttachmentUrl(id, att.id)} download={att.originalName} style={{ color: token.colorText }}>
                     {att.originalName}
                   </a>
-                  <Text type="secondary" style={{ fontSize: 12 }}>({(att.size / 1024).toFixed(0)}KB)</Text>
+                  <Text type="secondary" style={{ fontSize: 13 }}>({(att.size / 1024).toFixed(0)}KB)</Text>
                   {(isAdmin || att.uploadedBy === user?.id) && (
                     <Popconfirm title="삭제?" onConfirm={() => handleDeleteAttachment(att.id)} okText="삭제" cancelText="취소">
                       <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ width: 18, height: 18, padding: 0 }} />
@@ -422,7 +422,7 @@ export default function PostDetail({ postId, onBack, onChanged }) {
                   <Button size="small" icon={<PaperClipOutlined />}>파일 첨부</Button>
                 </Upload>
                 {commentFile && (
-                  <Text style={{ fontSize: 12 }}>
+                  <Text style={{ fontSize: 13 }}>
                     {commentFile.name}
                     <Button type="link" size="small" danger onClick={() => setCommentFile(null)} style={{ padding: '0 4px' }}>✕</Button>
                   </Text>

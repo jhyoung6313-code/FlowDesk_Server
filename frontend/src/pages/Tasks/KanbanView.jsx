@@ -208,14 +208,14 @@ export default function KanbanView() {
                       background: col.dot, flexShrink: 0,
                     }} />
                     <span className="kanban-column-label" style={{
-                      fontSize: 12, fontWeight: 600,
+                      fontSize: 13, fontWeight: 600,
                       color: isDark ? 'rgba(255,255,255,0.35)' : '#64748b',
                       textTransform: 'uppercase', letterSpacing: '0.06em', flex: 1,
                     }}>
                       {col.label}
                     </span>
                     <span className="kanban-column-count" style={{
-                      fontSize: 12, fontWeight: 600,
+                      fontSize: 13, fontWeight: 600,
                       color: isDark ? 'rgba(255,255,255,0.35)' : '#94a3b8',
                       background: isDark ? 'rgba(255,255,255,0.06)' : '#f1f5f9',
                       borderRadius: 4, padding: '1px 6px',
@@ -244,7 +244,7 @@ export default function KanbanView() {
                       <div className="kanban-empty" style={{
                         textAlign: 'center',
                         color: isDark ? 'rgba(255,255,255,0.2)' : '#bfbfbf',
-                        fontSize: 12, padding: '16px 0',
+                        fontSize: 13, padding: '16px 0',
                       }}>
                         업무 없음
                       </div>
@@ -322,10 +322,10 @@ function KanbanCard({ task, isDark, dragging, canEdit, canDelete, onEdit, onDele
       </div>
 
       {task.part && (
-        <Tag color="blue" style={{ fontSize: 12, marginTop: 4 }}>{task.part.name}</Tag>
+        <Tag color="blue" style={{ fontSize: 13, marginTop: 4 }}>{task.part.name}</Tag>
       )}
       {overdue && (
-        <Tag color="default" style={{ fontSize: 12, marginTop: 4 }}>
+        <Tag color="default" style={{ fontSize: 13, marginTop: 4 }}>
           {task.status === 'in_progress' ? '진행중' : task.status === 'hold' ? '보류' : '대기'}
         </Tag>
       )}
@@ -341,7 +341,7 @@ function KanbanCard({ task, isDark, dragging, canEdit, canDelete, onEdit, onDele
             const uid = a.userId ?? a.user?.id;
             return (
               <Tooltip key={uid} title={a.user?.displayName}>
-                <Avatar size={20} style={{ backgroundColor: getAvatarColor(uid), fontSize: 12 }}>
+                <Avatar size={20} style={{ backgroundColor: getAvatarColor(uid), fontSize: 13 }}>
                   {a.user?.displayName?.slice(0, 1)}
                 </Avatar>
               </Tooltip>
@@ -349,14 +349,14 @@ function KanbanCard({ task, isDark, dragging, canEdit, canDelete, onEdit, onDele
           })}
           {task.extraAssignees?.map((e) => (
             <Tooltip key={`x-${e.id}`} title={e.name}>
-              <Avatar size={20} style={{ backgroundColor: '#8c8c8c', fontSize: 12 }}>
+              <Avatar size={20} style={{ backgroundColor: '#8c8c8c', fontSize: 13 }}>
                 {e.name?.slice(0, 1)}
               </Avatar>
             </Tooltip>
           ))}
         </Avatar.Group>
         {task.dueDate && (
-          <Typography.Text style={{ fontSize: 12, color: isDark ? 'rgba(255,255,255,0.35)' : '#94a3b8' }}>
+          <Typography.Text style={{ fontSize: 13, color: isDark ? 'rgba(255,255,255,0.35)' : '#94a3b8' }}>
             {dayjs(task.dueDate).format('MM/DD')}
           </Typography.Text>
         )}

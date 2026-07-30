@@ -15,7 +15,7 @@ export default function StatusBadge({ status, dueDate }) {
         border: `1px solid ${cfg.color}29`,
         borderRadius: 20,
         fontWeight: 600,
-        fontSize: 12,
+        fontSize: 13,
         lineHeight: '18px',
         padding: '1px 10px',
         whiteSpace: 'nowrap',

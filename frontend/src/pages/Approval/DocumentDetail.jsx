@@ -60,25 +60,25 @@ function StampCell({ roleLabel, title, name, status, actingType, signImagePath, 
       textAlign: 'center', background: token.colorBgContainer,
       boxShadow: isCurrent ? `inset 0 0 0 2px ${token.colorPrimary}` : 'none',
     }}>
-      <div style={{ fontSize: 12, fontWeight: 800, padding: '5px 2px', color: token.colorTextSecondary, background: token.colorBgLayout, borderBottom: `1px solid ${token.colorBorderSecondary}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+      <div style={{ fontSize: 13, fontWeight: 800, padding: '5px 2px', color: token.colorTextSecondary, background: token.colorBgLayout, borderBottom: `1px solid ${token.colorBorderSecondary}`, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {roleLabel}
       </div>
       <div style={{ height: 80, position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, background: bodyBg }}>
         {badge && (
-          <span style={{ position: 'absolute', top: 5, right: 5, fontSize: 12, fontWeight: 800, padding: '1px 5px', borderRadius: 5, background: badge.bg, color: badge.color }}>{badge.label}</span>
+          <span style={{ position: 'absolute', top: 5, right: 5, fontSize: 13, fontWeight: 800, padding: '1px 5px', borderRadius: 5, background: badge.bg, color: badge.color }}>{badge.label}</span>
         )}
-        {title && <span style={{ fontSize: 12, color: token.colorTextTertiary }}>{title}</span>}
-        <span style={{ fontSize: 12, fontWeight: 700, color: token.colorText }}>{name || '-'}</span>
+        {title && <span style={{ fontSize: 13, color: token.colorTextTertiary }}>{title}</span>}
+        <span style={{ fontSize: 13, fontWeight: 700, color: token.colorText }}>{name || '-'}</span>
         {done && (
           signImagePath
             ? <img src={signImagePath} alt="서명" style={{ height: 30, maxWidth: 74, objectFit: 'contain' }} />
-            : <span style={{ width: 34, height: 34, border: `2px solid ${token.colorSuccess}`, color: token.colorSuccess, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, transform: 'rotate(-10deg)' }}>{getInitial(name)}</span>
+            : <span style={{ width: 34, height: 34, border: `2px solid ${token.colorSuccess}`, color: token.colorSuccess, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, transform: 'rotate(-10deg)' }}>{getInitial(name)}</span>
         )}
-        {rejected && <span style={{ width: 34, height: 34, border: `2px solid ${token.colorError}`, color: token.colorError, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 800, transform: 'rotate(-10deg)' }}>반려</span>}
-        {skipped && <span style={{ fontSize: 12, color: token.colorTextTertiary }}>전결 생략</span>}
-        {status === 'pending' && isCurrent && <span style={{ fontSize: 12, color: token.colorPrimary, fontWeight: 700 }}>결재 진행중</span>}
-        {status === 'pending' && !isCurrent && <span style={{ fontSize: 12, color: token.colorTextTertiary }}>대기</span>}
-        {dateStr && <span style={{ position: 'absolute', bottom: 5, fontSize: 12, color: token.colorTextTertiary }}>{dateStr}</span>}
+        {rejected && <span style={{ width: 34, height: 34, border: `2px solid ${token.colorError}`, color: token.colorError, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, transform: 'rotate(-10deg)' }}>반려</span>}
+        {skipped && <span style={{ fontSize: 13, color: token.colorTextTertiary }}>전결 생략</span>}
+        {status === 'pending' && isCurrent && <span style={{ fontSize: 13, color: token.colorPrimary, fontWeight: 700 }}>결재 진행중</span>}
+        {status === 'pending' && !isCurrent && <span style={{ fontSize: 13, color: token.colorTextTertiary }}>대기</span>}
+        {dateStr && <span style={{ position: 'absolute', bottom: 5, fontSize: 13, color: token.colorTextTertiary }}>{dateStr}</span>}
       </div>
     </div>
   );
@@ -139,21 +139,21 @@ function StepRow({ step, isCurrentGroup, docStatus, token }) {
 
   return (
     <div style={{ display: 'flex', gap: 8, padding: '6px 0', alignItems: 'flex-start' }}>
-      <Tag color={role.color} style={{ fontSize: 12, margin: 0, lineHeight: '18px', flexShrink: 0 }}>{role.label}</Tag>
+      <Tag color={role.color} style={{ fontSize: 13, margin: 0, lineHeight: '18px', flexShrink: 0 }}>{role.label}</Tag>
       <div style={{ flex: 1, minWidth: 0 }}>
         <Space size={6} wrap>
-          {step.approverTitleSnap && <Text type="secondary" style={{ fontSize: 12 }}>{step.approverTitleSnap}</Text>}
-          <Text style={{ fontSize: 12, color: statusColor, fontWeight: isProcessing ? 600 : 400 }}>{name}</Text>
-          {isProcessing && <Text style={{ fontSize: 12, color: token.colorPrimary }}>진행중</Text>}
-          {skipped && <Text style={{ fontSize: 12, color: token.colorTextTertiary }}>전결 생략</Text>}
+          {step.approverTitleSnap && <Text type="secondary" style={{ fontSize: 13 }}>{step.approverTitleSnap}</Text>}
+          <Text style={{ fontSize: 13, color: statusColor, fontWeight: isProcessing ? 600 : 400 }}>{name}</Text>
+          {isProcessing && <Text style={{ fontSize: 13, color: token.colorPrimary }}>진행중</Text>}
+          {skipped && <Text style={{ fontSize: 13, color: token.colorTextTertiary }}>전결 생략</Text>}
         </Space>
-        <div style={{ fontSize: 12, lineHeight: 1.5 }}>
+        <div style={{ fontSize: 13, lineHeight: 1.5 }}>
           {done && (
             step.signImagePath
               ? <img src={step.signImagePath} alt="서명" style={{ height: 34, maxWidth: 88, objectFit: 'contain', marginTop: 2 }} />
-              : <Tag color="success" style={{ fontSize: 12, marginTop: 2, lineHeight: '16px' }}>{step.actingType || '승인'}</Tag>
+              : <Tag color="success" style={{ fontSize: 13, marginTop: 2, lineHeight: '16px' }}>{step.actingType || '승인'}</Tag>
           )}
-          {rejected && <Tag color="error" style={{ fontSize: 12, marginTop: 2, lineHeight: '16px' }}>반려</Tag>}
+          {rejected && <Tag color="error" style={{ fontSize: 13, marginTop: 2, lineHeight: '16px' }}>반려</Tag>}
           {step.comment && <div style={{ color: token.colorTextSecondary, marginTop: 2 }}>"{step.comment}"</div>}
           {step.actionAt && <div style={{ color: token.colorTextTertiary }}>{dayjs(step.actionAt).format('MM.DD HH:mm')}</div>}
         </div>
@@ -192,13 +192,13 @@ function FormDataView({ template, formData, token }) {
   fields.forEach((f, i) => {
     if (f.type === 'divider') {
       flush(i);
-      blocks.push(<Divider key={`d-${i}`} orientation="left" style={{ fontSize: 12, color: token.colorTextSecondary, margin: '4px 0' }}>{f.label}</Divider>);
+      blocks.push(<Divider key={`d-${i}`} orientation="left" style={{ fontSize: 13, color: token.colorTextSecondary, margin: '4px 0' }}>{f.label}</Divider>);
       return;
     }
     const display = formatFieldValue(f, data[f.id]);
     bucket.push(
       <div key={f.id} style={{ padding: '8px 12px', background: token.colorBgLayout, borderRadius: token.borderRadius, borderLeft: `3px solid ${token.colorPrimary}` }}>
-        <div style={{ fontSize: 12, color: token.colorTextTertiary, marginBottom: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+        <div style={{ fontSize: 13, color: token.colorTextTertiary, marginBottom: 2, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.3px' }}>
           {f.label}{f.required && <span style={{ color: token.colorError }}>*</span>}
         </div>
         <div style={{ fontSize: 13, color: token.colorText, wordBreak: 'break-all' }}>
@@ -376,7 +376,7 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
             <Space size={8} style={{ marginBottom: 8 }} wrap>
               <Tag color={statusCfg.color} icon={statusCfg.icon}>{statusCfg.label}</Tag>
               {doc.docNo && (
-                <Tag style={{ fontFamily: 'monospace', fontSize: 12 }} color="blue">{doc.docNo}</Tag>
+                <Tag style={{ fontFamily: 'monospace', fontSize: 13 }} color="blue">{doc.docNo}</Tag>
               )}
               {doc.isUrgent && <Tag color="red" icon={<FireOutlined />}>긴급</Tag>}
               {doc.dueDate && (() => {
@@ -387,19 +387,19 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                   </Tag>
                 );
               })()}
-              <Text type="secondary" style={{ fontSize: 12 }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>
                 {doc.template?.formType?.name} / {doc.template?.name}
               </Text>
             </Space>
             <Title level={4} style={{ margin: '0 0 10px', wordBreak: 'break-word' }}>{doc.title}</Title>
             <Space size={16}>
               <Space size={6}>
-                <Avatar size={22} style={{ background: getAvatarBg(doc.creator?.avatarColor), fontSize: 12 }}>
+                <Avatar size={22} style={{ background: getAvatarBg(doc.creator?.avatarColor), fontSize: 13 }}>
                   {getInitial(doc.creator?.displayName)}
                 </Avatar>
-                <Text style={{ fontSize: 12 }}>{doc.creator?.displayName}</Text>
+                <Text style={{ fontSize: 13 }}>{doc.creator?.displayName}</Text>
               </Space>
-              <Text type="secondary" style={{ fontSize: 12 }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>
                 <ClockCircleOutlined style={{ marginRight: 4 }} />
                 {dayjs(doc.createdAt).format('YYYY.MM.DD HH:mm')}
               </Text>
@@ -489,13 +489,13 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                     display: 'flex', alignItems: 'center', gap: 6,
                     padding: '4px 10px', borderRadius: 6,
                     border: `1px solid ${token.colorBorderSecondary}`,
-                    background: token.colorBgLayout, fontSize: 12,
+                    background: token.colorBgLayout, fontSize: 13,
                   }}>
                     <PaperClipOutlined style={{ color: token.colorTextTertiary }} />
                     <a href={downloadApprovalAttachmentUrl(id, att.id)} download={att.originalName} style={{ color: token.colorText }}>
                       {att.originalName}
                     </a>
-                    <Text type="secondary" style={{ fontSize: 12 }}>({(att.size / 1024).toFixed(0)}KB)</Text>
+                    <Text type="secondary" style={{ fontSize: 13 }}>({(att.size / 1024).toFixed(0)}KB)</Text>
                     {(isAdmin || att.uploadedBy === user?.id) && (
                       <Popconfirm title="삭제?" onConfirm={() => handleDeleteAttachment(att.id)} okText="삭제" cancelText="취소">
                         <Button type="text" size="small" danger icon={<DeleteOutlined />} style={{ width: 18, height: 18, padding: 0 }} />
@@ -516,7 +516,7 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
             size="small"
           >
             {comments.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '14px 0', color: token.colorTextTertiary, fontSize: 12 }}>
+              <div style={{ textAlign: 'center', padding: '14px 0', color: token.colorTextTertiary, fontSize: 13 }}>
                 의견을 남겨보세요.
               </div>
             ) : (
@@ -525,20 +525,20 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                   <div key={c.id}>
                     {idx > 0 && <Divider style={{ margin: '10px 0' }} />}
                     <div style={{ display: 'flex', gap: 10 }}>
-                      <Avatar size={30} style={{ background: getAvatarBg(c.user?.avatarColor), flexShrink: 0, fontSize: 12 }}>
+                      <Avatar size={30} style={{ background: getAvatarBg(c.user?.avatarColor), flexShrink: 0, fontSize: 13 }}>
                         {getInitial(c.user?.displayName)}
                       </Avatar>
                       <div style={{ flex: 1 }}>
                         <Space size={8} style={{ marginBottom: 4 }}>
                           <Text strong style={{ fontSize: 13 }}>{c.user?.displayName}</Text>
-                          <Text type="secondary" style={{ fontSize: 12 }}>{dayjs(c.createdAt).format('MM.DD HH:mm')}</Text>
+                          <Text type="secondary" style={{ fontSize: 13 }}>{dayjs(c.createdAt).format('MM.DD HH:mm')}</Text>
                         </Space>
                         <div style={{ background: token.colorBgLayout, borderRadius: token.borderRadius, padding: '6px 10px', fontSize: 13, whiteSpace: 'pre-wrap', color: token.colorText }}>
                           {c.content}
                         </div>
                         {(isAdmin || c.userId === user?.id) && (
                           <Popconfirm title="삭제?" onConfirm={() => handleDeleteComment(c.id)} okText="삭제" cancelText="취소">
-                            <Button type="link" size="small" danger style={{ padding: 0, fontSize: 12, height: 'auto', marginTop: 4 }}>삭제</Button>
+                            <Button type="link" size="small" danger style={{ padding: 0, fontSize: 13, height: 'auto', marginTop: 4 }}>삭제</Button>
                           </Popconfirm>
                         )}
                       </div>
@@ -550,7 +550,7 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
 
             <Divider style={{ margin: '10px 0 12px' }} />
             <div style={{ display: 'flex', gap: 10 }}>
-              <Avatar size={30} style={{ background: getAvatarBg(user?.avatarColor), flexShrink: 0, fontSize: 12 }}>
+              <Avatar size={30} style={{ background: getAvatarBg(user?.avatarColor), flexShrink: 0, fontSize: 13 }}>
                 {getInitial(user?.displayName)}
               </Avatar>
               <div style={{ flex: 1 }}>
@@ -587,10 +587,10 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
             return (
               <div key={order} style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 2 }}>
-                  <Text style={{ fontSize: 12, fontWeight: 600, color: isCurrentGroup ? token.colorPrimary : token.colorTextSecondary }}>
+                  <Text style={{ fontSize: 13, fontWeight: 600, color: isCurrentGroup ? token.colorPrimary : token.colorTextSecondary }}>
                     {order}차
                   </Text>
-                  {parallel && <Tag color="cyan" style={{ fontSize: 12, margin: 0, lineHeight: '16px' }}>병렬</Tag>}
+                  {parallel && <Tag color="cyan" style={{ fontSize: 13, margin: 0, lineHeight: '16px' }}>병렬</Tag>}
                 </div>
                 <div style={{ borderLeft: `2px solid ${isCurrentGroup ? token.colorPrimary : token.colorBorderSecondary}`, paddingLeft: 8 }}>
                   {groupSteps.map(step => (
@@ -603,7 +603,7 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
 
           {refSteps.length > 0 && (
             <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px dashed ${token.colorBorderSecondary}` }}>
-              <Text style={{ fontSize: 12, fontWeight: 600, color: token.colorTextSecondary }}>참조</Text>
+              <Text style={{ fontSize: 13, fontWeight: 600, color: token.colorTextSecondary }}>참조</Text>
               <div style={{ marginTop: 2 }}>
                 {refSteps.map(step => (
                   <StepRow key={step.id} step={step} isCurrentGroup={false} docStatus={doc.status} token={token} />
@@ -615,13 +615,13 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
           {doc.status === 'approved' && (
             <div style={{ marginTop: 12, padding: '8px 12px', background: `${token.colorSuccess}15`, borderRadius: token.borderRadius, textAlign: 'center' }}>
               <CheckCircleOutlined style={{ color: token.colorSuccess, marginRight: 6 }} />
-              <Text style={{ color: token.colorSuccess, fontSize: 12, fontWeight: 600 }}>최종 승인 완료</Text>
+              <Text style={{ color: token.colorSuccess, fontSize: 13, fontWeight: 600 }}>최종 승인 완료</Text>
             </div>
           )}
           {doc.status === 'rejected' && (
             <div style={{ marginTop: 12, padding: '8px 12px', background: `${token.colorError}12`, borderRadius: token.borderRadius, textAlign: 'center' }}>
               <CloseCircleOutlined style={{ color: token.colorError, marginRight: 6 }} />
-              <Text style={{ color: token.colorError, fontSize: 12, fontWeight: 600 }}>반려됨</Text>
+              <Text style={{ color: token.colorError, fontSize: 13, fontWeight: 600 }}>반려됨</Text>
             </div>
           )}
         </Card>

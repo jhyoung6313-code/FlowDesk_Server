@@ -392,7 +392,7 @@ export default function UsersAdminPage() {
                 return (
                   <Space direction="vertical" size={0}>
                     <span>{p?.label}</span>
-                    {p?.desc && <Typography.Text type="secondary" style={{ fontSize: 12 }}>{p.desc}</Typography.Text>}
+                    {p?.desc && <Typography.Text type="secondary" style={{ fontSize: 13 }}>{p.desc}</Typography.Text>}
                   </Space>
                 );
               }}

@@ -98,7 +98,7 @@ function StepCard({ step, phaseId, users, onUpdate, onDelete }) {
           type="text"
           size="small"
           onClick={() => setOpen((v) => !v)}
-          style={{ color: '#888', fontSize: 12 }}
+          style={{ color: '#888', fontSize: 13 }}
         >
           {open ? '접기' : '상세'}
         </Button>
@@ -114,14 +114,14 @@ function StepCard({ step, phaseId, users, onUpdate, onDelete }) {
         placeholder="메모 / 지침 (선택, {{변수}} 사용 가능)"
         autoSize={{ minRows: 1, maxRows: 4 }}
         size="small"
-        style={{ marginTop: 6, fontSize: 12 }}
+        style={{ marginTop: 6, fontSize: 13 }}
       />
 
       {open && (
         <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--fd-border)' }}>
           <Row gutter={[10, 10]}>
             <Col span={8}>
-              <Text type="secondary" style={{ fontSize: 12 }}>유형</Text>
+              <Text type="secondary" style={{ fontSize: 13 }}>유형</Text>
               <Select
                 value={step.type}
                 onChange={(v) => onUpdate({ ...step, type: v })}
@@ -134,7 +134,7 @@ function StepCard({ step, phaseId, users, onUpdate, onDelete }) {
               </Select>
             </Col>
             <Col span={8}>
-              <Text type="secondary" style={{ fontSize: 12 }}>예상 시간 (분)</Text>
+              <Text type="secondary" style={{ fontSize: 13 }}>예상 시간 (분)</Text>
               <InputNumber
                 value={step.estimatedMins}
                 onChange={(v) => onUpdate({ ...step, estimatedMins: v })}
@@ -145,7 +145,7 @@ function StepCard({ step, phaseId, users, onUpdate, onDelete }) {
               />
             </Col>
             <Col span={8}>
-              <Text type="secondary" style={{ fontSize: 12 }}>SLA (분)</Text>
+              <Text type="secondary" style={{ fontSize: 13 }}>SLA (분)</Text>
               <InputNumber
                 value={step.slaMins}
                 onChange={(v) => onUpdate({ ...step, slaMins: v })}
@@ -156,7 +156,7 @@ function StepCard({ step, phaseId, users, onUpdate, onDelete }) {
               />
             </Col>
             <Col span={8}>
-              <Text type="secondary" style={{ fontSize: 12 }}>증거 필수</Text>
+              <Text type="secondary" style={{ fontSize: 13 }}>증거 필수</Text>
               <br />
               <Switch
                 size="small"
@@ -165,7 +165,7 @@ function StepCard({ step, phaseId, users, onUpdate, onDelete }) {
               />
             </Col>
             <Col span={8}>
-              <Text type="secondary" style={{ fontSize: 12 }}>병렬 그룹 번호</Text>
+              <Text type="secondary" style={{ fontSize: 13 }}>병렬 그룹 번호</Text>
               <InputNumber
                 value={step.parallelGroup ?? null}
                 onChange={(v) => onUpdate({ ...step, parallelGroup: v })}
@@ -177,7 +177,7 @@ function StepCard({ step, phaseId, users, onUpdate, onDelete }) {
             </Col>
             {step.type === 'decision' && (
               <Col span={24}>
-                <Text type="secondary" style={{ fontSize: 12 }}>분기 옵션</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>분기 옵션</Text>
                 {(step.decisionOptions || []).map((opt, idx) => (
                   <div key={idx} style={{ display: 'flex', gap: 6, marginTop: 4, alignItems: 'center' }}>
                     <Input
@@ -219,7 +219,7 @@ function StepCard({ step, phaseId, users, onUpdate, onDelete }) {
                 >
                   옵션 추가
                 </Button>
-                <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 2 }}>
+                <Text type="secondary" style={{ fontSize: 13, display: 'block', marginTop: 2 }}>
                   "이동할 스텝 순서": 해당 번호 이전 스텝이 자동으로 스킵됩니다
                 </Text>
               </Col>
@@ -319,7 +319,7 @@ function VariableEditor({ variables, onChange }) {
 
   return (
     <div>
-      <Text type="secondary" style={{ fontSize: 12 }}>
+      <Text type="secondary" style={{ fontSize: 13 }}>
         Run 시작 시 입력받을 변수. 단계 제목/지침에서 {'{{변수키}}'} 형태로 사용.
       </Text>
       {variables.map((v, i) => (
@@ -748,8 +748,8 @@ export default function PlaybookEditor({ embedded = false, embeddedId = null, on
                   title={`v${v.version}`}
                   description={
                     <>
-                      <div style={{ fontSize: 12 }}>{v.creator?.displayName}</div>
-                      <div style={{ fontSize: 12, color: '#aaa' }}>{dayjs(v.createdAt).format('YYYY-MM-DD HH:mm')}</div>
+                      <div style={{ fontSize: 13 }}>{v.creator?.displayName}</div>
+                      <div style={{ fontSize: 13, color: '#aaa' }}>{dayjs(v.createdAt).format('YYYY-MM-DD HH:mm')}</div>
                     </>
                   }
                 />
@@ -842,11 +842,11 @@ export default function PlaybookEditor({ embedded = false, embeddedId = null, on
                   title={
                     <Space size={4}>
                       {s.name}
-                      {!s.isActive && <Tag color="default" style={{ fontSize: 12 }}>비활성</Tag>}
+                      {!s.isActive && <Tag color="default" style={{ fontSize: 13 }}>비활성</Tag>}
                     </Space>
                   }
                   description={
-                    <span style={{ fontSize: 12, color: '#888' }}>
+                    <span style={{ fontSize: 13, color: '#888' }}>
                       {formatRecurrence(s)}
                       {s.lastRunAt && ` · 마지막 실행: ${dayjs(s.lastRunAt).format('MM/DD HH:mm')}`}
                     </span>
@@ -875,7 +875,7 @@ export default function PlaybookEditor({ embedded = false, embeddedId = null, on
             />
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreateWebhook}>생성</Button>
           </div>
-          <div style={{ fontSize: 12, color: '#888', marginTop: 6 }}>
+          <div style={{ fontSize: 13, color: '#888', marginTop: 6 }}>
             생성된 URL로 POST 요청 시 이 Playbook의 Run이 자동 시작됩니다.
           </div>
         </div>
@@ -905,14 +905,14 @@ export default function PlaybookEditor({ embedded = false, embeddedId = null, on
                     title={h.name}
                     description={
                       <div>
-                        <div style={{ fontSize: 12, fontFamily: 'monospace', color: 'var(--fd-text-secondary)', wordBreak: 'break-all' }}>
+                        <div style={{ fontSize: 13, fontFamily: 'monospace', color: 'var(--fd-text-secondary)', wordBreak: 'break-all' }}>
                           POST {url}
                         </div>
                         <Button
                           type="link"
                           size="small"
                           icon={<CopyOutlined />}
-                          style={{ padding: 0, fontSize: 12 }}
+                          style={{ padding: 0, fontSize: 13 }}
                           onClick={() => { navigator.clipboard.writeText(url); message.success('URL 복사됨'); }}
                         >
                           URL 복사

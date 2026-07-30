@@ -56,7 +56,7 @@ export default function MemoWidget() {
         <Button
           type="text" size="small"
           onClick={() => { setOpen(false); navigate('/memos'); }}
-          style={{ fontSize: 12, color: '#64748b' }}
+          style={{ fontSize: 13, color: '#64748b' }}
         >
           전체 보기 <ArrowRightOutlined />
         </Button>

@@ -140,7 +140,7 @@ export default function GanttView({ tasks, project }) {
         />
       </div>
       <div style={{
-        display: 'flex', gap: 16, marginTop: 10, fontSize: 12, color: 'var(--fd-text-secondary)',
+        display: 'flex', gap: 16, marginTop: 10, fontSize: 13, color: 'var(--fd-text-secondary)',
         flexWrap: 'wrap',
       }}>
         <span><span style={{ display:'inline-block', width:12, height:12, background:'#2e7d32', borderRadius:2, marginRight:4, verticalAlign:'middle' }} />대분류</span>

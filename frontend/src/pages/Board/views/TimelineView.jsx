@@ -99,7 +99,7 @@ export default function TimelineView({ board, cards, onEditCard }) {
         <div style={{ width: LEFT_WIDTH, flexShrink: 0, position: 'sticky', left: 0, zIndex: 10, background: 'var(--fd-surface)', borderRight: '1px solid var(--fd-border)' }}>
           {/* 헤더 - 월 */}
           <div style={{ height: HEADER_HEIGHT / 2, borderBottom: '1px solid var(--fd-border)', display: 'flex', alignItems: 'center', padding: '0 12px', background: 'var(--fd-surface-sunken)' }}>
-            <Text strong style={{ fontSize: 12 }}>카드</Text>
+            <Text strong style={{ fontSize: 13 }}>카드</Text>
           </div>
           {/* 헤더 - 일 */}
           <div style={{ height: HEADER_HEIGHT / 2, borderBottom: '1px solid var(--fd-border)', background: 'var(--fd-surface-sunken)' }} />
@@ -120,17 +120,17 @@ export default function TimelineView({ board, cards, onEditCard }) {
               onClick={() => onEditCard?.(card)}
             >
               {card.cardNumber && (
-                <Text style={{ fontSize: 12, color: '#bfbfbf', flexShrink: 0 }}>#{card.cardNumber}</Text>
+                <Text style={{ fontSize: 13, color: '#bfbfbf', flexShrink: 0 }}>#{card.cardNumber}</Text>
               )}
               <Tag
                 color={STATUS_COLORS[card.status]}
-                style={{ fontSize: 12, margin: 0, flexShrink: 0 }}
+                style={{ fontSize: 13, margin: 0, flexShrink: 0 }}
               >
                 {STATUS_LABELS[card.status] ?? card.status}
               </Tag>
               <Text
                 ellipsis
-                style={{ fontSize: 12, flex: 1 }}
+                style={{ fontSize: 13, flex: 1 }}
                 title={card.title}
               >
                 {card.title}
@@ -153,7 +153,7 @@ export default function TimelineView({ board, cards, onEditCard }) {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  fontSize: 12,
+                  fontSize: 13,
                   fontWeight: 600,
                   color: 'var(--fd-text-secondary)',
                 }}
@@ -177,7 +177,7 @@ export default function TimelineView({ board, cards, onEditCard }) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 12,
+                    fontSize: 13,
                     color: isToday ? '#1677ff' : isWeekend ? '#ff4d4f' : '#8c8c8c',
                     fontWeight: isToday ? 700 : 400,
                     borderRight: '1px solid var(--fd-border)',
@@ -241,10 +241,10 @@ export default function TimelineView({ board, cards, onEditCard }) {
                   title={
                     <div>
                       <div style={{ fontWeight: 600 }}>{card.title}</div>
-                      <div style={{ fontSize: 12, opacity: 0.85 }}>
+                      <div style={{ fontSize: 13, opacity: 0.85 }}>
                         {card.startDate ? dayjs(card.startDate).format('MM/DD') : '?'} ~ {card.dueDate ? dayjs(card.dueDate).format('MM/DD') : '?'}
                       </div>
-                      {card.progress > 0 && <div style={{ fontSize: 12 }}>진행도: {card.progress}%</div>}
+                      {card.progress > 0 && <div style={{ fontSize: 13 }}>진행도: {card.progress}%</div>}
                     </div>
                   }
                 >
@@ -280,7 +280,7 @@ export default function TimelineView({ board, cards, onEditCard }) {
                     )}
                     <Text
                       ellipsis
-                      style={{ fontSize: 12, color: '#fff', fontWeight: 500, flex: 1, zIndex: 1 }}
+                      style={{ fontSize: 13, color: '#fff', fontWeight: 500, flex: 1, zIndex: 1 }}
                     >
                       {card.cardNumber ? `#${card.cardNumber} ` : ''}{card.title}
                     </Text>
@@ -288,7 +288,7 @@ export default function TimelineView({ board, cards, onEditCard }) {
                       <Avatar
                         key={a.id}
                         size={16}
-                        style={{ backgroundColor: getAvatarColor(a.userId), fontSize: 12, flexShrink: 0, zIndex: 1 }}
+                        style={{ backgroundColor: getAvatarColor(a.userId), fontSize: 13, flexShrink: 0, zIndex: 1 }}
                       >
                         {a.user?.displayName?.slice(0, 1)}
                       </Avatar>

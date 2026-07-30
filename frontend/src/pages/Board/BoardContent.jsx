@@ -693,7 +693,7 @@ export default function BoardContent({ boardId: propBoardId }) {
             </Title>
             {linkedRoom && (
               <Tooltip title={`채팅방: ${linkedRoom.name ?? '1:1 채팅'}`}>
-                <Tag icon={<MessageOutlined />} color="blue" style={{ fontSize: 12 }}>
+                <Tag icon={<MessageOutlined />} color="blue" style={{ fontSize: 13 }}>
                   {linkedRoom.name ?? '채팅 연결됨'}
                 </Tag>
               </Tooltip>
@@ -748,7 +748,7 @@ export default function BoardContent({ boardId: propBoardId }) {
                   trigger={['click']}
                   dropdownRender={() => (
                     <div style={{ background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 8, padding: 12, minWidth: 200, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                      <Text strong style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>스위밍레인 기준</Text>
+                      <Text strong style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>스위밍레인 기준</Text>
                       <Select
                         size="small"
                         style={{ width: '100%' }}
@@ -860,7 +860,7 @@ export default function BoardContent({ boardId: propBoardId }) {
 
         {/* 검색 결과 수 표시 */}
         {searchQuery && (
-          <Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 4 }}>
+          <Text type="secondary" style={{ fontSize: 13, display: 'block', marginTop: 4 }}>
             "{searchQuery}" 검색 결과: {sortedCards.length}개
           </Text>
         )}
@@ -889,11 +889,11 @@ export default function BoardContent({ boardId: propBoardId }) {
                 background: isActive ? '#e6f4ff' : 'transparent',
               }}
             >
-              <span style={{ fontSize: 12 }}>{typeMeta?.icon}</span>
+              <span style={{ fontSize: 13 }}>{typeMeta?.icon}</span>
               <span>{v.name}</span>
               {canEdit() && (
                 <Dropdown menu={{ items: menuItems }} trigger={['click']}>
-                  <MoreOutlined onClick={e => e.stopPropagation()} style={{ fontSize: 12, color: '#bfbfbf' }} />
+                  <MoreOutlined onClick={e => e.stopPropagation()} style={{ fontSize: 13, color: '#bfbfbf' }} />
                 </Dropdown>
               )}
             </div>
@@ -919,7 +919,7 @@ export default function BoardContent({ boardId: propBoardId }) {
                 closable
                 onClose={() => removeFilter(f.id)}
                 color="blue"
-                style={{ fontSize: 12 }}
+                style={{ fontSize: 13 }}
               >
                 {getFilterLabel(f)}
               </Tag>
@@ -1126,7 +1126,7 @@ export default function BoardContent({ boardId: propBoardId }) {
                 style={{ width: 120 }}
               />
               {wipLimits[col.value] > 0 && (
-                <Text type="secondary" style={{ fontSize: 12 }}>최대 {wipLimits[col.value]}개</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>최대 {wipLimits[col.value]}개</Text>
               )}
             </div>
           ))}
@@ -1204,7 +1204,7 @@ export default function BoardContent({ boardId: propBoardId }) {
                   }
                   title={<Text style={{ fontWeight: 600 }}>{auto.name}</Text>}
                   description={
-                    <Text type="secondary" style={{ fontSize: 12 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>
                       {TRIGGER_OPTIONS.find(t => t.value === auto.trigger)?.label ?? auto.trigger}
                       {' → '}
                       {ACTION_OPTIONS.find(a => a.value === auto.action)?.label ?? auto.action}

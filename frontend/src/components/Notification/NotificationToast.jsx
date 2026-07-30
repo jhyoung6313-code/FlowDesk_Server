@@ -72,7 +72,7 @@ function ToastItem({ toast, onDismiss, onNavigate }) {
           right: 10,
           cursor: 'pointer',
           color: '#8c8c8c',
-          fontSize: 12,
+          fontSize: 13,
           lineHeight: 1,
           padding: 2,
         }}
@@ -83,7 +83,7 @@ function ToastItem({ toast, onDismiss, onNavigate }) {
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
         <BellOutlined style={{ color: cfg.color, fontSize: 13 }} />
-        <span style={{ fontSize: 12, fontWeight: 700, color: cfg.color }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: cfg.color }}>
           {cfg.label}
         </span>
       </div>
@@ -104,7 +104,7 @@ function ToastItem({ toast, onDismiss, onNavigate }) {
       {/* transient 본문 (채팅·보드 메시지 미리보기) */}
       {displayBody && (
         <div style={{
-          fontSize: 12,
+          fontSize: 13,
           color: 'var(--fd-text-secondary)',
           marginBottom: 4,
           overflow: 'hidden',
@@ -119,16 +119,16 @@ function ToastItem({ toast, onDismiss, onNavigate }) {
       {!isTransient && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {toast.task?.dueDate && (
-            <span style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }}>
+            <span style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }}>
               마감: {dayjs(toast.task.dueDate).format('MM/DD')}
             </span>
           )}
           {dday && (
-            <span style={{ fontSize: 12, fontWeight: 700, color: ddayColor }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: ddayColor }}>
               {dday}
             </span>
           )}
-          <span style={{ fontSize: 12, color: '#8c8c8c', marginLeft: 'auto' }}>
+          <span style={{ fontSize: 13, color: '#8c8c8c', marginLeft: 'auto' }}>
             클릭하여 업무 확인
           </span>
         </div>

@@ -358,7 +358,7 @@ function SignSlot({ kind, label, hint, path, saving, onUpload, onDelete, onDraw 
         }}>
           {path
             ? <img src={path} alt={label} style={{ maxHeight: 56, maxWidth: 116, objectFit: 'contain' }} />
-            : <Typography.Text type="secondary" style={{ fontSize: 12 }}>미등록</Typography.Text>}
+            : <Typography.Text type="secondary" style={{ fontSize: 13 }}>미등록</Typography.Text>}
         </div>
         <Space direction="vertical" size={6}>
           <Space size={6}>
@@ -374,7 +374,7 @@ function SignSlot({ kind, label, hint, path, saving, onUpload, onDelete, onDraw 
           )}
         </Space>
       </div>
-      <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginTop: 6 }}>{hint}</Typography.Text>
+      <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block', marginTop: 6 }}>{hint}</Typography.Text>
     </div>
   );
 }

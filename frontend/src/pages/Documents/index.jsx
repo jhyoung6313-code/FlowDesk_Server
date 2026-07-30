@@ -66,7 +66,7 @@ export default function DocumentsPage() {
     {
       title: '올린이', dataIndex: 'uploaderName', key: 'uploaderName', width: 120,
       render: (v) => v
-        ? <Space size={7}><Avatar size={22} style={{ background: avatarColor(v), fontSize: 12 }}>{initial(v)}</Avatar>{v}</Space>
+        ? <Space size={7}><Avatar size={22} style={{ background: avatarColor(v), fontSize: 13 }}>{initial(v)}</Avatar>{v}</Space>
         : <Typography.Text type="secondary">-</Typography.Text>,
     },
     { title: '크기', dataIndex: 'size', key: 'size', width: 90, render: fmtSize },

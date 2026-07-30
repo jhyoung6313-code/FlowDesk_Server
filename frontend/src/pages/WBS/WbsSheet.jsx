@@ -75,7 +75,7 @@ function EditCell({ value, onChange, type = 'text', style = {}, readOnly = false
           style={{ cursor: readOnly ? 'default' : 'pointer', minHeight: 22, ...style }}
           onClick={() => { if (!readOnly) { setVal(value); setEditing(true); } }}
         >
-          {value ? dayjs(value).format('MM/DD') : <span style={{ color: '#ccc', fontSize: 12 }}>-</span>}
+          {value ? dayjs(value).format('MM/DD') : <span style={{ color: '#ccc', fontSize: 13 }}>-</span>}
         </div>
       );
     }
@@ -86,7 +86,7 @@ function EditCell({ value, onChange, type = 'text', style = {}, readOnly = false
           style={{ cursor: readOnly ? 'default' : 'pointer', ...style }}
           onClick={() => { if (!readOnly) { setVal(num); setEditing(true); } }}
         >
-          <span style={{ fontSize: 12, minWidth: 28, display: 'block', textAlign: 'right' }}>{num}%</span>
+          <span style={{ fontSize: 13, minWidth: 28, display: 'block', textAlign: 'right' }}>{num}%</span>
         </div>
       );
     }
@@ -95,7 +95,7 @@ function EditCell({ value, onChange, type = 'text', style = {}, readOnly = false
         style={{ cursor: readOnly ? 'default' : 'pointer', minHeight: 22, ...style }}
         onClick={() => { if (!readOnly) { setVal(value); setEditing(true); } }}
       >
-        {value || <span style={{ color: '#ccc', fontSize: 12 }}>-</span>}
+        {value || <span style={{ color: '#ccc', fontSize: 13 }}>-</span>}
       </div>
     );
   }
@@ -186,7 +186,7 @@ function MemoCell({ value, onChange }) {
         onChange={(e) => setVal(e.target.value)}
         onBlur={save}
         onPressEnter={(e) => { if (!e.shiftKey) { e.preventDefault(); save(); } }}
-        style={{ fontSize: 12, background: '#fffde7', border: '1.5px solid #ffe082', borderRadius: 4 }}
+        style={{ fontSize: 13, background: '#fffde7', border: '1.5px solid #ffe082', borderRadius: 4 }}
       />
     );
   }
@@ -202,7 +202,7 @@ function MemoCell({ value, onChange }) {
         <>
           <Tooltip title={value} placement="topLeft">
             <span
-              style={{ flex: 1, fontSize: 12, color: 'var(--fd-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+              style={{ flex: 1, fontSize: 13, color: 'var(--fd-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
               onClick={() => { setVal(value); setEditing(true); }}
             >
               <FileTextOutlined style={{ color: '#faad14', marginRight: 4 }} />
@@ -219,7 +219,7 @@ function MemoCell({ value, onChange }) {
         </>
       ) : (
         <span
-          style={{ color: '#bbb', fontSize: 12, flex: 1, fontStyle: 'italic' }}
+          style={{ color: '#bbb', fontSize: 13, flex: 1, fontStyle: 'italic' }}
           onClick={() => { setVal(''); setEditing(true); }}
         >
           클릭하여 메모 입력...
@@ -294,7 +294,7 @@ function DeliverableCell({ taskId, value, fileOrigName, onChange, onRefresh }) {
         <div style={{
           display: 'flex', alignItems: 'center', gap: 4,
           background: '#e6f4ff', border: '1px solid #91caff',
-          borderRadius: 4, padding: '2px 6px', fontSize: 12,
+          borderRadius: 4, padding: '2px 6px', fontSize: 13,
         }}>
           <PaperClipOutlined style={{ color: '#1890ff', flexShrink: 0 }} />
           <Tooltip title={fileOrigName} placement="topLeft">
@@ -324,7 +324,7 @@ function DeliverableCell({ taskId, value, fileOrigName, onChange, onRefresh }) {
           <Button
             type="text" size="small" icon={<PaperClipOutlined />}
             loading={uploading}
-            style={{ color: '#aaa', fontSize: 12, padding: '0 4px', height: 18, lineHeight: '18px' }}
+            style={{ color: '#aaa', fontSize: 13, padding: '0 4px', height: 18, lineHeight: '18px' }}
           >
             파일 첨부
           </Button>
@@ -389,8 +389,8 @@ const LEVEL_CONFIG = [
   { rowBg: '#dff0df', borderColor: '#2e7d32', borderWidth: 4, dotColor: '#1b5e20', textColor: '#1b5e20', fontWeight: 800, fontSize: 13, label: '대', labelBg: '#2e7d32' },
   { rowBg: '#edf7ed', borderColor: '#43a047', borderWidth: 3, dotColor: '#2e7d32', textColor: '#2e7d32', fontWeight: 700, fontSize: 13, label: '중', labelBg: '#43a047' },
   { rowBg: '#f3faf3', borderColor: '#81c784', borderWidth: 2, dotColor: '#388e3c', textColor: '#2d5a31', fontWeight: 600, fontSize: 13, label: '소', labelBg: '#66bb6a' },
-  { rowBg: '#f9fdf9', borderColor: '#c8e6c9', borderWidth: 2, dotColor: '#66bb6a', textColor: '#37474f', fontWeight: 500, fontSize: 12, label: null, labelBg: '#a5d6a7' },
-  { rowBg: '#ffffff', borderColor: '#e8f5e9', borderWidth: 1, dotColor: '#a5d6a7', textColor: '#546e7a', fontWeight: 400, fontSize: 12, label: null, labelBg: '#c8e6c9' },
+  { rowBg: '#f9fdf9', borderColor: '#c8e6c9', borderWidth: 2, dotColor: '#66bb6a', textColor: '#37474f', fontWeight: 500, fontSize: 13, label: null, labelBg: '#a5d6a7' },
+  { rowBg: '#ffffff', borderColor: '#e8f5e9', borderWidth: 1, dotColor: '#a5d6a7', textColor: '#546e7a', fontWeight: 400, fontSize: 13, label: null, labelBg: '#c8e6c9' },
 ];
 
 const DEFAULT_COL_WIDTHS = {
@@ -582,7 +582,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
           <div style={{ paddingLeft: record.level * 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {cfg.label ? (
-                <span style={{ flexShrink: 0, background: cfg.labelBg, color: '#fff', fontSize: 12, fontWeight: 700, lineHeight: 1, padding: '2px 4px', borderRadius: 3, letterSpacing: 0.5 }}>
+                <span style={{ flexShrink: 0, background: cfg.labelBg, color: '#fff', fontSize: 13, fontWeight: 700, lineHeight: 1, padding: '2px 4px', borderRadius: 3, letterSpacing: 0.5 }}>
                   {cfg.label}
                 </span>
               ) : (
@@ -600,12 +600,12 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
                     style={{
                       flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 2,
                       background: '#ff4d4f', color: '#fff',
-                      fontSize: 12, fontWeight: 700, lineHeight: 1,
+                      fontSize: 13, fontWeight: 700, lineHeight: 1,
                       padding: '2px 5px', borderRadius: 8,
                       cursor: 'pointer', whiteSpace: 'nowrap',
                     }}
                   >
-                    <ExclamationCircleOutlined style={{ fontSize: 12 }} />
+                    <ExclamationCircleOutlined style={{ fontSize: 13 }} />
                     이슈 {activeIssues.length}
                   </span>
                 </Tooltip>
@@ -618,14 +618,14 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 3,
                   marginTop: 3, marginLeft: 2,
-                  color: cfg.borderColor, fontSize: 12, cursor: 'pointer',
+                  color: cfg.borderColor, fontSize: 13, cursor: 'pointer',
                   opacity: 0.55, transition: 'opacity 0.15s',
                   userSelect: 'none',
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.opacity = 1}
                 onMouseLeave={(e) => e.currentTarget.style.opacity = 0.55}
               >
-                <PlusOutlined style={{ fontSize: 12 }} />
+                <PlusOutlined style={{ fontSize: 13 }} />
                 {childLabel} 추가
               </div>
             )}
@@ -655,7 +655,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
       title: '기간',
       key: 'duration',
       render: (_, record) => (
-        <span style={{ color: 'var(--fd-text-secondary)', fontSize: 12 }}>{calcDuration(record.startDate, record.endDate)}</span>
+        <span style={{ color: 'var(--fd-text-secondary)', fontSize: 13 }}>{calcDuration(record.startDate, record.endDate)}</span>
       ),
     }),
     withResize('startDate', {
@@ -678,7 +678,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
       title: (
         <div>
           <div>계획진척률</div>
-          <div style={{ fontSize: 12, color: '#1890ff', fontWeight: 400 }}>━ 파란선</div>
+          <div style={{ fontSize: 13, color: '#1890ff', fontWeight: 400 }}>━ 파란선</div>
         </div>
       ),
       dataIndex: 'plannedProgress',
@@ -699,7 +699,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
       title: (
         <div>
           <div>실적진척률</div>
-          <div style={{ fontSize: 12, color: '#52c41a', fontWeight: 400 }}>▓ 컬러바</div>
+          <div style={{ fontSize: 13, color: '#52c41a', fontWeight: 400 }}>▓ 컬러바</div>
         </div>
       ),
       dataIndex: 'actualProgress',
@@ -735,7 +735,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
         if (days === null) return null;
         return (
           <Tooltip title={`${dayjs(record.endDate).format('MM/DD')} 종료 → ${days}일 초과`}>
-            <span style={{ color: '#ff4d4f', fontWeight: 600, fontSize: 12, cursor: 'help' }}>
+            <span style={{ color: '#ff4d4f', fontWeight: 600, fontSize: 13, cursor: 'help' }}>
               D+{days}일
             </span>
           </Tooltip>
@@ -804,7 +804,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
                 style={{ color: '#52c41a', padding: '0 4px' }}
               >
                 <PlusCircleOutlined />
-                <DownOutlined style={{ fontSize: 12, marginLeft: 2 }} />
+                <DownOutlined style={{ fontSize: 13, marginLeft: 2 }} />
               </Button>
             </Dropdown>
             <Popconfirm title="이 항목과 하위 항목이 모두 삭제됩니다." onConfirm={() => handleDelete(record.id)}>
@@ -838,7 +838,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
           size="small"
         />
         {searchText && (
-          <span style={{ marginLeft: 8, fontSize: 12, color: '#888' }}>
+          <span style={{ marginLeft: 8, fontSize: 13, color: '#888' }}>
             검색 결과: {filteredTasks.length}개 최상위 항목
           </span>
         )}
@@ -886,7 +886,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <BugOutlined style={{ color: '#ff4d4f' }} />
             {issueDrawer.taskNum && (
-              <span style={{ fontSize: 12, color: '#1890ff', fontWeight: 700, background: '#e6f4ff', padding: '1px 6px', borderRadius: 4 }}>
+              <span style={{ fontSize: 13, color: '#1890ff', fontWeight: 700, background: '#e6f4ff', padding: '1px 6px', borderRadius: 4 }}>
                 {issueDrawer.taskNum}
               </span>
             )}
@@ -930,7 +930,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
                     </Popconfirm>
                   </div>
                   {(iss.occurDate || iss.targetDate) && (
-                    <div style={{ marginTop: 6, fontSize: 12, color: '#aaa', display: 'flex', gap: 12 }}>
+                    <div style={{ marginTop: 6, fontSize: 13, color: '#aaa', display: 'flex', gap: 12 }}>
                       {iss.occurDate && <span>발생일: {dayjs(iss.occurDate).format('MM/DD')}</span>}
                       {iss.targetDate && (
                         <span style={{ color: dayjs().isAfter(dayjs(iss.targetDate), 'day') && iss.status !== 'closed' ? '#ff4d4f' : '#aaa' }}>
@@ -956,7 +956,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
 
         {/* 이슈 등록 폼 */}
         <div style={{ background: '#f9fffe', border: '1px dashed #b7eb8f', borderRadius: 8, padding: 12 }}>
-          <div style={{ fontWeight: 600, fontSize: 12, color: '#52c41a', marginBottom: 8 }}>
+          <div style={{ fontWeight: 600, fontSize: 13, color: '#52c41a', marginBottom: 8 }}>
             <PlusOutlined /> 새 이슈 등록
           </div>
           <Input.TextArea

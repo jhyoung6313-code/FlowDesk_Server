@@ -74,7 +74,7 @@ export default function MyDayPage() {
                       </Space>
                       <Space size={6}>
                         {t.overdue && <Tag color="red">지연</Tag>}
-                        {t.dueDate && <Typography.Text type="secondary" style={{ fontSize: 12 }}>{dayjs(t.dueDate).format('MM/DD')}</Typography.Text>}
+                        {t.dueDate && <Typography.Text type="secondary" style={{ fontSize: 13 }}>{dayjs(t.dueDate).format('MM/DD')}</Typography.Text>}
                         <Tag>{t.statusLabel}</Tag>
                       </Space>
                     </Space>
@@ -94,7 +94,7 @@ export default function MyDayPage() {
                   <List.Item style={{ cursor: 'pointer' }} onClick={() => navigate(`/meetings?id=${m.id}`)}>
                     <Space size={8} style={{ width: '100%', justifyContent: 'space-between' }}>
                       <span>{m.title}</span>
-                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                         {dayjs(m.startAt).format('HH:mm')}{m.location ? ` · ${m.location}` : ''}
                       </Typography.Text>
                     </Space>
@@ -115,7 +115,7 @@ export default function MyDayPage() {
                       <Space size={6}>
                         {a.overdue && <Tag color="red">지연</Tag>}
                         {a.taskId && <Tag color="green">업무연결</Tag>}
-                        {a.dueDate && <Typography.Text type="secondary" style={{ fontSize: 12 }}>{dayjs(a.dueDate).format('MM/DD')}</Typography.Text>}
+                        {a.dueDate && <Typography.Text type="secondary" style={{ fontSize: 13 }}>{dayjs(a.dueDate).format('MM/DD')}</Typography.Text>}
                       </Space>
                     </Space>
                   </List.Item>

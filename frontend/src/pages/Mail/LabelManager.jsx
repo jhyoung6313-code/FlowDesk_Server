@@ -86,7 +86,7 @@ export default function LabelManager({ open, onClose, onChanged }) {
 
       {/* 라벨 목록 */}
       {labels.length === 0 ? (
-        <Text type="secondary" style={{ fontSize: 12 }}>아직 라벨이 없습니다. 위에서 추가하세요.</Text>
+        <Text type="secondary" style={{ fontSize: 13 }}>아직 라벨이 없습니다. 위에서 추가하세요.</Text>
       ) : (
         <Space direction="vertical" style={{ width: '100%' }} size={6}>
           {labels.map(lb => (

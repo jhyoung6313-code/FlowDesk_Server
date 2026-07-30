@@ -86,7 +86,7 @@ export default function AuditLogPage() {
       width: 130,
       render: (u, rec) => (
         <Space size={4}>
-          <UserOutlined style={{ fontSize: 12, color: '#8c8c8c' }} />
+          <UserOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />
           {/* 사용자가 삭제됐어도 username 스냅샷으로 추적 가능 */}
           <span style={{ fontSize: 13 }}>{u?.displayName || rec.username || '-'}</span>
         </Space>
@@ -98,7 +98,7 @@ export default function AuditLogPage() {
       width: 120,
       render: (v) => {
         const cfg = ACTION_LABELS[v] || { label: v, color: 'default' };
-        return <Tag color={cfg.color} style={{ fontSize: 12 }}>{cfg.label}</Tag>;
+        return <Tag color={cfg.color} style={{ fontSize: 13 }}>{cfg.label}</Tag>;
       },
     },
     {
@@ -107,22 +107,22 @@ export default function AuditLogPage() {
       width: 70,
       render: (v) => (
         v
-          ? <Tag color="success" style={{ fontSize: 12 }}>성공</Tag>
-          : <Tag color="error" style={{ fontSize: 12 }}>실패</Tag>
+          ? <Tag color="success" style={{ fontSize: 13 }}>성공</Tag>
+          : <Tag color="error" style={{ fontSize: 13 }}>실패</Tag>
       ),
     },
     {
       title: 'IP 주소',
       dataIndex: 'ipAddress',
       width: 140,
-      render: (v) => <span style={{ fontSize: 12, fontFamily: 'monospace' }}>{v || '-'}</span>,
+      render: (v) => <span style={{ fontSize: 13, fontFamily: 'monospace' }}>{v || '-'}</span>,
     },
     {
       title: '대상',
       dataIndex: 'resource',
       width: 140,
       render: (v) => v
-        ? <span style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }}>{v}</span>
+        ? <span style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }}>{v}</span>
         : '-',
     },
     {
@@ -131,7 +131,7 @@ export default function AuditLogPage() {
       render: (v) => v
         ? (
           <Tooltip title={v}>
-            <Typography.Text style={{ fontSize: 12 }} ellipsis>{v}</Typography.Text>
+            <Typography.Text style={{ fontSize: 13 }} ellipsis>{v}</Typography.Text>
           </Tooltip>
         )
         : '-',
@@ -143,7 +143,7 @@ export default function AuditLogPage() {
       render: (v) => v
         ? (
           <Tooltip title={v}>
-            <Typography.Text style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }} ellipsis>{v}</Typography.Text>
+            <Typography.Text style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }} ellipsis>{v}</Typography.Text>
           </Tooltip>
         )
         : '-',

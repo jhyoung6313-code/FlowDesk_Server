@@ -76,7 +76,7 @@ export default function SignaturePad({ open, title = '서명 그리기', onCance
         </Space>
       }
     >
-      <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+      <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
         아래 영역에 마우스나 손가락으로 그리세요.
       </Typography.Text>
       <canvas

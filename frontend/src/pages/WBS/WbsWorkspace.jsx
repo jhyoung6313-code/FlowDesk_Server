@@ -30,7 +30,7 @@ function MemberEditor({ members, onChange }) {
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
       {members.map((m, i) => (
-        <Tag key={i} closable onClose={() => onChange(members.filter((_, idx) => idx !== i))} style={{ fontSize: 12 }}>
+        <Tag key={i} closable onClose={() => onChange(members.filter((_, idx) => idx !== i))} style={{ fontSize: 13 }}>
           <span style={{ color: '#888', marginRight: 4 }}>{m.role}</span>
           <span style={{ fontWeight: 600 }}>{m.memberName}</span>
         </Tag>

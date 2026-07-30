@@ -115,7 +115,7 @@ export default function SpellTextArea({
 
       {/* 검출 요약 (표시 전용) */}
       {spellSummary && matches.length > 0 && (
-        <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, fontSize: 12 }}>
+        <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, fontSize: 13 }}>
           <span style={{ color: '#e0483d', fontWeight: 600 }}>오타 의심 {matches.length}건</span>
           {matches.slice(0, 8).map((m, i) => (
             <span key={i} style={{

@@ -228,7 +228,7 @@ export default function ListView() {
               {title}
             </Typography.Link>
             {isOverdue(record.dueDate, record.status) && (
-              <Tag color="error" style={{ fontSize: 12, padding: '0 6px', lineHeight: '18px', marginInlineEnd: 0 }}>지연</Tag>
+              <Tag color="error" style={{ fontSize: 13, padding: '0 6px', lineHeight: '18px', marginInlineEnd: 0 }}>지연</Tag>
             )}
             <DdayBadge dueDate={record.dueDate} status={record.status} />
           </Space>
@@ -238,7 +238,7 @@ export default function ListView() {
                 <Tag
                   key={tt.tagId ?? tt.tag?.id}
                   style={{
-                    fontSize: 12, padding: '0 6px', lineHeight: '18px',
+                    fontSize: 13, padding: '0 6px', lineHeight: '18px',
                     backgroundColor: tt.tag?.color + '22',
                     borderColor: tt.tag?.color,
                     color: tt.tag?.color,
@@ -259,8 +259,8 @@ export default function ListView() {
       width: 110,
       render: (_, record) => (
         record.part
-          ? <Tag color="blue" style={{ fontSize: 12, margin: 0 }}>{record.part.name}</Tag>
-          : <Typography.Text type="secondary" style={{ fontSize: 12 }}>-</Typography.Text>
+          ? <Tag color="blue" style={{ fontSize: 13, margin: 0 }}>{record.part.name}</Tag>
+          : <Typography.Text type="secondary" style={{ fontSize: 13 }}>-</Typography.Text>
       ),
     },
     {
@@ -333,7 +333,7 @@ export default function ListView() {
       render: (_, record) => (
         <Space direction="vertical" size={1}>
           {record.startDate && (
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
               시작 {dayjs(record.startDate).format('MM/DD')}
             </Typography.Text>
           )}
@@ -342,7 +342,7 @@ export default function ListView() {
               <>
                 <Typography.Text
                   style={{
-                    fontSize: 12,
+                    fontSize: 13,
                     color: isOverdue(record.dueDate, record.status) ? '#ff4d4f' : undefined,
                     fontWeight: isOverdue(record.dueDate, record.status) ? 600 : undefined,
                   }}
@@ -357,7 +357,7 @@ export default function ListView() {
                 </Tooltip>
               </>
             ) : (
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>-</Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 13 }}>-</Typography.Text>
             )}
           </Space>
         </Space>
@@ -561,7 +561,7 @@ export default function ListView() {
           <Space>
             <span>{detailTask?.title}</span>
             {detailTask && isOverdue(detailTask.dueDate, detailTask.status) && (
-              <Tag color="error" style={{ fontSize: 12, padding: '0 5px', lineHeight: '18px', marginInlineEnd: 0 }}>지연</Tag>
+              <Tag color="error" style={{ fontSize: 13, padding: '0 5px', lineHeight: '18px', marginInlineEnd: 0 }}>지연</Tag>
             )}
             {detailTask && <DdayBadge dueDate={detailTask.dueDate} status={detailTask.status} />}
           </Space>
@@ -649,7 +649,7 @@ export default function ListView() {
                     {detailTask.description && (
                       <>
                         <Divider style={{ margin: '12px 0' }} />
-                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>설명</Typography.Text>
+                        <Typography.Text type="secondary" style={{ fontSize: 13 }}>설명</Typography.Text>
                         <div style={{ marginTop: 6, whiteSpace: 'pre-wrap', fontSize: 13 }}>
                           {detailTask.description}
                         </div>
@@ -716,15 +716,15 @@ export default function ListView() {
                           return {
                             color: h.action === 'delete' ? 'red' : h.action === 'create' ? 'green' : 'blue',
                             children: (
-                              <div style={{ fontSize: 12 }}>
+                              <div style={{ fontSize: 13 }}>
                                 <Space size={6}>
-                                  <Typography.Text strong style={{ fontSize: 12 }}>
+                                  <Typography.Text strong style={{ fontSize: 13 }}>
                                     {ACTION_LABEL[h.action] || h.action}
                                   </Typography.Text>
-                                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                  <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                                     {h.user?.displayName}
                                   </Typography.Text>
-                                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                                  <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                                     {dayjs(h.createdAt).format('MM/DD HH:mm')}
                                   </Typography.Text>
                                 </Space>
