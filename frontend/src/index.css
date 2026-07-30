@@ -401,6 +401,10 @@ span.ant-typography-secondary {
   font-size: 15px !important;
   font-weight: 500 !important;
 }
+/* 탭 라벨을 Badge 등으로 감싸도 폰트 크기가 탭과 동일하게 (혼합 크기 방지) */
+.ant-tabs-tab .ant-badge,
+.ant-tabs-tab .ant-badge-status-text,
+.ant-tabs-tab .ant-tabs-tab-btn * { font-size: inherit !important; }
 :root:not([data-dark="true"]) .ant-tabs-tab-active .ant-tabs-tab-btn {
   color: var(--fd-accent-mid) !important;
   font-weight: 700 !important;
