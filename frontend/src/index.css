@@ -401,6 +401,12 @@ span.ant-typography-secondary {
 :root .ant-table-tbody > tr > td span:not(.anticon):not(.ant-avatar-string) {
   font-size: 13px !important;
 }
+/* AntD Tree(전자결재 결재종류 등) 노드 텍스트 13으로 통일 */
+:root .ant-tree .ant-tree-node-content-wrapper,
+:root .ant-tree .ant-tree-title,
+:root .ant-tree .ant-tree-title span:not(.anticon) {
+  font-size: 13px !important;
+}
 /* 상세 패널(Descriptions) 라벨·값·태그도 13으로 통일 (아이콘·아바타 제외) */
 :root .ant-descriptions-item-label,
 :root .ant-descriptions-item-content,
