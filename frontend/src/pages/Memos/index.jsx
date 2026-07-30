@@ -93,7 +93,7 @@ export default function MemosPage() {
   };
 
   const header = (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+    <div className="fd-toolbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>메모지</h2>
         <Segmented
@@ -127,8 +127,8 @@ export default function MemosPage() {
           ref={boardRef}
           style={{
             position: 'relative', flex: 1, minHeight: 480,
-            background: 'repeating-linear-gradient(45deg, #f8fafc, #f8fafc 12px, #f1f5f9 12px, #f1f5f9 24px)',
-            border: '1px solid var(--fd-border)', borderRadius: 12, overflow: 'auto',
+            background: 'repeating-linear-gradient(45deg, var(--fd-surface-sunken), var(--fd-surface-sunken) 12px, var(--fd-surface) 12px, var(--fd-surface) 24px)',
+            border: 'var(--fd-sk-border-w, 1px) solid var(--fd-border)', borderRadius: 'var(--fd-sk-radius-lg, 12px)', overflow: 'auto',
           }}
         >
           {memos.map((m) => (

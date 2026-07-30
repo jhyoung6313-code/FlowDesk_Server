@@ -10,7 +10,7 @@ import ScheduleDetail from './ScheduleDetail';
 import ScheduleMonthModal from './ScheduleMonthModal';
 
 /* 대시보드 주간 일정·자원 위젯 — 하루 한 칸에 등록된 일정 전부 표시 */
-export default function ScheduleWidget({ isDark, D }) {
+export default function ScheduleWidget({ isDark, D, fill }) {
   const events = useScheduleStore((s) => s.events);
   const fetchRange = useScheduleStore((s) => s.fetchRange);
   const fetchResources = useScheduleStore((s) => s.fetchResources);
@@ -55,7 +55,10 @@ export default function ScheduleWidget({ isDark, D }) {
   };
 
   return (
-    <div style={{ background: cardBg, border: `1px solid ${border}`, borderRadius: 14, overflow: 'hidden' }}>
+    <div style={{
+      background: cardBg, border: `1px solid ${border}`, borderRadius: 14, overflow: 'hidden',
+      ...(fill ? { height: '100%', display: 'flex', flexDirection: 'column' } : {}),
+    }}>
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 14px', borderBottom: `1px solid ${border}` }}>
         <div style={{ width: 24, height: 24, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, background: isDark ? 'rgba(59,130,246,.15)' : '#EFF6FF', color: '#3B82F6' }}>📅</div>
@@ -74,7 +77,10 @@ export default function ScheduleWidget({ isDark, D }) {
       </div>
 
       {/* 7일 그리드 */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
+      <div style={{
+        display: 'grid', gridTemplateColumns: 'repeat(7,1fr)',
+        ...(fill ? { flex: 1, minHeight: 0, gridTemplateRows: 'auto 1fr' } : {}),
+      }}>
         {days.map((d, i) => {
           const isToday = d.isSame(today, 'day');
           const holiday = getHoliday(d, holidayMap);
@@ -103,7 +109,7 @@ export default function ScheduleWidget({ isDark, D }) {
             <div key={`c${i}`}
               onClick={() => openCreate(d.format('YYYY-MM-DD'))}
               style={{
-                minHeight: 92, borderLeft: i === 0 ? 'none' : `1px solid ${border}`,
+                minHeight: fill ? 44 : 92, borderLeft: i === 0 ? 'none' : `1px solid ${border}`,
                 padding: '5px 6px 6px', display: 'flex', flexDirection: 'column', gap: 3, cursor: 'pointer',
                 background: isToday ? todayBg : 'transparent',
               }}

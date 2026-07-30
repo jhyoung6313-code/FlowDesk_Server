@@ -5,6 +5,7 @@
 
 const prisma = require('../lib/prisma');
 const ai = require('../services/aiService');
+const rag = require('../services/ragService');
 const audit = require('../services/auditService');
 const { AUDIT_ACTION } = require('../config/security');
 
@@ -124,6 +125,59 @@ exports.weeklySummary = async (req, res, next) => {
 
     await audit.record({ action: AUDIT_ACTION.AI_REQUEST, req, resource: 'weekly_summary', detail: `${scopeLabel} ${periodLabel}` });
     res.json({ summary, stats, period: periodLabel });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/ai/ask  { question } — RAG 질의응답(F-63)
+exports.ask = async (req, res, next) => {
+  try {
+    if (!ai.isConfigured()) return res.status(503).json({ error: 'AI 기능이 설정되지 않았습니다. 관리자에게 문의하세요.' });
+    const question = (req.body?.question || '').trim();
+    if (!question) return res.status(400).json({ error: '질문을 입력해주세요.' });
+    if (question.length > 1000) return res.status(400).json({ error: '질문이 너무 깁니다(최대 1000자).' });
+
+    const contexts = await rag.gatherContexts({ userId: req.user.id, question });
+    if (contexts.length === 0) {
+      return res.json({ answer: '관련 정보를 찾지 못했습니다. 다른 키워드로 질문해 보세요.', sources: [] });
+    }
+    const answer = await ai.answerFromContext({ req, question, contexts });
+    // 인용용 출처 목록(제목·경로)
+    const sources = contexts.map((c, i) => ({ n: i + 1, source: c.source, title: c.title, path: c.path }));
+
+    await audit.record({ action: AUDIT_ACTION.AI_REQUEST, req, resource: 'rag_answer', detail: `질의 (${contexts.length}건 근거)` });
+    res.json({ answer, sources });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// POST /api/ai/chat-summary  { roomId } — 채팅방/스레드 요약(F-63)
+exports.chatSummary = async (req, res, next) => {
+  try {
+    if (!ai.isConfigured()) return res.status(503).json({ error: 'AI 기능이 설정되지 않았습니다. 관리자에게 문의하세요.' });
+    const roomId = Number(req.body?.roomId);
+    if (!roomId) return res.status(400).json({ error: '채팅방을 지정해주세요.' });
+
+    // 본인이 속한 방만 요약 허용
+    const membership = await prisma.chatRoomMember.findFirst({ where: { roomId, userId: req.user.id } });
+    if (!membership) return res.status(403).json({ error: '해당 채팅방에 접근 권한이 없습니다.' });
+
+    const room = await prisma.chatRoom.findUnique({ where: { id: roomId }, select: { name: true } });
+    const rows = await prisma.chatMessage.findMany({
+      where: { roomId, isDeleted: false },
+      select: { content: true, sender: { select: { displayName: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    if (rows.length === 0) return res.json({ summary: '', empty: true });
+
+    const messages = rows.reverse().map((m) => ({ sender: m.sender?.displayName || '알수없음', content: m.content }));
+    const summary = await ai.summarizeChat({ req, roomName: room?.name || '채팅', messages });
+
+    await audit.record({ action: AUDIT_ACTION.AI_REQUEST, req, resource: 'chat_summary', detail: `room ${roomId} (${messages.length}건)` });
+    res.json({ summary });
   } catch (err) {
     next(err);
   }

@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Tabs, Table, Button, Space, Typography, Popconfirm, message, Modal,
-  Form, Input, Select, Switch, Card, Divider, Tag, InputNumber, Radio, Checkbox,
+  Form, Input, Select, Switch, Card, Divider, Tag, InputNumber, Radio, Checkbox, Row, Col,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, PlusCircleOutlined, MinusCircleOutlined,
-  ArrowUpOutlined, ArrowDownOutlined, CopyOutlined, EyeOutlined,
+  ArrowUpOutlined, ArrowDownOutlined, CopyOutlined, EyeOutlined, HolderOutlined,
 } from '@ant-design/icons';
 import {
   getApprovalFormTypes, createApprovalFormType, updateApprovalFormType, deleteApprovalFormType,
@@ -39,6 +39,28 @@ const OP_OPTIONS = [
   { value: 'contains', label: '포함' },
 ];
 
+// 조건 평가 (미리보기용 — 백엔드 resolvePresetLine 로직 근사)
+function evalCondition(cond, raw) {
+  if (!cond?.field) return true;
+  const v = raw;
+  const cv = cond.value;
+  switch (cond.op || 'truthy') {
+    case 'truthy': {
+      if (Array.isArray(v)) return v.length > 0;
+      const s = String(v ?? '').trim().toLowerCase();
+      return !(s === '' || s === '아니오' || s === 'false' || s === 'no' || s === '0');
+    }
+    case 'eq': return String(v ?? '') === String(cv ?? '');
+    case 'ne': return String(v ?? '') !== String(cv ?? '');
+    case 'gt': return Number(v) > Number(cv);
+    case 'gte': return Number(v) >= Number(cv);
+    case 'lt': return Number(v) < Number(cv);
+    case 'lte': return Number(v) <= Number(cv);
+    case 'contains': return String(v ?? '').includes(String(cv ?? ''));
+    default: return true;
+  }
+}
+
 const FIELD_TYPES = [
   { value: 'text', label: '텍스트' },
   { value: 'textarea', label: '장문 텍스트' },
@@ -61,23 +83,25 @@ function PreviewFields({ fieldsJson }) {
   const parseOpts = (o) => (Array.isArray(o) ? o : (o ? o.split('\n').map(s => s.trim()).filter(Boolean) : []));
   return (
     <Form layout="vertical">
-      {fields.map((f, i) => {
-        if (f.type === 'divider') return <Divider key={i} orientation="left" style={{ fontSize: 13, color: '#888' }}>{f.label}</Divider>;
-        const lbl = <>{f.label}{f.required && <span style={{ color: '#ff4d4f' }}> *</span>}</>;
-        let ctrl;
-        switch (f.type) {
-          case 'textarea': ctrl = <Input.TextArea rows={2} disabled placeholder={f.placeholder} />; break;
-          case 'number': ctrl = <InputNumber style={{ width: '100%' }} disabled placeholder={f.placeholder} />; break;
-          case 'money': ctrl = <InputNumber style={{ width: '100%' }} disabled addonAfter="원" placeholder={f.placeholder} />; break;
-          case 'date': ctrl = <Input disabled placeholder="YYYY-MM-DD" />; break;
-          case 'select': ctrl = <Select disabled placeholder={f.placeholder || '선택'} options={parseOpts(f.options).map(o => ({ label: o, value: o }))} />; break;
-          case 'radio': ctrl = <Radio.Group disabled options={parseOpts(f.options)} />; break;
-          case 'checkbox': ctrl = <Checkbox.Group disabled options={parseOpts(f.options)} />; break;
-          case 'user': ctrl = <Select disabled placeholder={f.placeholder || '사용자 선택'} />; break;
-          default: ctrl = <Input disabled placeholder={f.placeholder} />;
-        }
-        return <Form.Item key={i} label={lbl} style={{ marginBottom: 12 }}>{ctrl}</Form.Item>;
-      })}
+      <Row gutter={16}>
+        {fields.map((f, i) => {
+          if (f.type === 'divider') return <Col span={24} key={i}><Divider orientation="left" style={{ fontSize: 13, color: '#888' }}>{f.label}</Divider></Col>;
+          const lbl = <>{f.label}{f.required && <span style={{ color: '#ff4d4f' }}> *</span>}</>;
+          let ctrl;
+          switch (f.type) {
+            case 'textarea': ctrl = <Input.TextArea rows={2} disabled placeholder={f.placeholder} />; break;
+            case 'number': ctrl = <InputNumber style={{ width: '100%' }} disabled placeholder={f.placeholder} />; break;
+            case 'money': ctrl = <InputNumber style={{ width: '100%' }} disabled addonAfter="원" placeholder={f.placeholder} />; break;
+            case 'date': ctrl = <Input disabled placeholder="YYYY-MM-DD" />; break;
+            case 'select': ctrl = <Select disabled placeholder={f.placeholder || '선택'} options={parseOpts(f.options).map(o => ({ label: o, value: o }))} />; break;
+            case 'radio': ctrl = <Radio.Group disabled options={parseOpts(f.options)} />; break;
+            case 'checkbox': ctrl = <Checkbox.Group disabled options={parseOpts(f.options)} />; break;
+            case 'user': ctrl = <Select disabled placeholder={f.placeholder || '사용자 선택'} />; break;
+            default: ctrl = <Input disabled placeholder={f.placeholder} />;
+          }
+          return <Col key={i} xs={24} sm={f.width === 'half' ? 12 : 24}><Form.Item label={lbl} style={{ marginBottom: 12 }}>{ctrl}</Form.Item></Col>;
+        })}
+      </Row>
     </Form>
   );
 }
@@ -92,6 +116,47 @@ function FormTypeTab() {
   const [editing, setEditing] = useState(null);
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
+  const [ftUsers, setFtUsers] = useState([]);
+  const [ftLine, setFtLine] = useState([]);
+  const [ftRulePos, setFtRulePos] = useState('');
+  const [ftRuleScope, setFtRuleScope] = useState('team');
+
+  useEffect(() => { getUsers().then(setFtUsers).catch(() => {}); }, []);
+
+  const ftNextGroup = (line) => { const gs = line.filter(s => s.type !== 'reference').map(s => s.stepOrder); return gs.length ? Math.max(...gs) + 1 : 1; };
+  const ftParse = (lineJson) => {
+    if (!lineJson) return [];
+    let l = []; try { l = JSON.parse(lineJson); } catch { return []; }
+    return l.map((s, i) => {
+      const type = s.type || 'approval';
+      const stepOrder = type === 'reference' ? 0 : (s.stepOrder || i + 1);
+      if (s.rule?.by === 'position') return { key: `r${i}`, kind: 'rule', position: s.rule.value || '', scope: s.rule.scope || 'all', type, stepOrder };
+      const u = ftUsers.find(x => x.id === s.approverId);
+      return { key: `u${s.approverId}`, kind: 'user', approverId: s.approverId, approverName: u?.displayName || `사용자 ${s.approverId}`, type, stepOrder };
+    });
+  };
+  const ftAddUser = (uid) => {
+    if (!uid || ftLine.some(s => s.kind === 'user' && s.approverId === uid)) return;
+    const u = ftUsers.find(x => x.id === uid);
+    setFtLine(p => [...p, { key: `u${uid}`, kind: 'user', approverId: uid, approverName: u?.displayName || '', type: 'approval', stepOrder: ftNextGroup(p) }]);
+  };
+  const ftAddRule = () => {
+    const pos = ftRulePos.trim();
+    if (!pos) { message.warning('직급/직책을 입력하세요.'); return; }
+    setFtLine(p => [...p, { key: `r${Date.now()}`, kind: 'rule', position: pos, scope: ftRuleScope, type: 'approval', stepOrder: ftNextGroup(p) }]);
+    setFtRulePos('');
+  };
+  const ftRemove = (i) => setFtLine(p => p.filter((_, idx) => idx !== i));
+  const ftSetRole = (i, type) => setFtLine(p => p.map((s, idx) => idx !== i ? s : { ...s, type, stepOrder: type === 'reference' ? 0 : (s.stepOrder || ftNextGroup(p)) }));
+  const ftSetGroup = (i, v) => setFtLine(p => p.map((s, idx) => idx === i ? { ...s, stepOrder: Math.max(1, Number(v) || 1) } : s));
+  const ftLineToJson = () => ftLine.length > 0
+    ? JSON.stringify(ftLine.map(s => {
+        const stepOrder = s.type === 'reference' ? 0 : s.stepOrder;
+        return s.kind === 'rule'
+          ? { stepOrder, type: s.type, rule: { by: 'position', value: s.position, scope: s.scope } }
+          : { stepOrder, type: s.type, approverId: s.approverId };
+      }))
+    : null;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -102,10 +167,11 @@ function FormTypeTab() {
 
   useEffect(() => { load(); }, [load]);
 
-  const openCreate = () => { setEditing(null); form.resetFields(); setModalOpen(true); };
+  const openCreate = () => { setEditing(null); form.resetFields(); setFtLine([]); setModalOpen(true); };
   const openEdit = (rec) => {
     setEditing(rec);
     form.setFieldsValue({ name: rec.name, description: rec.description, parentId: rec.parentId || undefined, icon: rec.icon || undefined, isActive: rec.isActive });
+    setFtLine(ftParse(rec.lineJson));
     setModalOpen(true);
   };
 
@@ -113,11 +179,12 @@ function FormTypeTab() {
     try {
       const values = await form.validateFields();
       setSaving(true);
+      const payload = { ...values, lineJson: ftLineToJson() };
       if (editing) {
-        await updateApprovalFormType(editing.id, values);
+        await updateApprovalFormType(editing.id, payload);
         message.success('수정되었습니다.');
       } else {
-        await createApprovalFormType(values);
+        await createApprovalFormType(payload);
         message.success('생성되었습니다.');
       }
       setModalOpen(false);
@@ -194,6 +261,44 @@ function FormTypeTab() {
             <Switch />
           </Form.Item>
         </Form>
+
+        <Divider style={{ margin: '12px 0' }}>기본 결재 라인 (이 종류 공통, 선택)</Divider>
+        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+          이 종류의 <b>공통 기본 결재선</b>입니다. 하위 양식(템플릿)에 자체 결재선이 없으면 이 결재선이 상속됩니다.
+        </Text>
+        <Space size={6} wrap style={{ marginBottom: 8 }}>
+          <Select
+            placeholder="지정 사용자 추가" style={{ width: 190 }} size="small"
+            showSearch optionFilterProp="children" onChange={ftAddUser} value={null}
+          >
+            {ftUsers.map(u => <Select.Option key={u.id} value={u.id}>{u.displayName} ({u.username})</Select.Option>)}
+          </Select>
+          <Input.Group compact>
+            <Input size="small" placeholder="직급/직책 (예: 팀장)" style={{ width: 130 }}
+              value={ftRulePos} onChange={e => setFtRulePos(e.target.value)} onPressEnter={ftAddRule} />
+            <Select size="small" value={ftRuleScope} onChange={setFtRuleScope} options={SCOPE_OPTIONS} style={{ width: 90 }} />
+            <Button size="small" icon={<PlusCircleOutlined />} onClick={ftAddRule}>규칙 추가</Button>
+          </Input.Group>
+        </Space>
+        {ftLine.length === 0 ? (
+          <Text type="secondary" style={{ fontSize: 12 }}>지정된 기본 결재선이 없습니다.</Text>
+        ) : ftLine.map((step, i) => (
+          <div key={step.key || i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px dashed #f0f0f0' }}>
+            {step.kind === 'rule'
+              ? <Tag color="geekblue" style={{ margin: 0 }}>규칙: {step.position} · {SCOPE_OPTIONS.find(o => o.value === step.scope)?.label}</Tag>
+              : <Text style={{ fontSize: 13, minWidth: 90 }}>{step.approverName}</Text>}
+            <Select size="small" value={step.type} style={{ width: 78 }} onChange={v => ftSetRole(i, v)} options={ROLE_OPTIONS} />
+            {step.type === 'reference'
+              ? <Text type="secondary" style={{ fontSize: 12, width: 56 }}>열람</Text>
+              : (
+                <Space size={2} style={{ width: 56 }}>
+                  <InputNumber size="small" min={1} value={step.stepOrder} controls={false} onChange={v => ftSetGroup(i, v)} style={{ width: 42 }} />
+                  <Text type="secondary" style={{ fontSize: 12 }}>차</Text>
+                </Space>
+              )}
+            <Button size="small" danger icon={<MinusCircleOutlined />} onClick={() => ftRemove(i)} />
+          </div>
+        ))}
       </Modal>
     </>
   );
@@ -212,6 +317,7 @@ function TemplateTab() {
   const [fields, setFields] = useState([]);
   const [defaultLine, setDefaultLine] = useState([]);
   const [previewTpl, setPreviewTpl] = useState(null);
+  const [sampleValues, setSampleValues] = useState({});
 
   const openPreview = async (rec) => {
     try {
@@ -339,6 +445,11 @@ function TemplateTab() {
     [arr[idx], arr[t]] = [arr[t], arr[idx]];
     setFields(arr);
   };
+  const [dragField, setDragField] = useState(null);
+  const moveFieldTo = (from, to) => {
+    if (from == null || to == null || from === to) return;
+    setFields(prev => { const a = [...prev]; const [m] = a.splice(from, 1); a.splice(to, 0, m); return a; });
+  };
 
   // 기본 결재라인 (프리셋)
   const nextGroupNo = (line) => {
@@ -446,10 +557,16 @@ function TemplateTab() {
           <Card
             key={field.id}
             size="small"
-            style={{ marginBottom: 8, background: '#fafafa' }}
+            draggable
+            onDragStart={() => setDragField(idx)}
+            onDragOver={e => e.preventDefault()}
+            onDrop={() => { moveFieldTo(dragField, idx); setDragField(null); }}
+            onDragEnd={() => setDragField(null)}
+            style={{ marginBottom: 8, background: '#fafafa', opacity: dragField === idx ? 0.4 : 1 }}
             bodyStyle={{ padding: '8px 12px' }}
           >
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+              <HolderOutlined style={{ color: '#bbb', cursor: 'grab', marginTop: 6 }} />
               <Select
                 size="small" style={{ width: 100 }}
                 value={field.type}
@@ -479,6 +596,11 @@ function TemplateTab() {
                 />
               )}
               <Space size={4}>
+                {field.type !== 'divider' && (
+                  <Button size="small" onClick={() => updateField(field.id, 'width', field.width === 'half' ? 'full' : 'half')} title="필드 폭">
+                    {field.width === 'half' ? '반칸' : '전체'}
+                  </Button>
+                )}
                 <Button size="small" type={field.required ? 'primary' : 'default'}
                   onClick={() => updateField(field.id, 'required', !field.required)}>
                   {field.required ? '필수' : '선택'}
@@ -553,6 +675,59 @@ function TemplateTab() {
             )}
           </div>
         ))}
+
+        {/* 조건 결재선 미리보기 — 샘플 값에 따라 최종 결재선 시뮬레이션 */}
+        {(() => {
+          const condFields = [...new Set(defaultLine.filter(s => s.condition?.field).map(s => s.condition.field))];
+          if (condFields.length === 0) return null;
+          const resolved = defaultLine.filter(s => !s.condition || evalCondition(s.condition, sampleValues[s.condition.field]));
+          const renderSampleInput = (fid) => {
+            const f = fields.find(x => x.id === fid);
+            const type = f?.type;
+            const opts = f ? (Array.isArray(f.options) ? f.options : (f.options ? f.options.split('\n').map(s => s.trim()).filter(Boolean) : [])) : [];
+            const set = (v) => setSampleValues(prev => ({ ...prev, [fid]: v }));
+            if (type === 'select' || type === 'radio') {
+              return <Select size="small" allowClear style={{ width: 130 }} value={sampleValues[fid]} onChange={set} options={opts.map(o => ({ label: o, value: o }))} />;
+            }
+            if (type === 'checkbox') {
+              return <Select size="small" mode="multiple" allowClear style={{ minWidth: 130 }} value={sampleValues[fid] || []} onChange={set} options={opts.map(o => ({ label: o, value: o }))} />;
+            }
+            return <Input size="small" style={{ width: 130 }} value={sampleValues[fid] ?? ''} onChange={e => set(e.target.value)} placeholder="샘플 값" />;
+          };
+          return (
+            <>
+              <Divider style={{ margin: '12px 0' }}>조건 결재선 미리보기</Divider>
+              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+                샘플 값을 입력하면 조건에 따라 상신 시 최종 결재선이 어떻게 구성되는지 시뮬레이션합니다.
+              </Text>
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
+                {condFields.map(fid => {
+                  const f = fields.find(x => x.id === fid);
+                  return (
+                    <div key={fid} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <Text style={{ fontSize: 11, color: '#888' }}>{f?.label || fid}</Text>
+                      {renderSampleInput(fid)}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6, padding: '8px 10px' }}>
+                <Text style={{ fontSize: 12, fontWeight: 600, color: '#389e0d', display: 'block', marginBottom: 6 }}>최종 결재선</Text>
+                {resolved.length === 0 ? (
+                  <Text type="secondary" style={{ fontSize: 12 }}>포함될 결재자가 없습니다.</Text>
+                ) : (
+                  <Space size={[4, 4]} wrap>
+                    {resolved.map((s, i) => (
+                      <Tag key={i} color={s.condition ? 'gold' : 'blue'} style={{ margin: 0 }}>
+                        {s.type === 'reference' ? '참조' : `${s.stepOrder}차`} · {s.kind === 'rule' ? `규칙:${s.position}` : s.approverName} · {ROLE_OPTIONS.find(o => o.value === s.type)?.label}{s.condition ? ' (조건)' : ''}
+                      </Tag>
+                    ))}
+                  </Space>
+                )}
+              </div>
+            </>
+          );
+        })()}
       </Modal>
 
       <Modal

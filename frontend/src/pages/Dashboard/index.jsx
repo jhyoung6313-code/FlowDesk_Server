@@ -1,7 +1,11 @@
-import { useEffect, useState, useMemo, useCallback } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Spin, message, Popover, Checkbox, Button, Empty as AntEmpty } from 'antd';
-import { SettingOutlined } from '@ant-design/icons';
+import { Spin, message, Popover, Checkbox, Button, Empty as AntEmpty, Tooltip } from 'antd';
+import { SettingOutlined, EditOutlined, CheckOutlined, EyeInvisibleOutlined, ReloadOutlined, HolderOutlined } from '@ant-design/icons';
+import GridLayout, { WidthProvider } from 'react-grid-layout';
+import 'react-grid-layout/css/styles.css';
+import 'react-resizable/css/styles.css';
+import { getDashboardLayout, updateDashboardLayout } from '../../api/settings';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -19,6 +23,7 @@ import MemoCard from '../../components/Memo/MemoCard';
 import TaskForm from '../../components/Task/TaskForm';
 import ScheduleWidget from '../../components/Schedule/ScheduleWidget';
 import AiWeeklySummary from '../../components/ai/AiWeeklySummary';
+import AiAsk from '../../components/ai/AiAsk';
 
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
@@ -44,9 +49,62 @@ function daysLate(dueDate) {
   return dayjs().startOf('day').diff(dayjs(dueDate).startOf('day'), 'day');
 }
 
+const RGL = WidthProvider(GridLayout);
+
+/* 대시보드 커스터마이즈: 섹션(블록) 정의 · 기본 레이아웃 · 기본 사용여부 */
+const DASH_BLOCKS = [
+  { id: 'focus',    title: '🎯 오늘의 포커스' },
+  { id: 'schedule', title: '📅 이번 주 일정·자원' },
+  { id: 'board',    title: '🗂 업무 보드' },
+  { id: 'widgets',  title: '📥 받은항목·게시판·결재' },
+  { id: 'memo',     title: '📌 고정 메모' },
+];
+const DASH_DEFAULT_LAYOUT = [
+  { i: 'focus',    x: 0, y: 0,  w: 12, h: 6 },
+  { i: 'schedule', x: 0, y: 6,  w: 12, h: 5 },
+  { i: 'board',    x: 0, y: 11, w: 12, h: 10 },
+  { i: 'widgets',  x: 0, y: 21, w: 12, h: 8 },
+  { i: 'memo',     x: 0, y: 29, w: 12, h: 3 },
+];
+const DASH_DEFAULT_ENABLED = { focus: true, schedule: true, board: true, widgets: true, memo: true };
+
+/* 각 섹션을 감싸는 블록 카드 — 편집모드에서만 드래그 핸들/숨김 표시 */
+function DashBlock({ editing, onHide, D, children }) {
+  return (
+    <div style={{
+      height: '100%', display: 'flex', flexDirection: 'column',
+      // 편집 중엔 overflow visible 로 두어 우하단 리사이즈 핸들이 가려지지 않게 한다.
+      overflow: editing ? 'visible' : 'hidden',
+      background: D.cardBg, borderRadius: 'var(--fd-sk-radius-lg, 14px)',
+      border: `var(--fd-sk-border-w, 1px) solid ${editing ? '#93c5fd' : D.cardBor}`,
+      boxShadow: editing ? '0 2px 10px rgba(59,130,246,.12)' : 'var(--fd-sk-shadow, none)',
+    }}>
+      {editing && (
+        <div className="dash-drag-handle" style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '6px 12px', flexShrink: 0, cursor: 'move',
+          borderBottom: `1px solid ${D.border}`, background: D.stripBg,
+          borderRadius: '13px 13px 0 0',
+        }}>
+          <span style={{ fontSize: 11.5, color: D.text2, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <HolderOutlined /> 드래그 이동 · 모서리로 크기조절
+          </span>
+          <span onClick={(e) => { e.stopPropagation(); onHide(); }}
+            style={{ fontSize: 11.5, color: '#c73a2f', fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <EyeInvisibleOutlined /> 숨기기
+          </span>
+        </div>
+      )}
+      {/* 편집 중엔 body pointer-events 를 none 으로: 우하단 리사이즈 핸들/드래그를 방해하지 않음 */}
+      <div style={{ flex: 1, minHeight: 0, overflow: 'auto', pointerEvents: editing ? 'none' : 'auto' }}>{children}</div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const navigate   = useNavigate();
   const isDark     = useThemeStore((s) => s.isDark);
+  const skin       = useThemeStore((s) => s.skin);
   const user       = useAuthStore((s) => s.user);
   const calVer     = useTaskStore((s) => s.calendarVersion);
   const { addTask, editTask, fetchTasks } = useTaskStore();
@@ -75,6 +133,63 @@ export default function DashboardPage() {
   });
   const [bbsPosts, setBbsPosts] = useState([]);
   const [approvals, setApprovals] = useState([]);
+
+  /* ── 대시보드 커스터마이즈(레이아웃/사용여부) 상태 ── */
+  const [dashLayout, setDashLayout]   = useState(DASH_DEFAULT_LAYOUT);
+  const [dashEnabled, setDashEnabled] = useState(DASH_DEFAULT_ENABLED);
+  const [dashEditing, setDashEditing] = useState(false);
+  const dashSaveTimer = useRef(null);
+
+  // 서버에서 저장된 레이아웃 로드
+  useEffect(() => {
+    getDashboardLayout().then((d) => {
+      if (d && Array.isArray(d.layout) && d.layout.length) {
+        const byId = Object.fromEntries(d.layout.map((l) => [l.i, l]));
+        const merged = DASH_BLOCKS.map((b) => {
+          const s = byId[b.id];
+          const def = DASH_DEFAULT_LAYOUT.find((dl) => dl.i === b.id);
+          return s ? { i: b.id, x: s.x, y: s.y, w: s.w, h: s.h } : def;
+        });
+        setDashLayout(merged);
+        if (d.enabled) setDashEnabled({ ...DASH_DEFAULT_ENABLED, ...d.enabled });
+      }
+    }).catch(() => {});
+  }, []);
+
+  const persistDash = useCallback((layout, enabled) => {
+    clearTimeout(dashSaveTimer.current);
+    dashSaveTimer.current = setTimeout(() => {
+      updateDashboardLayout({ v: 1, layout, enabled }).catch(() => {});
+    }, 600);
+  }, []);
+
+  const handleDashLayoutChange = useCallback((l) => {
+    setDashLayout((prev) => {
+      const byId = Object.fromEntries(l.map((x) => [x.i, x]));
+      const merged = prev.map((p) => (byId[p.i] ? { ...p, ...byId[p.i] } : p));
+      l.forEach((x) => { if (!merged.some((m) => m.i === x.i)) merged.push(x); });
+      return merged;
+    });
+  }, []);
+
+  const toggleDashBlock = useCallback((id) => {
+    setDashEnabled((prev) => {
+      const next = { ...prev, [id]: !prev[id] };
+      setDashLayout((lay) => { persistDash(lay, next); return lay; });
+      return next;
+    });
+  }, [persistDash]);
+
+  const resetDashLayout = useCallback(() => {
+    setDashLayout(DASH_DEFAULT_LAYOUT);
+    setDashEnabled(DASH_DEFAULT_ENABLED);
+    persistDash(DASH_DEFAULT_LAYOUT, DASH_DEFAULT_ENABLED);
+  }, [persistDash]);
+
+  const finishDashEdit = useCallback(() => {
+    setDashEditing(false);
+    setDashLayout((lay) => { setDashEnabled((en) => { persistDash(lay, en); return en; }); return lay; });
+  }, [persistDash]);
 
   // 개인 게시판 설정 Popover
   const [allCats, setAllCats] = useState([]);
@@ -159,31 +274,34 @@ export default function DashboardPage() {
     overdue,
   }), [active, overdue]);
 
-  /* ── 색상 (라이트/다크) ── */
+  /* ── 색상 (라이트/다크) ──
+     표면/테두리/배경은 스킨 CSS 변수를 참조해 스킨(형태 테마)에 자동 반응한다.
+     텍스트/의미색은 라이트·다크 값 유지. */
   const D = isDark ? {
-    pageBg:   '#181b24',
-    navBg:    '#1e222c',
-    border:   'rgba(255,255,255,.1)',
+    pageBg:   'var(--fd-sk-page-bg, #181b24)',
+    navBg:    'var(--fd-sk-card-bg, #1e222c)',
+    border:   'var(--fd-sk-border-color, rgba(255,255,255,.1))',
     text1:    '#e8e8ee',
     text2:    '#94a3b8',
-    colBg:    '#20242f',           // 컬럼: 페이지보다 한 단계 위
-    cardBg:   '#2b313d',           // 카드: 솔리드 elevated 로 또렷하게 구분
-    cardBor:  'rgba(255,255,255,.1)',
-    addBor:   'rgba(255,255,255,.14)',
+    colBg:    'var(--fd-sk-surface-sunken, #20242f)',   // 컬럼: 페이지보다 한 단계 위
+    cardBg:   'var(--fd-sk-card-bg, #2b313d)',          // 카드: 솔리드 elevated 로 또렷하게 구분
+    cardBor:  'var(--fd-sk-border-color, rgba(255,255,255,.1))',
+    addBor:   'var(--fd-sk-border-color, rgba(255,255,255,.14))',
     addTxt:   '#94a3b8',
-    stripBg:  '#1e222c',
+    stripBg:  'var(--fd-sk-surface-sunken, #1e222c)',
   } : {
-    pageBg:   '#F8F9FC',
-    navBg:    '#fff',
-    border:   '#E8ECF4',
-    text1:    '#0F172A',
-    text2:    '#94A3B8',
-    colBg:    '#F1F5F9',
-    cardBg:   '#fff',
-    cardBor:  '#E8ECF4',
-    addBor:   '#CBD5E1',
-    addTxt:   '#94A3B8',
-    stripBg:  '#fff',
+    // Notion Warm 기준에 맞춘 대시보드 중립 팔레트 (의미색 틴트는 컬럼/위젯에서 유지)
+    pageBg:   'var(--fd-sk-page-bg, #f4f4f2)',
+    navBg:    'var(--fd-sk-card-bg, #ffffff)',
+    border:   'var(--fd-sk-border-color, #e9e7e2)',
+    text1:    '#37352f',
+    text2:    '#a8a29a',
+    colBg:    'var(--fd-sk-surface-sunken, #f2f1ec)',
+    cardBg:   'var(--fd-sk-card-bg, #ffffff)',
+    cardBor:  'var(--fd-sk-border-color, #e9e7e2)',
+    addBor:   'var(--fd-sk-border-color, #dcd8d0)',
+    addTxt:   '#a8a29a',
+    stripBg:  'var(--fd-sk-card-bg, #ffffff)',
   };
 
   if (loading) {
@@ -199,11 +317,11 @@ export default function DashboardPage() {
     {
       key: 'pending',
       label: '대기',
-      dot:   '#94A3B8',
-      cntBg: isDark ? 'rgba(255,255,255,.06)' : '#F1F5F9',
-      cntC:  isDark ? '#cbd5e1' : '#64748B',
-      colBg: isDark ? 'rgba(148,163,184,.08)' : '#F8FAFC',
-      borderColor: isDark ? 'rgba(148,163,184,.15)' : '#E2E8F0',
+      dot:   '#a8a29a',
+      cntBg: isDark ? 'rgba(255,255,255,.06)' : '#f2f1ec',
+      cntC:  isDark ? '#cbd5e1' : '#8a827a',
+      colBg: isDark ? 'rgba(148,163,184,.08)' : '#faf9f6',
+      borderColor: isDark ? 'rgba(148,163,184,.15)' : '#e9e7e2',
       tasks: cols.pending,
     },
     {
@@ -258,7 +376,8 @@ export default function DashboardPage() {
   /* ── 위젯 공통 스타일 ── */
   const wHoverBg = isDark ? 'rgba(255,255,255,.04)' : '#F8FAFC';
   const wCard = {
-    background: D.cardBg, border: `1px solid ${D.cardBor}`, borderRadius: 14,
+    background: D.cardBg, border: `var(--fd-sk-border-w, 1px) solid ${D.cardBor}`, borderRadius: 'var(--fd-sk-radius-lg, 14px)',
+    boxShadow: 'var(--fd-sk-shadow, none)',
     display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%', minHeight: 0,
   };
   const wHead = {
@@ -276,6 +395,70 @@ export default function DashboardPage() {
 
   const unreadCount = mails.filter((m) => !m.isRead).length;
 
+  /* ── 히어로: 오늘의 포커스 파생 데이터 ── */
+  const today = dayjs().startOf('day');
+  const isToday = (d) => d && dayjs(d).startOf('day').isSame(today);
+  const rankPrio = (t) => (isOverdue(t.dueDate, t.status) ? 0 : isToday(t.dueDate) ? 1 : 2);
+  const todayPriorities = active
+    .filter((t) => t.status !== 'done')
+    .filter((t) => isOverdue(t.dueDate, t.status) || isToday(t.dueDate) || t.priority === 'high')
+    .sort((a, b) => rankPrio(a) - rankPrio(b))
+    .slice(0, 6);
+  const dueTodayCount = active.filter((t) => t.status !== 'done' && isToday(t.dueDate)).length;
+  const atRisk = active
+    .filter((t) => t.status !== 'done' && (isOverdue(t.dueDate, t.status) || isToday(t.dueDate)))
+    .sort((a, b) => rankPrio(a) - rankPrio(b))
+    .slice(0, 4);
+
+  /* 히어로 전용 스타일 */
+  const heroCard = { background: D.cardBg, border: `var(--fd-sk-border-w, 1px) solid ${D.cardBor}`, borderRadius: 'var(--fd-sk-radius-lg, 12px)', boxShadow: 'var(--fd-sk-shadow, 0 1px 2px rgba(55,53,47,.05), 0 1px 3px rgba(55,53,47,.04))', padding: 16, display: 'flex', flexDirection: 'column', minHeight: 0 };
+  const heroHd   = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 };
+  const heroHdT  = { fontSize: 13, fontWeight: 700, color: D.text1, display: 'flex', alignItems: 'center', gap: 7 };
+  const secTitle = { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 'var(--fd-sk-font-weight-hd, 700)', color: D.text1, marginBottom: 10,
+    ...(skin === 'mono' ? { textTransform: 'uppercase', letterSpacing: '0.12em' } : {}) };
+  /* ── KPI 타일: 스킨별 표현 (flat=브루탈·grad=클레이·line=모노·tint=기본) ── */
+  const KPI_MODE = { default: 'tint', brutal: 'flat', clay: 'grad', mono: 'line', glass: 'grad', pop: 'flat', slick: 'tint', paper: 'tint' }[skin] || 'tint';
+  const kpiBgVar = (variant) => (variant === 'accent' ? 'var(--fd-sk-kpi-a)' : variant === 'risk' ? 'var(--fd-sk-kpi-b)' : variant === 'info' ? 'var(--fd-sk-kpi-c)' : null);
+  const kpiColored = (v) => v === 'accent' || v === 'risk' || v === 'info';
+  const kpiTile  = (variant) => {
+    const base = { borderRadius: 'var(--fd-sk-radius-lg, 12px)', padding: 12, display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', gap: 3, minWidth: 0, cursor: 'pointer' };
+    const bg = kpiBgVar(variant);
+    if (KPI_MODE === 'flat') // 브루탈: 솔리드 컬러 블록 + 검정 테두리 + 하드 그림자
+      return { ...base, background: kpiColored(variant) ? bg : D.cardBg, border: 'var(--fd-sk-border-w, 2.5px) solid var(--fd-sk-border-color, #111)', boxShadow: 'var(--fd-sk-shadow-sm, 2px 2px 0 #111)' };
+    if (KPI_MODE === 'grad') // 클레이: 그라데이션 + 말랑 그림자 + 테두리 없음
+      return { ...base, background: kpiColored(variant) ? bg : D.cardBg, border: 'none', boxShadow: 'var(--fd-sk-shadow-sm)' };
+    if (KPI_MODE === 'line') // 모노: 흰/다크 카드 + 헤어라인 + 좌측 컬러 바
+      return { ...base, background: D.cardBg, border: '1px solid var(--fd-sk-border-color, #ececec)', borderLeft: kpiColored(variant) ? `3px solid ${variant === 'accent' ? '#12b886' : variant === 'risk' ? '#f0392b' : '#3b82f6'}` : '1px solid var(--fd-sk-border-color, #ececec)', boxShadow: 'none' };
+    // tint(기본): 연한 틴트 배경 + 컬러 숫자
+    return { ...base, border: 'var(--fd-sk-border-w, 1px) solid',
+      ...(variant === 'accent' ? { background: kpiBgVar('accent'), borderColor: isDark ? 'rgba(22,163,74,.3)' : '#bfe6cd' }
+        : variant === 'risk' ? { background: kpiBgVar('risk'), borderColor: isDark ? 'rgba(199,58,47,.3)' : '#f7ddd6' }
+        : { background: D.cardBg, borderColor: D.cardBor }) };
+  };
+  const kpiTxtColor = (variant) => {
+    if (KPI_MODE === 'flat' || KPI_MODE === 'grad') return kpiColored(variant) ? 'var(--fd-sk-kpi-txt)' : D.text1;
+    // tint/line: 의미색 숫자
+    return variant === 'accent' ? '#15803d' : variant === 'risk' ? '#c73a2f' : variant === 'info' ? '#2563eb' : D.text1;
+  };
+  const kpiMuted = (variant) => ((KPI_MODE === 'flat' || KPI_MODE === 'grad') && kpiColored(variant)) ? 'var(--fd-sk-kpi-txt)' : D.text2;
+  const kpiLbl   = (variant) => ({ fontSize: 11.5, color: kpiMuted(variant), fontWeight: 700, opacity: (KPI_MODE === 'flat' || KPI_MODE === 'grad') && kpiColored(variant) ? 0.92 : 1, display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+    ...(KPI_MODE === 'line' ? { textTransform: 'uppercase', letterSpacing: '0.1em' } : {}) });
+  const kpiBig   = (variant) => ({ fontSize: 28, fontWeight: 900, lineHeight: 1, marginTop: 6, letterSpacing: '-1px', fontFamily: 'var(--fd-sk-font-num)', color: kpiTxtColor(variant) });
+  const kpiSub   = (variant) => ({ fontSize: 10.5, color: kpiMuted(variant), opacity: (KPI_MODE === 'flat' || KPI_MODE === 'grad') && kpiColored(variant) ? 0.8 : 1, marginTop: 5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' });
+  const qbtn     = (green) => ({
+    background: green ? '#16a34a' : D.cardBg, color: green ? '#fff' : D.text2,
+    border: `1px solid ${green ? '#16a34a' : D.cardBor}`, borderRadius: 8, padding: '6px 8px',
+    fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap',
+    display: 'flex', alignItems: 'center', justifyContent: 'center',
+  });
+
+  /* 표시할 블록 + 그리드 레이아웃 (숨김 블록·빈 메모는 제외) */
+  const dashVisibleIds = DASH_BLOCKS
+    .filter((b) => dashEnabled[b.id] && !(b.id === 'memo' && pinnedMemos.length === 0))
+    .map((b) => b.id);
+  const dashVisLayout = dashLayout.filter((l) => dashVisibleIds.includes(l.i));
+  const dashHiddenBlocks = DASH_BLOCKS.filter((b) => !dashEnabled[b.id]);
+
   return (
     <div style={{
       flex: 1,
@@ -283,97 +466,170 @@ export default function DashboardPage() {
       display: 'flex',
       flexDirection: 'column',
       background: D.pageBg,
-      overflow: 'hidden',
+      overflowY: 'auto',
     }}>
 
-      {/* ── 고정 메모 + 주간 일정·자원 위젯 (나란히) ── */}
-      <div style={{
-        flexShrink: 0,
-        padding: '12px 24px 8px',
-        borderBottom: `1px solid ${D.border}`,
-        background: D.stripBg,
-        display: 'flex',
-        gap: 16,
-        alignItems: 'stretch',
-      }}>
-        {/* 좌: 고정 메모 */}
-        {pinnedMemos.length > 0 && (
-          <div style={{ flexShrink: 0, maxWidth: 500, display: 'flex', flexDirection: 'column' }}>
-            <div style={{
-              fontSize: 9.5, fontWeight: 700, color: D.text2,
-              letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8,
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}>
-              📌 고정 메모
-              <span
-                onClick={() => navigate('/memos')}
-                style={{ cursor: 'pointer', color: D.text2, fontWeight: 500, textTransform: 'none', letterSpacing: 0 }}
-              >
-                · 전체 보기
-              </span>
-            </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', overflowY: 'auto', alignContent: 'flex-start', flex: 1 }}>
-              {pinnedMemos.map((m) => (
-                <div key={m.id} style={{ width: 230, flexShrink: 0 }}>
-                  <MemoCard
-                    memo={m}
-                    mode="compact"
-                    onSave={(id, patch) => updateMemo(id, patch)}
-                    onDelete={(id) => removeMemo(id)}
-                    onTogglePin={(memo) => updateMemo(memo.id, { pinned: !memo.pinned })}
-                    onColor={(memo, color) => { if (memo.color !== color) updateMemo(memo.id, { color }); }}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* ══ 편집 툴바 (아이콘 최소화) ══ */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6, padding: '6px 16px 0', flexWrap: 'wrap' }}>
+        {dashEditing && dashHiddenBlocks.map((b) => (
+          <Button key={b.id} size="small" onClick={() => toggleDashBlock(b.id)}>+ {b.title}</Button>
+        ))}
+        {dashEditing && (
+          <Tooltip title="레이아웃·표시 상태를 기본값으로 되돌립니다">
+            <Button size="small" shape="circle" icon={<ReloadOutlined />} onClick={resetDashLayout} />
+          </Tooltip>
         )}
-
-        {/* 우: 주간 일정 · 자원 위젯 */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          <div style={{
-            fontSize: 9.5, fontWeight: 700, color: D.text2,
-            letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8,
-          }}>📅 일정 · 자원 현황</div>
-          <ScheduleWidget isDark={isDark} D={D} />
-        </div>
+        <Tooltip title={dashEditing ? '편집 완료' : '대시보드 편집'}>
+          <Button
+            size="small"
+            shape="circle"
+            type={dashEditing ? 'primary' : 'default'}
+            icon={dashEditing ? <CheckOutlined /> : <EditOutlined />}
+            onClick={() => (dashEditing ? finishDashEdit() : setDashEditing(true))}
+          />
+        </Tooltip>
       </div>
 
+      {/* ══ 커스터마이즈 그리드 ══ */}
+      <RGL
+        className="dashboard-grid"
+        layout={dashVisLayout}
+        cols={12}
+        rowHeight={40}
+        margin={[14, 14]}
+        containerPadding={[20, 12]}
+        isDraggable={dashEditing}
+        isResizable={dashEditing}
+        draggableHandle=".dash-drag-handle"
+        onLayoutChange={handleDashLayoutChange}
+        useCSSTransforms
+      >
+
+      {dashEnabled.focus && (
+      <div key="focus">
+      <DashBlock editing={dashEditing} onHide={() => toggleDashBlock('focus')} D={D}>
+      {/* ══ 히어로: 오늘의 포커스 (오늘 우선순위 + KPI) ══ */}
+      <div style={{ padding: '14px 16px', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div style={secTitle}>🎯 오늘의 포커스
+          <span style={{ fontSize: 11, fontWeight: 600, color: D.text2 }}>지금 집중해야 할 일</span>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) minmax(0,1fr)', gap: 14, alignItems: 'stretch', flex: 1, minHeight: 0 }}>
+
+          {/* ① 오늘 우선순위 체크리스트 */}
+          <div style={heroCard}>
+            <div style={heroHd}>
+              <span style={heroHdT}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#16a34a', display: 'inline-block' }} /> 오늘 우선순위</span>
+              <span style={{ background: '#16a34a', color: '#fff', borderRadius: 20, fontSize: 11, fontWeight: 700, padding: '1px 9px' }}>{todayPriorities.length}</span>
+            </div>
+            {todayPriorities.length === 0 ? (
+              <div style={{ flex: 1, minHeight: 80, display: 'flex', alignItems: 'center', justifyContent: 'center', color: D.text2, fontSize: 12.5 }}>오늘 집중할 우선 업무가 없습니다 🎉</div>
+            ) : todayPriorities.map((t) => {
+              const late = isOverdue(t.dueDate, t.status);
+              const prio = t.priority ? PRIO[t.priority] : null;
+              const done = t.status === 'done';
+              return (
+                <div key={t.id} onClick={() => { setSelectedTask(t); setFormOpen(true); }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: `1px solid ${D.border}`, cursor: 'pointer' }}>
+                  <span style={{ width: 16, height: 16, borderRadius: 5, flexShrink: 0, border: `1.6px solid ${done ? '#16a34a' : D.text2}`, background: done ? '#16a34a' : 'transparent', color: '#fff', fontSize: 11, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{done ? '✓' : ''}</span>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: 12.5, color: D.text1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.title}</div>
+                    <div style={{ color: D.text2, fontSize: 11, marginTop: 2, display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {t.part && <span style={{ background: D.stripBg, border: `1px solid ${D.border}`, borderRadius: 6, padding: '1px 6px', color: D.text2 }}>{t.part.name}</span>}
+                      {prio && <span style={{ background: prio.bg, color: prio.color, borderRadius: 20, padding: '1px 8px', fontWeight: 600 }}>{prio.label}</span>}
+                      <span style={{ color: late ? '#c73a2f' : D.text2, fontWeight: late ? 700 : 400 }}>
+                        {late ? '지연' : isToday(t.dueDate) ? '오늘 마감' : t.dueDate ? dayjs(t.dueDate).format('MM/DD') : ''}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ② KPI 타일 — 좁으면 세로 1열로 리플로우, 넓으면 2열 (상단 정렬·넘치면 스크롤) */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(132px, 1fr))', gridAutoRows: 'min-content', gap: 12, minHeight: 0, alignContent: 'start', overflowY: 'auto' }}>
+            <div style={kpiTile('accent')} onClick={() => navigate('/tasks')}>
+              <div style={kpiLbl('accent')}>🔥 오늘 마감</div>
+              <div style={{ minWidth: 0 }}>
+                <div style={kpiBig('accent')}>{dueTodayCount}</div>
+                <div style={kpiSub('accent')}>오늘 처리 권장</div>
+              </div>
+            </div>
+            <div style={kpiTile('risk')} onClick={() => navigate('/tasks?status=overdue')}>
+              <div style={kpiLbl('risk')}>⚠ 지연·초과</div>
+              <div style={{ minWidth: 0 }}>
+                <div style={kpiBig('risk')}>{overdue.length}</div>
+                <div style={kpiSub('risk')}>{atRisk[0] ? `${atRisk[0].title}` : '위험 업무 없음'}</div>
+              </div>
+            </div>
+            <div style={kpiTile('info')} onClick={() => navigate('/mail')}>
+              <div style={kpiLbl('info')}>✉️ 미확인 메일</div>
+              <div style={{ minWidth: 0 }}>
+                <div style={kpiBig('info')}>{unreadCount}</div>
+                <div style={kpiSub('info')}>받은편지함</div>
+              </div>
+            </div>
+            <div style={kpiTile()}>
+              <div style={kpiLbl()}>⚡ 빠른 실행</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginTop: 10 }}>
+                <span style={qbtn(true)} onClick={() => { setSelectedTask(null); setFormStatus('pending'); setFormOpen(true); }}>+ 업무</span>
+                <span style={qbtn()} onClick={() => navigate('/memos')}>메모</span>
+                <span style={qbtn()} onClick={() => navigate('/mail')}>메일</span>
+                <span style={qbtn()} onClick={() => navigate('/approvals/new')}>결재</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      </DashBlock>
+      </div>
+      )}
+
+      {dashEnabled.schedule && (
+      <div key="schedule">
+      <DashBlock editing={dashEditing} onHide={() => toggleDashBlock('schedule')} D={D}>
+      {/* ══ 주간 일정 · 자원 현황 (블록 크기에 맞춰 채움) ══ */}
+      <div style={{ height: '100%', padding: 12, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <ScheduleWidget isDark={isDark} D={D} fill />
+      </div>
+      </DashBlock>
+      </div>
+      )}
+
+      {dashEnabled.board && (
+      <div key="board">
+      <DashBlock editing={dashEditing} onHide={() => toggleDashBlock('board')} D={D}>
       {/* ── 업무 칸반 보드 섹션 ── */}
       <div style={{
-        flex: 1, minHeight: 0,
+        flexShrink: 0,
         display: 'flex', flexDirection: 'column',
-        padding: '12px 24px 0',
+        padding: '14px 16px 0',
         boxSizing: 'border-box',
       }}>
-      <div style={{
-        fontSize: 9.5, fontWeight: 700, color: D.text2,
-        letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8, flexShrink: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
-        <span>🗂 업무 보드</span>
-        <AiWeeklySummary compact />
+      <div style={{ ...secTitle, justifyContent: 'space-between' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>🗂 업무 보드</span>
+        <span style={{ display: 'inline-flex', gap: 6 }}>
+          <AiAsk compact />
+          <AiWeeklySummary compact />
+        </span>
       </div>
       <div style={{
         display: 'flex',
         flexDirection: 'row',
         alignItems: 'flex-start',
         gap: 12,
-        flex: 1,
-        minHeight: 0,
-        overflow: 'hidden',
         boxSizing: 'border-box',
       }}>
         {COLUMNS.map((col) => (
           <div key={col.key} style={{
             flex: 1,
             minWidth: 0,
-            maxHeight: '100%',
+            maxHeight: 380,
             background: col.colBg,
-            borderRadius: 12,
+            borderRadius: 'var(--fd-sk-radius-lg, 12px)',
             display: 'flex',
             flexDirection: 'column',
-            border: `1px solid ${col.borderColor}`,
+            border: `var(--fd-sk-border-w, 1px) solid ${col.borderColor}`,
             overflow: 'hidden',
           }}>
             {/* 열 헤더 */}
@@ -412,9 +668,10 @@ export default function DashboardPage() {
                     onClick={() => { setSelectedTask(task); setFormOpen(true); }}
                     style={{
                       background: D.cardBg,
-                      borderRadius: 9,
+                      borderRadius: 'var(--fd-sk-radius, 9px)',
                       padding: '11px 13px',
-                      border: `1px solid ${late ? '#FECACA' : D.cardBor}`,
+                      border: `var(--fd-sk-border-w, 1px) solid ${late ? '#FECACA' : D.cardBor}`,
+                      boxShadow: 'var(--fd-sk-shadow-sm, none)',
                       cursor: 'pointer',
                       position: 'relative',
                       overflow: 'hidden',
@@ -541,22 +798,23 @@ export default function DashboardPage() {
         ))}
       </div>
       </div>
+      </DashBlock>
+      </div>
+      )}
 
+      {dashEnabled.widgets && (
+      <div key="widgets">
+      <DashBlock editing={dashEditing} onHide={() => toggleDashBlock('widgets')} D={D}>
       {/* ── 받은 항목 · 게시판 · 결재 위젯 섹션 ── */}
       <div style={{
-        flex: 1, minHeight: 0,
+        flexShrink: 0,
         display: 'flex', flexDirection: 'column',
-        padding: '12px 24px 16px',
-        borderTop: `1px solid ${D.border}`,
-        background: D.stripBg,
+        padding: '14px 16px',
         boxSizing: 'border-box',
       }}>
-        <div style={{
-          fontSize: 9.5, fontWeight: 700, color: D.text2,
-          letterSpacing: '1px', textTransform: 'uppercase', marginBottom: 8, flexShrink: 0,
-        }}>📥 받은 항목 · 게시판 · 결재</div>
+        <div style={{ ...secTitle, marginTop: 0 }}>📥 받은 항목 · 게시판 · 결재</div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 14, flex: 1, minHeight: 0 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 14, minHeight: 300 }}>
 
           {/* ① 받은 메일 */}
           <div style={wCard}>
@@ -745,6 +1003,41 @@ export default function DashboardPage() {
 
         </div>
       </div>
+      </DashBlock>
+      </div>
+      )}
+
+      {dashEnabled.memo && pinnedMemos.length > 0 && (
+      <div key="memo">
+      <DashBlock editing={dashEditing} onHide={() => toggleDashBlock('memo')} D={D}>
+      {/* ══ 고정 메모 스트립 ══ */}
+      <div style={{ flexShrink: 0, padding: '14px 16px' }}>
+          <div style={secTitle}>📌 고정 메모
+            <span onClick={() => navigate('/memos')} style={{ fontSize: 11, fontWeight: 500, color: D.text2, cursor: 'pointer' }}>· 전체 보기</span>
+          </div>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            {pinnedMemos.map((m) => (
+              <div key={m.id} style={{ width: 230, flexShrink: 0 }}>
+                <MemoCard
+                  memo={m}
+                  mode="compact"
+                  onSave={(id, patch) => updateMemo(id, patch)}
+                  onDelete={(id) => removeMemo(id)}
+                  onTogglePin={(memo) => updateMemo(memo.id, { pinned: !memo.pinned })}
+                  onColor={(memo, color) => { if (memo.color !== color) updateMemo(memo.id, { color }); }}
+                />
+              </div>
+            ))}
+          </div>
+      </div>
+      </DashBlock>
+      </div>
+      )}
+
+      </RGL>
+
+      {/* 하단 여백 — 마지막 콘텐츠가 작업표시줄 등에 가리지 않도록 확보 */}
+      <div style={{ height: 48, flexShrink: 0 }} />
 
       {/* ── 업무 등록 폼 ── */}
       <TaskForm

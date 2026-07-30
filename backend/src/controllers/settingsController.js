@@ -123,8 +123,8 @@ const getThemePrefs = async (req, res, next) => {
 const updateThemePrefs = async (req, res, next) => {
   try {
     const key = `theme_prefs_${req.user.id}`;
-    const { themeKey, isDark, customAccent, density } = req.body;
-    const value = JSON.stringify({ themeKey, isDark, customAccent, density });
+    const { themeKey, isDark, customAccent, density, skin } = req.body;
+    const value = JSON.stringify({ themeKey, isDark, customAccent, density, skin });
     await prisma.appSetting.upsert({
       where: { key },
       create: { key, value },
@@ -136,4 +136,64 @@ const updateThemePrefs = async (req, res, next) => {
   }
 };
 
-module.exports = { getEmailSettings, updateEmailSettings, testEmail, getWidgetSettings, updateWidgetSettings, getThemePrefs, updateThemePrefs };
+/** GET /api/settings/dashboard-layout — 개인 대시보드 레이아웃 조회 (본인) */
+const getDashboardLayout = async (req, res, next) => {
+  try {
+    const key = `dashboard_layout_${req.user.id}`;
+    const row = await prisma.appSetting.findUnique({ where: { key } });
+    if (!row) return res.json(null);
+    try {
+      res.json(JSON.parse(row.value));
+    } catch {
+      res.json(null);
+    }
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** PUT /api/settings/dashboard-layout — 개인 대시보드 레이아웃 저장 (본인)
+ *  body: { layout: [{i,x,y,w,h}...], enabled: {blockId: bool}, v: number } */
+const updateDashboardLayout = async (req, res, next) => {
+  try {
+    const key = `dashboard_layout_${req.user.id}`;
+    await prisma.appSetting.upsert({
+      where: { key },
+      create: { key, value: JSON.stringify(req.body) },
+      update: { value: JSON.stringify(req.body) },
+    });
+    res.json({ message: '대시보드 레이아웃이 저장되었습니다.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** GET /api/settings/approval-lines — 개인 결재선 프리셋 조회 (본인) */
+const getApprovalLinePresets = async (req, res, next) => {
+  try {
+    const key = `approval_lines_${req.user.id}`;
+    const row = await prisma.appSetting.findUnique({ where: { key } });
+    if (!row) return res.json([]);
+    try {
+      const v = JSON.parse(row.value);
+      res.json(Array.isArray(v) ? v : []);
+    } catch { res.json([]); }
+  } catch (err) { next(err); }
+};
+
+/** PUT /api/settings/approval-lines — 개인 결재선 프리셋 저장 (본인)
+ *  body: [{ id, name, steps: [{approverId, approverName, type, stepOrder}] }] */
+const updateApprovalLinePresets = async (req, res, next) => {
+  try {
+    const key = `approval_lines_${req.user.id}`;
+    const value = JSON.stringify(Array.isArray(req.body) ? req.body.slice(0, 30) : []);
+    await prisma.appSetting.upsert({
+      where: { key },
+      create: { key, value },
+      update: { value },
+    });
+    res.json({ message: '결재선 프리셋이 저장되었습니다.' });
+  } catch (err) { next(err); }
+};
+
+module.exports = { getEmailSettings, updateEmailSettings, testEmail, getWidgetSettings, updateWidgetSettings, getThemePrefs, updateThemePrefs, getDashboardLayout, updateDashboardLayout, getApprovalLinePresets, updateApprovalLinePresets };

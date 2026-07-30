@@ -12,6 +12,7 @@ const { scheduleAnomalyScan } = require('./services/anomalyService');
 const { auditForbidden } = require('./middlewares/auditLogger');
 const { piiGuard } = require('./middlewares/piiGuard');
 const { setupSocketIO } = require('./socket');
+const { setupCollab } = require('./collabServer');
 
 const app = express();
 const server = http.createServer(app);
@@ -125,6 +126,9 @@ app.use((err, req, res, next) => {
 });
 
 const io = setupSocketIO(server);
+
+// 실시간 공동편집(F-69): y-websocket을 같은 http 서버에 /collab path로 임베드 (Socket.IO와 공존)
+setupCollab(server);
 
 // boardController에 socket.io 인스턴스 주입 (채팅방 알림용)
 const boardController = require('./controllers/boardController');

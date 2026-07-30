@@ -1,7 +1,7 @@
 # FlowDesk 프로젝트
 
 풀스택 업무관리 시스템 (소규모 팀 2~10명, 로컬 전용)
-- 버전: v2.5.0 (기능 F-01~F-61 구현 완료 — OKR/목표 관리(주기·목표·핵심결과·체크인·진척 자동계산) 추가. v2.4: 회의 관리. v2.3: 협업 위키/문서. v2.2: AI 어시스턴트(Claude API). v2.1: 전자결재·게시판·사내메일·일정/공휴일·PII·보안강화, 다크모드 제거, 조직구조 부서·팀 개편)
+- 버전: v2.14.0 (디자인 스킨 시스템 도입 — 색상 테마 선택 기능을 **디자인 스킨 8종**(기본·뉴브루탈·클레이·미니멀모노·아우로라글래스·소프트팝·슬릭다크·페이퍼)으로 대체. 스킨=형태(모서리·테두리·그림자·표면·폰트)+강조색+자연 모드. `utils/skins.js` 정의, `store/themeStore.js` 관리(localStorage+서버), `App.jsx` AntD 토큰을 스킨에 연결해 전 화면 반영. 상세: F-20. v2.13: 기능 F-01~F-69 구현 완료 — 위키 실시간 공동편집(Yjs CRDT + 협업 커서, /collab y-websocket 임베드, M365 Word 온라인 대응) 추가. v2.12: 통합 문서함(전 도메인 첨부 통합 검색, SharePoint 라이브러리 경량판). v2.11: 민감도 라벨(공개/사내한/기밀, 위키·게시판 기밀 접근 게이트, Purview 라벨 경량판). v2.10: Forms 설문/투표 엔진(문항·응답·집계, M365 Forms 경량판). v2.9: 회의 빈시간 찾기(Scheduling Assistant, 참석자 공통 가용시간 제안). v2.8: 개인 '내 하루' 통합 홈(업무·회의·액션아이템·결재대기·알림/메일 집계). v2.7: AI 질의응답(RAG)·채팅요약(사내 데이터 근거+출처인용). v2.6: 범용 자동화 규칙 엔진(이벤트→조건→액션: 알림·이메일·채팅·웹훅·업무생성, Power Automate 경량판). v2.5: OKR/목표 관리. v2.4: 회의 관리. v2.3: 협업 위키/문서. v2.2: AI 어시스턴트(Claude API). v2.1: 전자결재·게시판·사내메일·일정/공휴일·PII·보안강화, 다크모드 제거, 조직구조 부서·팀 개편)
 - 기능정의서: `FEATURES.md`
 
 ## 접속 정보
@@ -24,6 +24,10 @@
 - 환경변수: `backend/.env`
 - 서버 시작: `bash restart.sh` (또는 `restart.bat`)
 - 기능정의서: `FEATURES.md`
+- **새 PC/다른 환경 세팅 가이드: `SETUP.md`**
+
+## 새 PC에서 이어서 작업 (중요)
+사용자가 "다른 PC에서 이어서 작업", "새 컴퓨터에서 세팅", "환경 옮기기", "이어받기" 등을 물으면 **`SETUP.md`를 읽고 그 내용으로 안내**한다. 핵심: 코드는 git으로 전부 공유되지만 ① `node_modules`(npm install) ② `backend/.env`(git 제외, `backend/.env.example` 복사 후 값 입력 — 특히 `DATA_ENCRYPTION_KEY`는 기존 DB 데이터를 옮기면 기존 PC와 **동일** 값 필요) ③ PostgreSQL 로컬 DB(`prisma migrate deploy` + 새 DB면 `npm run seed`, 기존 데이터면 `pg_dump`/복원)는 각 PC에서 새로 준비해야 한다. 현재 작업 브랜치는 `feat/m365-gap-features`.
 
 ## 디렉토리 구조
 ```
@@ -98,6 +102,14 @@ FlowDesk_Repo/
 | `/tm-wiki` | F-59 | 협업 위키/문서 — 스페이스·문서트리·버전이력·댓글 (`controllers/wikiController.js`, `pages/Wiki`) |
 | `/tm-meeting` | F-61 | 회의 관리 — 안건·참석자(RSVP)·회의록·결정사항·액션아이템(→업무전환) (`controllers/meetingController.js`, `pages/Meetings`) |
 | `/tm-okr` | F-60 | OKR/목표 관리 — 주기·목표·핵심결과·체크인·진척 자동계산 (`controllers/okrController.js`, `pages/Okr`) |
+| `/tm-automation-rules` | F-62 | 범용 자동화 규칙 엔진 — 이벤트→조건→액션(알림·이메일·채팅·웹훅·업무생성), Power Automate 경량판 (`services/automationService.js`, `pages/Admin/Automations`) |
+| `/tm-ai-search` | F-63 | AI 질의응답(RAG)·채팅요약 — 사내 데이터 근거+출처인용 (`services/ragService.js`, `aiService.js`, `components/ai/AiAsk.jsx`) |
+| `/tm-myday` | F-64 | 개인 '내 하루' 통합 홈 — 업무·회의·액션아이템·결재대기·알림/메일 집계 (`controllers/meController.js`, `pages/MyDay`) |
+| `/tm-scheduling` | F-65 | 회의 빈시간 찾기 — 참석자 공통 가용시간 제안(Scheduling Assistant) (`services/schedulingService.js`, `components/Schedule/FreeSlotFinder.jsx`) |
+| `/tm-forms` | F-66 | Forms 설문/투표 — 문항·응답·집계(M365 Forms 경량판) (`controllers/formController.js`, `pages/Forms`) |
+| `/tm-sensitivity` | F-67 | 민감도 라벨 — 공개/사내한/기밀, 위키·게시판 기밀 접근 게이트 (`wikiController.js`, `bbsPostController.js`) |
+| `/tm-documents` | F-68 | 통합 문서함 — 전 도메인 첨부 통합 검색(SharePoint 라이브러리 경량판) (`controllers/documentController.js`, `pages/Documents`) |
+| `/tm-collab-edit` | F-69 | 위키 실시간 공동편집 — Yjs CRDT+협업커서, /collab y-websocket 임베드 (`collabServer.js`, `components/CollaborativeEditor.jsx`) |
 
 ### 참조 문서
 | 명령어 | 내용 |

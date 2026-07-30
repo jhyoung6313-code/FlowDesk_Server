@@ -244,6 +244,8 @@ exports.createCheckin = async (req, res, next) => {
     const krId = Number(req.params.krId);
     const kr = await loadObjectiveForKr(krId);
     if (!kr) return res.status(404).json({ error: 'KR을 찾을 수 없습니다.' });
+    // 체크인은 KR 현재값을 갱신하므로 KR CRUD와 동일하게 목표 소유자·관리자만 허용
+    if (!canEditObjective(kr.objective, req)) return res.status(403).json({ error: '권한이 없습니다.' });
     const { value, confidence, comment } = req.body || {};
     if (value === undefined || value === null || value === '') return res.status(400).json({ error: '현재값을 입력하세요.' });
     const checkin = await prisma.keyResultCheckin.create({

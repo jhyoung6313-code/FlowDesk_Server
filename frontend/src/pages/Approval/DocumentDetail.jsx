@@ -2,19 +2,22 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Breadcrumb, Button, Space, Typography, Tag, Divider,
-  Avatar, Modal, Input, message, Spin, Popconfirm, Card, Descriptions,
+  Avatar, Modal, Input, message, Spin, Popconfirm, Card, Descriptions, Select,
   theme as antTheme,
 } from 'antd';
 import {
   ArrowLeftOutlined, EditOutlined, CheckCircleOutlined, CloseCircleOutlined,
   StopOutlined, PaperClipOutlined, SendOutlined, DeleteOutlined,
   RedoOutlined, ClockCircleOutlined, FileDoneOutlined, UserOutlined,
+  CopyOutlined, FireOutlined,
 } from '@ant-design/icons';
 import {
-  getApproval, approveApproval, rejectApproval, cancelApproval, resubmitApproval, resumeApproval,
+  getApproval, getApprovals, approveApproval, rejectApproval, cancelApproval, delegateApproval, resubmitApproval, resumeApproval,
   getApprovalComments, createApprovalComment, deleteApprovalComment,
   deleteApprovalAttachment, downloadApprovalAttachmentUrl,
 } from '../../api/approval';
+import { getUsers } from '../../api/users';
+import SpellTextArea from '../../components/common/SpellTextArea';
 import useAuthStore from '../../store/authStore';
 import dayjs from 'dayjs';
 
@@ -209,7 +212,7 @@ function FormDataView({ template, formData, token }) {
   return <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>{blocks}</div>;
 }
 
-export default function DocumentDetail({ embedded = false, docId = null, onClose, onEdit, onChanged } = {}) {
+export default function DocumentDetail({ embedded = false, docId = null, onClose, onEdit, onCopy, onNext, onChanged } = {}) {
   const params = useParams();
   const navigate = useNavigate();
   const id = embedded ? docId : params.id;
@@ -221,17 +224,46 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
   const goList = () => { if (embedded) onClose?.(); else navigate('/approvals'); };
   // 수정 화면 열기
   const goEdit = () => { if (embedded) onEdit?.(id); else navigate(`/approvals/${id}/edit`); };
+  // 이 문서를 복제해 새 결재 작성
+  const goCopy = () => { if (embedded) onCopy?.(id); else navigate(`/approvals/new?copyFrom=${id}`); };
+  // 다음 대기 문서로 이동 (연속 결재)
+  const goNext = (nid) => {
+    const target = nid || nextPendingId;
+    if (!target) return;
+    if (embedded) onNext?.(target); else navigate(`/approvals/${target}`);
+  };
   // 결재/취소 등 변경 후 목록 갱신 알림
   const notifyChanged = () => onChanged?.();
 
   const [doc, setDoc] = useState(null);
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [nextPendingId, setNextPendingId] = useState(null);
   const [newComment, setNewComment] = useState('');
   const [actionModal, setActionModal] = useState(null);
   const [actionComment, setActionComment] = useState('');
   const [actioning, setActioning] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
+  const [delegateOpen, setDelegateOpen] = useState(false);
+  const [delegateTo, setDelegateTo] = useState(null);
+  const [delegateComment, setDelegateComment] = useState('');
+  const [delegating, setDelegating] = useState(false);
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => { getUsers().then(u => setUsers((u || []).filter(x => x.isActive !== false))).catch(() => {}); }, []);
+
+  const handleDelegate = async () => {
+    if (!delegateTo) { message.warning('위임할 대상을 선택하세요.'); return; }
+    setDelegating(true);
+    try {
+      await delegateApproval(id, delegateTo, delegateComment);
+      message.success('위임되었습니다.');
+      setDelegateOpen(false); setDelegateTo(null); setDelegateComment('');
+      notifyChanged();
+      if (nextPendingId) goNext(); else load();
+    } catch (e) { message.error(e.response?.data?.error || '위임 실패'); }
+    finally { setDelegating(false); }
+  };
 
   const load = async () => {
     try { const data = await getApproval(id); setDoc(data); }
@@ -246,6 +278,15 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
 
   useEffect(() => { load(); loadComments(); }, [id]);
 
+  // 내 결재 대기 큐 — 현재 문서 외 다음 대기 문서 id
+  useEffect(() => {
+    getApprovals({ tab: 'pending', limit: 100 })
+      .then(r => {
+        const ids = (r.documents || []).map(d => d.id).filter(x => x !== Number(id));
+        setNextPendingId(ids[0] || null);
+      }).catch(() => {});
+  }, [id]);
+
   const handleAction = async () => {
     setActioning(true);
     try {
@@ -257,7 +298,10 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
         await rejectApproval(id, actionComment);
         message.success('반려되었습니다.');
       }
-      setActionModal(null); setActionComment(''); load(); notifyChanged();
+      setActionModal(null); setActionComment(''); notifyChanged();
+      // 연속 결재: 다음 대기 문서가 있으면 이어서 처리
+      if (nextPendingId) { message.info('다음 결재 문서로 이동합니다.'); goNext(); }
+      else load();
     } catch (e) { message.error(e.response?.data?.error || '처리 실패'); }
     finally { setActioning(false); }
   };
@@ -334,6 +378,15 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
               {doc.docNo && (
                 <Tag style={{ fontFamily: 'monospace', fontSize: 12 }} color="blue">{doc.docNo}</Tag>
               )}
+              {doc.isUrgent && <Tag color="red" icon={<FireOutlined />}>긴급</Tag>}
+              {doc.dueDate && (() => {
+                const over = doc.status === 'pending' && dayjs(doc.dueDate).endOf('day').isBefore(dayjs());
+                return (
+                  <Tag color={over ? 'error' : 'orange'} icon={<ClockCircleOutlined />}>
+                    마감 {dayjs(doc.dueDate).format('YYYY.MM.DD')}{over ? ' · 초과' : ''}
+                  </Tag>
+                );
+              })()}
               <Text type="secondary" style={{ fontSize: 12 }}>
                 {doc.template?.formType?.name} / {doc.template?.name}
               </Text>
@@ -380,8 +433,16 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                   onClick={() => { setActionModal('approve'); setActionComment(''); }}>승인</Button>
                 <Button size="small" danger icon={<CloseCircleOutlined />}
                   onClick={() => { setActionModal('reject'); setActionComment(''); }}>반려</Button>
+                <Button size="small" icon={<UserOutlined />}
+                  onClick={() => { setDelegateOpen(true); setDelegateTo(null); setDelegateComment(''); }}>위임</Button>
               </>
             )}
+            {isCurrentApprover && nextPendingId && (
+              <Tooltip title="이 문서를 건너뛰고 다음 대기 문서로">
+                <Button size="small" onClick={() => goNext()}>다음 결재 →</Button>
+              </Tooltip>
+            )}
+            <Button size="small" icon={<CopyOutlined />} onClick={goCopy}>복제</Button>
             <Button size="small" icon={<ArrowLeftOutlined />} onClick={goList}>{embedded ? '닫기' : '목록'}</Button>
           </Space>
         </div>
@@ -493,11 +554,11 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                 {getInitial(user?.displayName)}
               </Avatar>
               <div style={{ flex: 1 }}>
-                <TextArea
+                <SpellTextArea
                   value={newComment}
-                  onChange={e => setNewComment(e.target.value)}
+                  onChange={setNewComment}
                   placeholder="의견을 입력하세요"
-                  autoSize={{ minRows: 2, maxRows: 5 }}
+                  rows={2}
                   style={{ marginBottom: 6 }}
                 />
                 <div style={{ textAlign: 'right' }}>
@@ -589,12 +650,37 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
             {actionModal === 'approve' ? '승인 의견을 입력하세요 (선택).' : '반려 사유를 입력하세요 (필수).'}
           </Text>
         </div>
-        <TextArea
+        <SpellTextArea
           value={actionComment}
-          onChange={e => setActionComment(e.target.value)}
+          onChange={setActionComment}
           rows={3}
           placeholder={actionModal === 'reject' ? '반려 사유를 반드시 입력하세요.' : '의견 (선택)'}
         />
+      </Modal>
+
+      {/* 위임(대결) 모달 */}
+      <Modal
+        title={<Space><UserOutlined />결재 위임 (대결)</Space>}
+        open={delegateOpen}
+        onOk={handleDelegate}
+        confirmLoading={delegating}
+        onCancel={() => setDelegateOpen(false)}
+        okText="위임" cancelText="취소"
+      >
+        <div style={{ marginBottom: 8 }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>현재 내 결재 차례를 다른 사용자에게 위임합니다.</Text>
+        </div>
+        <Select
+          showSearch optionFilterProp="children" style={{ width: '100%', marginBottom: 10 }}
+          placeholder="위임 대상 선택" value={delegateTo} onChange={setDelegateTo}
+        >
+          {users.filter(u => u.id !== user?.id).map(u => (
+            <Select.Option key={u.id} value={u.id}>
+              {u.displayName}{u.position ? ` · ${u.position}` : ''} ({u.username})
+            </Select.Option>
+          ))}
+        </Select>
+        <TextArea value={delegateComment} onChange={e => setDelegateComment(e.target.value)} rows={2} placeholder="위임 사유 (선택)" />
       </Modal>
     </div>
   );

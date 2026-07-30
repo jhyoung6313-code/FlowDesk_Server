@@ -117,12 +117,12 @@ function GalleryCard({ card, visibleProps, onEdit, onDelete }) {
         onMouseLeave={() => setHover(false)}
         onClick={onEdit}
         style={{
-          borderRadius: 12,
+          borderRadius: 'var(--fd-sk-radius-lg, 12px)',
           overflow: 'hidden',
           cursor: 'pointer',
           background: 'var(--fd-surface)',
-          border: `1px solid ${hover ? '#d0d0d0' : '#ebebeb'}`,
-          boxShadow: hover ? '0 6px 18px rgba(0,0,0,0.1)' : '0 1px 4px rgba(0,0,0,0.05)',
+          border: `var(--fd-sk-border-w, 1px) solid ${hover ? 'var(--fd-sk-border-color, #d0d0d0)' : 'var(--fd-border)'}`,
+          boxShadow: hover ? 'var(--fd-sk-shadow-hover, 0 6px 18px rgba(0,0,0,0.1))' : 'var(--fd-sk-shadow-sm, 0 1px 4px rgba(0,0,0,0.05))',
           transform: hover ? 'translateY(-2px)' : 'none',
           transition: 'all 0.15s',
           position: 'relative',

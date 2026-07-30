@@ -9,8 +9,10 @@ const search = async (req, res, next) => {
     if (q.length < 1) return res.json({ query: q, groups: [] });
 
     const contains = { contains: q, mode: 'insensitive' };
+    const userId = req.user.id;
+    const isAdmin = req.user.role === 'admin';
 
-    const [tasks, memos, cards, playbooks, wbsProjects, messages] = await Promise.all([
+    const [tasks, memos, cards, playbooks, wbsProjects, messages, bbsPosts, approvals] = await Promise.all([
       prisma.task.findMany({
         where: { delYn: '0', OR: [{ title: contains }, { description: contains }] },
         select: { id: true, title: true, status: true, dueDate: true },
@@ -53,6 +55,32 @@ const search = async (req, res, next) => {
           room: { select: { name: true } },
         },
         orderBy: { createdAt: 'desc' },
+        take: perGroup,
+      }),
+      // 게시판 글 (제목·내용) — F-67 기밀 게이트: 비관리자는 기밀 글 제외(본인 작성 제외)
+      prisma.bbsPost.findMany({
+        where: {
+          delYn: '0',
+          AND: [
+            { OR: [{ title: contains }, { content: contains }] },
+            ...(isAdmin ? [] : [{ OR: [{ NOT: { sensitivity: 'confidential' } }, { createdBy: userId }] }]),
+          ],
+        },
+        select: { id: true, title: true, categoryId: true, category: { select: { name: true } } },
+        orderBy: { updatedAt: 'desc' },
+        take: perGroup,
+      }),
+      // 전자결재 (제목·문서번호) — 본인 기안/결재자/참조만 (admin은 전체)
+      prisma.approvalDocument.findMany({
+        where: {
+          delYn: '0',
+          AND: [
+            { OR: [{ title: contains }, { docNo: contains }] },
+            ...(isAdmin ? [] : [{ OR: [{ createdBy: userId }, { steps: { some: { approverId: userId } } }] }]),
+          ],
+        },
+        select: { id: true, title: true, docNo: true, status: true },
+        orderBy: { updatedAt: 'desc' },
         take: perGroup,
       }),
     ]);
@@ -101,6 +129,20 @@ const search = async (req, res, next) => {
         items: messages.map((m) => ({
           id: m.id, title: strip(m.content), subtitle: m.room?.name || '',
           path: `/chat?roomId=${m.roomId}`,
+        })),
+      },
+      {
+        key: 'bbs', label: '게시판', icon: 'bbs',
+        items: bbsPosts.map((p) => ({
+          id: p.id, title: p.title, subtitle: p.category?.name || '',
+          path: `/bbs?categoryId=${p.categoryId}&postId=${p.id}`,
+        })),
+      },
+      {
+        key: 'approval', label: '전자결재', icon: 'approval',
+        items: approvals.map((d) => ({
+          id: d.id, title: d.title, subtitle: d.docNo || d.status,
+          path: `/approvals/${d.id}`,
         })),
       },
     ].filter((g) => g.items.length > 0);

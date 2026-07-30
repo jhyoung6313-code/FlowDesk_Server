@@ -3,6 +3,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Menu, ConfigProvider, Button, Modal, Form, Input, DatePicker, Tag, Space, message, Tooltip, Avatar, Dropdown } from 'antd';
 import {
   DashboardOutlined,
+  ScheduleOutlined,
+  FormOutlined,
   CheckSquareOutlined,
   BarChartOutlined,
   TeamOutlined,
@@ -178,14 +180,17 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     toggleHoverBg:c.sidebarHoverBg,
   };
 
-  // 1차 아이콘 레일 팔레트 — 라이트: 테마색으로 밝게, 다크: 다크 서피스 유지
+  // 1차 아이콘 레일 팔레트 — 라이트: Notion Warm 뉴트럴(웜 종이색), 다크: 다크 서피스 유지
+  // (활성 아이콘은 그룹 강조색을 그대로 사용 → 테마 색 스왑 유지)
   const RAIL = {
-    bg:           isDark ? '#1f1f1f' : c.sidebarBg,
-    border:       isDark ? '#303030' : c.sidebarDivider,
-    idle:         isDark ? 'rgba(255,255,255,0.5)' : c.sidebarText,
-    hoverBg:      isDark ? 'rgba(255,255,255,0.08)' : c.sidebarHoverBg,
-    avatarBorder: isDark ? 'rgba(255,255,255,0.15)' : c.sidebarDivider,
+    bg:           `var(--fd-sk-rail-bg, ${isDark ? '#1f1f1f' : '#f4f3ef'})`,
+    border:       `var(--fd-sk-rail-border, ${isDark ? '#303030' : '#e9e7e2'})`,
+    borderW:      'var(--fd-sk-border-w, 1px)',
+    idle:         `var(--fd-sk-rail-idle, ${isDark ? 'rgba(255,255,255,0.5)' : '#8a827a'})`,
+    hoverBg:      `var(--fd-sk-rail-hover-bg, ${isDark ? 'rgba(255,255,255,0.08)' : '#e7e5df'})`,
+    avatarBorder: isDark ? 'rgba(255,255,255,0.15)' : '#e2e0da',
   };
+  const skin = useThemeStore((s) => s.skin);
 
   const [approvalPendingCount, setApprovalPendingCount] = useState(0);
 
@@ -424,6 +429,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   // ── 섹션별 메뉴 항목 (아이콘에 그룹색)
   const viewItems = [
     { key: '/', icon: <DashboardOutlined style={{ color: GROUPS.view.color }} />, label: '대시보드' },
+    { key: '/my-day', icon: <ScheduleOutlined style={{ color: GROUPS.view.color }} />, label: '내 하루' },
     { key: '/tasks', icon: <CheckSquareOutlined style={{ color: GROUPS.view.color }} />, label: '업무 관리' },
     { key: '/workload', icon: <TeamOutlined style={{ color: GROUPS.view.color }} />, label: '워크로드' },
     { key: '/okr', icon: <FlagOutlined style={{ color: GROUPS.view.color }} />, label: 'OKR' },
@@ -452,6 +458,16 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
       key: '/meetings',
       icon: <FileDoneOutlined style={{ color: collabClr }} />,
       label: '회의',
+    },
+    {
+      key: '/forms',
+      icon: <FormOutlined style={{ color: collabClr }} />,
+      label: '설문',
+    },
+    {
+      key: '/documents',
+      icon: <FolderOutlined style={{ color: collabClr }} />,
+      label: '문서함',
     },
     {
       key: 'playbook-submenu',
@@ -502,7 +518,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
       <div
         style={{
           margin: '8px 10px',
-          borderRadius: 14,
+          borderRadius: 'var(--fd-sk-radius-lg, 14px)',
           padding: '2px 2px 6px',
           background: g.tint,
         }}
@@ -567,16 +583,18 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     { key: 'logout', icon: <LogoutOutlined />, label: '로그아웃', onClick: handleLogout },
   ];
 
-  // ── 1차 아이콘 레일 항목 (그룹색)
+  // ── 1차 아이콘 레일 항목 (활성 색 = 스킨 강조색) ──
+  const railAccent = c.accentMid;
   const railItems = [
-    { key: '/', icon: <DashboardOutlined />, title: '대시보드', color: GROUPS.view.color },
-    { key: '/tasks', icon: <CheckSquareOutlined />, title: '업무 관리', color: GROUPS.view.color },
-    { key: '/workload', icon: <TeamOutlined />, title: '워크로드', color: GROUPS.view.color },
-    { key: '/memos', icon: <SnippetsOutlined />, title: '메모지', color: GROUPS.view.color },
-    { key: '/chat', icon: <MessageOutlined />, title: '채팅', color: GROUPS.collab.color, dot: totalUnread > 0 },
-    { key: '/boards', icon: <AppstoreOutlined />, title: '보드', color: GROUPS.collab.color, dot: boardUnread > 0 },
-    { key: '/playbooks', icon: <BookOutlined />, title: 'Playbook', color: GROUPS.collab.color, dot: playbookUnread > 0 },
-    { key: '/wbs', icon: <ProjectOutlined />, title: '프로젝트', color: GROUPS.collab.color },
+    { key: '/', icon: <DashboardOutlined />, title: '대시보드', color: railAccent },
+    { key: '/my-day', icon: <ScheduleOutlined />, title: '내 하루', color: railAccent },
+    { key: '/tasks', icon: <CheckSquareOutlined />, title: '업무 관리', color: railAccent },
+    { key: '/workload', icon: <TeamOutlined />, title: '워크로드', color: railAccent },
+    { key: '/memos', icon: <SnippetsOutlined />, title: '메모지', color: railAccent },
+    { key: '/chat', icon: <MessageOutlined />, title: '채팅', color: railAccent, dot: totalUnread > 0 },
+    { key: '/boards', icon: <AppstoreOutlined />, title: '보드', color: railAccent, dot: boardUnread > 0 },
+    { key: '/playbooks', icon: <BookOutlined />, title: 'Playbook', color: railAccent, dot: playbookUnread > 0 },
+    { key: '/wbs', icon: <ProjectOutlined />, title: '프로젝트', color: railAccent },
   ];
   const railActive = (key) => (key === '/' ? pathname === '/' : pathname.startsWith(key));
 
@@ -590,7 +608,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
             position: 'relative',
             width: 40,
             height: 40,
-            borderRadius: 11,
+            borderRadius: 'var(--fd-sk-radius, 11px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -599,6 +617,8 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
             color: active ? '#fff' : RAIL.idle,
             background: active ? color : 'transparent',
             transition: 'background 0.15s, color 0.15s',
+            // 스킨별 활성 아이콘 강조: 브루탈=검정 테두리+하드 그림자, 모노=각짐
+            ...(active && skin === 'brutal' ? { border: '2px solid #111', boxShadow: '2px 2px 0 #111', color: '#111' } : {}),
           }}
           onMouseEnter={(e) => { if (!active) e.currentTarget.style.background = RAIL.hoverBg; }}
           onMouseLeave={(e) => { if (!active) e.currentTarget.style.background = 'transparent'; }}
@@ -645,7 +665,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
             width: RAIL_WIDTH,
             flexShrink: 0,
             background: RAIL.bg,
-            borderRight: `1px solid ${RAIL.border}`,
+            borderRight: `${RAIL.borderW} solid ${RAIL.border}`,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',

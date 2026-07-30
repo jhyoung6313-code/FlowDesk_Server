@@ -2,6 +2,21 @@ const XLSX = require('xlsx');
 
 const prisma = require('../lib/prisma');
 const { getIO } = require('../socket');
+const automation = require('../services/automationService');
+
+// 업무 컨텍스트를 자동화 이벤트 페이로드로 변환 (fire-and-forget에서만 사용)
+const taskCtx = (task, extra = {}) => ({
+  taskId: task.id,
+  title: task.title,
+  status: task.status,
+  priority: task.priority,
+  partId: task.partId,
+  dueDate: task.dueDate,
+  createdBy: task.createdBy,
+  assigneeIds: (task.assignees || []).map((a) => a.userId ?? a.user?.id).filter(Boolean),
+  link: `/tasks?taskId=${task.id}`,
+  ...extra,
+});
 
 // 업무 변경을 전체 접속자에게 알려 실시간 동기화 (요약 바·대시보드·캘린더·간트)
 // 가벼운 신호만 보내고 클라이언트가 서버에서 다시 읽도록 한다 (단일 진실 원천)
@@ -118,6 +133,7 @@ const create = async (req, res, next) => {
     await logHistory(task.id, req.user.id, 'create', null, null, title);
 
     emitTaskChanged(req, 'create', task.id);
+    automation.fire('task.created', taskCtx(task, { actorId: req.user.id }));
     res.status(201).json(task);
   } catch (err) {
     next(err);
@@ -282,6 +298,7 @@ const updateStatus = async (req, res, next) => {
     const statusMap = { pending: '대기', in_progress: '진행중', done: '완료', hold: '보류' };
     await logHistory(task.id, req.user.id, 'update', '상태', statusMap[existing?.status] || existing?.status, statusMap[status] || status);
     emitTaskChanged(req, 'status', task.id);
+    automation.fire('task.status_changed', taskCtx(task, { prevStatus: existing?.status, actorId: req.user.id }));
     res.json(task);
   } catch (err) {
     next(err);

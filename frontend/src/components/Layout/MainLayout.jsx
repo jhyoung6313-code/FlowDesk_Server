@@ -1,10 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, Suspense } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Layout } from 'antd';
+import { Layout, Spin } from 'antd';
 import ResizableDrawer from '../common/ResizableDrawer';
 import Sidebar from './Sidebar';
 import AppHeader from './AppHeader';
 import SubHeader from './SubHeader';
+import StatusBar from './StatusBar';
 import ChatFab from './ChatFab';
 import AdminBackBar from './AdminBackBar';
 import NotificationToast from '../Notification/NotificationToast';
@@ -121,8 +122,20 @@ export default function MainLayout() {
           }}
         >
           {isAdminSubpage && <AdminBackBar />}
-          <Outlet />
+          {/* 지연 로딩 페이지는 이 콘텐츠 영역 안에서만 스피너를 보여준다.
+              (Suspense를 여기 두어야 메뉴 전환 시 사이드바·헤더가 유지되고,
+               밝은 콘텐츠 배경 위에 스피너가 떠서 검은 화면 깜빡임이 없다.) */}
+          <Suspense
+            fallback={
+              <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Spin size="large" tip="로딩 중..." />
+              </div>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </Content>
+        <StatusBar />
       </Layout>
       <NotificationToast />
       <CommandPalette />

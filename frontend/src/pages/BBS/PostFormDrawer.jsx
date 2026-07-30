@@ -9,6 +9,7 @@ import {
 import { getDepartments } from '../../api/org';
 import RichEditor from '../../components/RichEditor';
 import ResizableDrawer from '../../components/common/ResizableDrawer';
+import { SENSITIVITY_OPTIONS } from '../../components/common/SensitivityTag';
 import useAuthStore from '../../store/authStore';
 
 const { Text } = Typography;
@@ -51,6 +52,7 @@ export default function PostFormDrawer({ open, postId = null, categoryId = null,
           senderOrg: data.senderOrg || undefined,
           officialDueDate: data.officialDueDate ? dayjs(data.officialDueDate) : undefined,
           recipientDepts: data.recipientDepts || [],
+          sensitivity: data.sensitivity || 'public',
         });
         setContent(data.content || '');
         setExistingAttachments(data.attachments || []);
@@ -134,6 +136,10 @@ export default function PostFormDrawer({ open, postId = null, categoryId = null,
         </Form.Item>
         <Form.Item name="title" label="제목" rules={[{ required: true, message: '제목을 입력하세요.' }]}>
           <Input placeholder="제목 입력" maxLength={200} />
+        </Form.Item>
+
+        <Form.Item name="sensitivity" label="민감도" initialValue="public" tooltip="기밀로 지정하면 작성자·관리자만 열람할 수 있습니다.">
+          <Select options={SENSITIVITY_OPTIONS} />
         </Form.Item>
 
         <Row gutter={12}>

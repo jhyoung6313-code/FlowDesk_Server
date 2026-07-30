@@ -161,7 +161,7 @@ export default function AuditLogPage() {
       </Typography.Paragraph>
 
       <Card style={{ borderRadius: 8 }}>
-        <Space style={{ marginBottom: 12 }} wrap>
+        <Space className="fd-toolbar" style={{ marginBottom: 12 }} wrap>
           <Select
             placeholder="액션 필터"
             allowClear

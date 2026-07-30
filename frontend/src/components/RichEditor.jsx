@@ -7,13 +7,12 @@ import { TextAlign } from '@tiptap/extension-text-align';
 import { Image } from '@tiptap/extension-image';
 import { Table, TableRow, TableHeader, TableCell } from '@tiptap/extension-table';
 import { Tooltip, Popover, InputNumber, Button, Space } from 'antd';
+import { FontColorsOutlined, TableOutlined, PictureOutlined } from '@ant-design/icons';
 import {
-  BoldOutlined, ItalicOutlined, UnderlineOutlined, StrikethroughOutlined,
-  FontColorsOutlined, TableOutlined, PictureOutlined,
-  AlignLeftOutlined, AlignCenterOutlined, AlignRightOutlined,
-  OrderedListOutlined, UnorderedListOutlined, LinkOutlined,
-  RedoOutlined, UndoOutlined,
-} from '@ant-design/icons';
+  btn, Separator, UndoRedoButtons, TextFormatButtons, AlignButtons, ListButtons, LinkButton, editorContentCss,
+} from './common/editorShared';
+import { applySpellHighlight, clearSpellHighlight } from '../utils/spellHighlight';
+import { addIgnore } from '../utils/koSpell';
 
 const FONT_SIZES = ['10px','12px','13px','14px','16px','18px','20px','24px','28px','32px'];
 const FONT_FAMILIES = [
@@ -56,6 +55,7 @@ export default function RichEditor({
   placeholder = '내용을 입력하세요',
   minHeight = 120,
   style = {},
+  spell = true,
 }) {
   const [tableOpen, setTableOpen] = useState(false);
   const [fontColor, setFontColor] = useState('#000000');
@@ -63,6 +63,17 @@ export default function RichEditor({
   const [fontSize, setFontSize] = useState('14px');
   const [fontFamily, setFontFamily] = useState(null);
   const imgInputRef = useRef(null);
+  const spellTimer = useRef(null);
+  const [spellMatches, setSpellMatches] = useState([]);
+
+  // 오타 검사(디바운스) — DOM 변형 없이 CSS Highlight로 밑줄
+  const scheduleSpell = (ed) => {
+    if (!spell || !ed) return;
+    clearTimeout(spellTimer.current);
+    spellTimer.current = setTimeout(() => {
+      try { setSpellMatches(applySpellHighlight(ed.view.dom)); } catch { /* ignore */ }
+    }, 400);
+  };
 
   const editor = useEditor({
     extensions: [
@@ -84,6 +95,7 @@ export default function RichEditor({
     content: defaultValue,
     onUpdate: ({ editor }) => {
       onChange?.(editor.getHTML());
+      scheduleSpell(editor);
     },
   });
 
@@ -91,8 +103,15 @@ export default function RichEditor({
   useEffect(() => {
     if (editor && defaultValue !== undefined && editor.getHTML() !== defaultValue) {
       editor.commands.setContent(defaultValue || '', false);
+      scheduleSpell(editor);
     }
   }, [defaultValue]);
+
+  // 최초 생성 시 1회 검사 + 언마운트 시 하이라이트 정리
+  useEffect(() => {
+    if (editor && spell) scheduleSpell(editor);
+    return () => { clearTimeout(spellTimer.current); clearSpellHighlight(); };
+  }, [editor]);
 
   const insertImage = (e) => {
     const file = e.target.files?.[0];
@@ -105,25 +124,7 @@ export default function RichEditor({
     e.target.value = '';
   };
 
-  const insertLink = () => {
-    const prev = editor?.getAttributes('link').href || '';
-    const url = window.prompt('링크 URL 입력', prev || 'https://');
-    if (!url) return;
-    if (url === '') { editor?.chain().focus().extendMarkRange('link').unsetLink().run(); return; }
-    editor?.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
-  };
-
-  const btn = (active = false) => ({
-    width: 26, height: 26, padding: 0,
-    display: 'flex', alignItems: 'center', justifyContent: 'center',
-    border: active ? '1px solid #1677ff' : '1px solid transparent',
-    borderRadius: 4,
-    background: active ? '#e6f4ff' : 'transparent',
-    cursor: 'pointer', fontSize: 12,
-    color: active ? '#1677ff' : 'var(--fd-text-secondary)',
-    flexShrink: 0,
-  });
-  const sep = { width: 1, height: 14, background: '#e0e0e0', margin: '0 3px', flexShrink: 0 };
+  // btn·Separator·링크·기본 서식 버튼은 common/editorShared로 공유(RichEditor ↔ CollaborativeEditor)
 
   if (!editor) return null;
 
@@ -136,13 +137,8 @@ export default function RichEditor({
         background: 'var(--fd-surface-sunken)', flexWrap: 'wrap', rowGap: 4,
       }}>
         {/* Undo/Redo */}
-        <Tooltip title="실행 취소 (Ctrl+Z)">
-          <button type="button" style={btn()} onClick={() => editor.chain().focus().undo().run()}><UndoOutlined /></button>
-        </Tooltip>
-        <Tooltip title="다시 실행 (Ctrl+Y)">
-          <button type="button" style={btn()} onClick={() => editor.chain().focus().redo().run()}><RedoOutlined /></button>
-        </Tooltip>
-        <div style={sep} />
+        <UndoRedoButtons editor={editor} />
+        <Separator />
 
         {/* 서체 */}
         <select value={fontFamily ?? ''} onChange={(e) => {
@@ -161,25 +157,19 @@ export default function RichEditor({
         }} style={{ height: 24, fontSize: 11, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', background: 'var(--fd-surface)', width: 56 }}>
           {FONT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        <div style={sep} />
+        <Separator />
 
         {/* 기본 서식 */}
-        <Tooltip title="굵게"><button type="button" style={btn(editor.isActive('bold'))} onClick={() => editor.chain().focus().toggleBold().run()}><BoldOutlined /></button></Tooltip>
-        <Tooltip title="기울임"><button type="button" style={btn(editor.isActive('italic'))} onClick={() => editor.chain().focus().toggleItalic().run()}><ItalicOutlined /></button></Tooltip>
-        <Tooltip title="밑줄"><button type="button" style={btn(editor.isActive('underline'))} onClick={() => editor.chain().focus().toggleUnderline().run()}><UnderlineOutlined /></button></Tooltip>
-        <Tooltip title="취소선"><button type="button" style={btn(editor.isActive('strike'))} onClick={() => editor.chain().focus().toggleStrike().run()}><StrikethroughOutlined /></button></Tooltip>
-        <div style={sep} />
+        <TextFormatButtons editor={editor} />
+        <Separator />
 
         {/* 정렬 */}
-        <Tooltip title="왼쪽 정렬"><button type="button" style={btn(editor.isActive({ textAlign: 'left' }))} onClick={() => editor.chain().focus().setTextAlign('left').run()}><AlignLeftOutlined /></button></Tooltip>
-        <Tooltip title="가운데 정렬"><button type="button" style={btn(editor.isActive({ textAlign: 'center' }))} onClick={() => editor.chain().focus().setTextAlign('center').run()}><AlignCenterOutlined /></button></Tooltip>
-        <Tooltip title="오른쪽 정렬"><button type="button" style={btn(editor.isActive({ textAlign: 'right' }))} onClick={() => editor.chain().focus().setTextAlign('right').run()}><AlignRightOutlined /></button></Tooltip>
-        <div style={sep} />
+        <AlignButtons editor={editor} />
+        <Separator />
 
         {/* 목록 */}
-        <Tooltip title="번호 목록"><button type="button" style={btn(editor.isActive('orderedList'))} onClick={() => editor.chain().focus().toggleOrderedList().run()}><OrderedListOutlined /></button></Tooltip>
-        <Tooltip title="글머리 목록"><button type="button" style={btn(editor.isActive('bulletList'))} onClick={() => editor.chain().focus().toggleBulletList().run()}><UnorderedListOutlined /></button></Tooltip>
-        <div style={sep} />
+        <ListButtons editor={editor} />
+        <Separator />
 
         {/* 글자 색상 */}
         <Tooltip title="글자 색상">
@@ -202,12 +192,10 @@ export default function RichEditor({
               style={{ position: 'absolute', opacity: 0, width: 0, height: 0, pointerEvents: 'none' }} />
           </label>
         </Tooltip>
-        <div style={sep} />
+        <Separator />
 
         {/* 링크 */}
-        <Tooltip title="링크 삽입">
-          <button type="button" style={btn(editor.isActive('link'))} onClick={insertLink}><LinkOutlined /></button>
-        </Tooltip>
+        <LinkButton editor={editor} />
 
         {/* 표 삽입 */}
         <Popover open={tableOpen} onOpenChange={setTableOpen} trigger="click" placement="bottomLeft" arrow={false}
@@ -229,7 +217,7 @@ export default function RichEditor({
         {/* 표 조작 버튼 (표 안에 커서가 있을 때만) */}
         {editor.isActive('table') && (
           <>
-            <div style={sep} />
+            <Separator />
             <Tooltip title="열 왼쪽에 추가"><button type="button" style={btn()} onClick={() => editor.chain().focus().addColumnBefore().run()}>←열</button></Tooltip>
             <Tooltip title="열 오른쪽에 추가"><button type="button" style={btn()} onClick={() => editor.chain().focus().addColumnAfter().run()}>열→</button></Tooltip>
             <Tooltip title="열 삭제"><button type="button" style={{ ...btn(), color: '#ef4444' }} onClick={() => editor.chain().focus().deleteColumn().run()}>열×</button></Tooltip>
@@ -248,66 +236,31 @@ export default function RichEditor({
         style={{ minHeight, background: 'var(--fd-surface)' }}
       />
 
-      <style>{`
-        .rich-editor-tiptap .ProseMirror {
-          min-height: ${minHeight}px;
-          padding: 10px 12px;
-          outline: none;
-          font-size: 14px;
-          line-height: 1.7;
-          color: var(--fd-text-primary);
-          word-break: break-word;
-        }
-        .rich-editor-tiptap .ProseMirror p { margin: 0 0 6px; }
-        .rich-editor-tiptap .ProseMirror p.is-editor-empty:first-child::before {
-          content: attr(data-placeholder);
-          color: #adb5bd;
-          pointer-events: none;
-          float: left;
-          height: 0;
-        }
-        .rich-editor-tiptap .ProseMirror table {
-          border-collapse: collapse;
-          width: 100%;
-          margin: 8px 0;
-        }
-        .rich-editor-tiptap .ProseMirror table td,
-        .rich-editor-tiptap .ProseMirror table th {
-          border: 1px solid #d1d5db;
-          padding: 6px 10px;
-          min-width: 60px;
-          vertical-align: top;
-          position: relative;
-        }
-        .rich-editor-tiptap .ProseMirror table th {
-          background: #f8fafc;
-          font-weight: 600;
-        }
-        .rich-editor-tiptap .ProseMirror table .selectedCell:after {
-          background: rgba(22, 119, 255, 0.12);
-          content: "";
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-        }
-        .rich-editor-tiptap .ProseMirror img {
-          max-width: 100%;
-          height: auto;
-          border-radius: 4px;
-          cursor: pointer;
-        }
-        .rich-editor-tiptap .ProseMirror img.ProseMirror-selectednode {
-          outline: 2px solid #1677ff;
-        }
-        .rich-editor-tiptap .ProseMirror a { color: #1677ff; text-decoration: underline; }
-        .rich-editor-tiptap .ProseMirror ul, .rich-editor-tiptap .ProseMirror ol { padding-left: 20px; margin: 4px 0; }
-        .rich-editor-tiptap .ProseMirror blockquote {
-          border-left: 3px solid #d1d5db;
-          padding-left: 12px;
-          color: #6b7280;
-          margin: 8px 0;
-        }
-      `}</style>
+      {/* 오타 검출 요약 (표시 전용) */}
+      {spell && spellMatches.length > 0 && (
+        <div style={{
+          display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6,
+          padding: '6px 10px', borderTop: '1px solid var(--fd-border)',
+          background: 'var(--fd-surface-sunken)', fontSize: 12,
+        }}>
+          <span style={{ color: '#e0483d', fontWeight: 600 }}>오타 의심 {spellMatches.length}건</span>
+          {spellMatches.slice(0, 8).map((m, i) => (
+            <span key={i} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              background: m.dict ? '#fbf0dd' : '#fbe9e6', color: m.dict ? '#b0741c' : '#c73a2f',
+              borderRadius: 6, padding: '1px 8px',
+            }}>
+              {m.suggestion ? <>{m.wrong} → <b>{m.suggestion}</b></> : m.wrong}
+              <span title="이 표기 무시" onClick={() => { addIgnore(m.wrong); if (editor) setSpellMatches(applySpellHighlight(editor.view.dom)); }}
+                style={{ cursor: 'pointer', color: '#999', marginLeft: 2, fontWeight: 700 }}>×</span>
+            </span>
+          ))}
+          {spellMatches.length > 8 && <span style={{ color: '#999' }}>외 {spellMatches.length - 8}건</span>}
+        </div>
+      )}
+
+      <style>{editorContentCss('rich-editor-tiptap', minHeight)}</style>
+      <style>{`::highlight(ko-spell){ text-decoration: underline wavy #e0483d; text-decoration-skip-ink: none; }`}</style>
     </div>
   );
 }

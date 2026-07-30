@@ -25,6 +25,7 @@ export const submitApproval = (id) => api.post(`/approvals/${id}/submit`).then(r
 export const approveApproval = (id, comment) => api.post(`/approvals/${id}/approve`, { comment }).then(r => r.data);
 export const rejectApproval = (id, comment) => api.post(`/approvals/${id}/reject`, { comment }).then(r => r.data);
 export const cancelApproval = (id) => api.post(`/approvals/${id}/cancel`).then(r => r.data);
+export const delegateApproval = (id, toUserId, comment) => api.post(`/approvals/${id}/delegate`, { toUserId, comment }).then(r => r.data);
 export const resubmitApproval = (id) => api.post(`/approvals/${id}/resubmit`).then(r => r.data);
 export const resumeApproval = (id) => api.post(`/approvals/${id}/resume`).then(r => r.data);
 export const deleteApproval = (id) => api.delete(`/approvals/${id}`).then(r => r.data);

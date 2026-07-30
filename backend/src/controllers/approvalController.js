@@ -54,11 +54,29 @@ async function sendApprovalNotification(userId, type, documentId, message, actor
 // GET /api/approvals  (query: tab=mine|pending|all, status, page, limit)
 const list = async (req, res, next) => {
   try {
-    const { tab = 'mine', status, page = 1, limit = 20 } = req.query;
+    const { tab = 'mine', status, page = 1, limit = 20, q, formTypeId, from, to } = req.query;
     const userId = req.user.id;
 
     let where = { delYn: '0' };
     if (status) where.status = status;
+
+    // 키워드 검색: 제목 · 문서번호 · 기안자명
+    if (q && String(q).trim()) {
+      const kw = String(q).trim();
+      where.OR = [
+        { title: { contains: kw, mode: 'insensitive' } },
+        { docNo: { contains: kw, mode: 'insensitive' } },
+        { creator: { displayName: { contains: kw, mode: 'insensitive' } } },
+      ];
+    }
+    // 양식종류 필터
+    if (formTypeId) where.template = { formTypeId: Number(formTypeId) };
+    // 기안일 기간 필터
+    if (from || to) {
+      where.createdAt = {};
+      if (from) where.createdAt.gte = new Date(from);
+      if (to) { const d = new Date(to); d.setHours(23, 59, 59, 999); where.createdAt.lte = d; }
+    }
 
     if (tab === 'mine') {
       where.createdBy = userId;
@@ -146,7 +164,7 @@ const get = async (req, res, next) => {
 // POST /api/approvals  — 임시저장(draft)
 const create = async (req, res, next) => {
   try {
-    const { templateId, title, formData, steps } = req.body;
+    const { templateId, title, formData, steps, isUrgent, dueDate } = req.body;
     if (!templateId || !title) {
       return res.status(400).json({ error: '템플릿과 제목은 필수입니다.' });
     }
@@ -164,6 +182,8 @@ const create = async (req, res, next) => {
         status: 'draft',
         totalSteps: countFlowGroups(stepsArr),
         currentStep: 0,
+        isUrgent: !!isUrgent,
+        dueDate: dueDate ? new Date(dueDate) : null,
         createdBy: req.user.id,
         steps: { create: stepsArr },
       },
@@ -192,7 +212,7 @@ const update = async (req, res, next) => {
       return res.status(400).json({ error: '임시저장 상태의 문서만 수정할 수 있습니다.' });
     }
 
-    const { title, formData, steps } = req.body;
+    const { title, formData, steps, isUrgent, dueDate } = req.body;
 
     await prisma.$transaction(async (tx) => {
       const normalized = steps !== undefined ? normalizeSteps(steps) : undefined;
@@ -205,6 +225,8 @@ const update = async (req, res, next) => {
             formData: typeof formData === 'string' ? formData : JSON.stringify(formData),
           }),
           ...(normalized !== undefined && { totalSteps: countFlowGroups(normalized) }),
+          ...(isUrgent !== undefined && { isUrgent: !!isUrgent }),
+          ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
         },
       });
 
@@ -238,7 +260,7 @@ const submit = async (req, res, next) => {
     const id = Number(req.params.id);
     const doc = await prisma.approvalDocument.findFirst({
       where: { id, delYn: '0' },
-      include: { steps: { orderBy: { stepOrder: 'asc' } }, creator: true, template: { select: { code: true, lineJson: true } } },
+      include: { steps: { orderBy: { stepOrder: 'asc' } }, creator: true, template: { select: { code: true, lineJson: true, formTypeId: true } } },
     });
     if (!doc) return res.status(404).json({ error: '결재 문서를 찾을 수 없습니다.' });
     if (doc.createdBy !== req.user.id) return res.status(403).json({ error: '상신 권한이 없습니다.' });
@@ -453,6 +475,57 @@ const cancel = async (req, res, next) => {
   }
 };
 
+// POST /api/approvals/:id/delegate — 현재 결재 단계를 다른 사용자에게 위임(대결)
+const delegate = async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const { toUserId, comment } = req.body;
+    if (!toUserId) return res.status(400).json({ error: '위임할 대상을 선택하세요.' });
+
+    const doc = await prisma.approvalDocument.findFirst({
+      where: { id, delYn: '0' },
+      include: { steps: true },
+    });
+    if (!doc) return res.status(404).json({ error: '결재 문서를 찾을 수 없습니다.' });
+    if (doc.status !== 'pending') return res.status(400).json({ error: '결재 진행 중인 문서만 위임할 수 있습니다.' });
+
+    // 현재 차수에서 내게 배정된 미처리 단계
+    const myStep = doc.steps.find(s =>
+      s.stepOrder === doc.currentStep && s.approverId === req.user.id &&
+      s.status === 'pending' && s.type !== 'reference');
+    if (!myStep) return res.status(403).json({ error: '현재 결재 차례가 아닙니다.' });
+
+    const toId = Number(toUserId);
+    if (toId === req.user.id) return res.status(400).json({ error: '본인에게는 위임할 수 없습니다.' });
+    const to = await prisma.user.findFirst({ where: { id: toId, isActive: true } });
+    if (!to) return res.status(404).json({ error: '위임 대상 사용자를 찾을 수 없습니다.' });
+    if (doc.steps.some(s => s.approverId === toId && s.type !== 'reference')) {
+      return res.status(400).json({ error: '이미 결재선에 포함된 사용자입니다.' });
+    }
+
+    const me = await prisma.user.findUnique({ where: { id: req.user.id }, select: { displayName: true } });
+
+    await prisma.approvalStep.update({
+      where: { id: myStep.id },
+      data: { approverId: toId, actingType: `위임(${me?.displayName || ''})` },
+    });
+
+    await sendApprovalNotification(
+      toId, 'approval_requested', id,
+      `${me?.displayName || ''}님이 "${doc.title}" 결재를 위임했습니다.${comment ? ` — ${comment}` : ''}`,
+      req.user.id,
+    );
+
+    const updated = await prisma.approvalDocument.findUnique({
+      where: { id },
+      include: { steps: { include: { approver: { select: { id: true, displayName: true } } }, orderBy: { stepOrder: 'asc' } } },
+    });
+    res.json({ message: '위임되었습니다.', document: updated });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // DELETE /api/approvals/:id  — draft 상태만 삭제
 const remove = async (req, res, next) => {
   try {
@@ -505,8 +578,17 @@ const downloadAttachment = async (req, res, next) => {
   try {
     const attachment = await prisma.approvalAttachment.findUnique({
       where: { id: Number(req.params.aid) },
+      include: { document: { select: { createdBy: true, delYn: true, steps: { select: { approverId: true } } } } },
     });
     if (!attachment) return res.status(404).json({ error: '파일을 찾을 수 없습니다.' });
+
+    // 접근 권한: 작성자·결재자·admin만 (get과 동일 규칙)
+    const doc = attachment.document;
+    if (!doc || doc.delYn !== '0') return res.status(404).json({ error: '결재 문서를 찾을 수 없습니다.' });
+    const isApprover = doc.steps.some(s => s.approverId === req.user.id);
+    if (req.user.role !== 'admin' && doc.createdBy !== req.user.id && !isApprover) {
+      return res.status(403).json({ error: '접근 권한이 없습니다.' });
+    }
 
     const filePath = path.join(UPLOAD_DIR, attachment.storedName);
     if (!fs.existsSync(filePath)) return res.status(404).json({ error: '파일이 서버에 존재하지 않습니다.' });
@@ -720,7 +802,7 @@ const pendingCount = async (req, res, next) => {
 };
 
 module.exports = {
-  list, get, create, update, submit, approve, reject, cancel, resubmit, resume, remove, pendingCount,
+  list, get, create, update, submit, approve, reject, cancel, delegate, resubmit, resume, remove, pendingCount,
   uploadAttachment, downloadAttachment, removeAttachment,
   listComments, createComment, updateComment, removeComment,
 };

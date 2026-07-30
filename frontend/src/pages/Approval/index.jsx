@@ -1,12 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Tabs, Button, Space, Typography, Tag, Select, message, Popconfirm,
-  theme as antTheme, Badge, Tooltip, Avatar, Pagination, Empty, Spin, Drawer, Grid,
+  theme as antTheme, Badge, Tooltip, Avatar, Pagination, Empty, Spin, Drawer, Grid, Input, Modal,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined, CloseCircleOutlined, FileDoneOutlined, ClockCircleOutlined } from '@ant-design/icons';
-import { getApprovals, deleteApproval, cancelApproval } from '../../api/approval';
+import { PlusOutlined, DeleteOutlined, CloseCircleOutlined, FileDoneOutlined, ClockCircleOutlined, CopyOutlined, FireOutlined, CheckOutlined } from '@ant-design/icons';
+import { getApprovals, deleteApproval, cancelApproval, getApprovalFormTypes, approveApproval, rejectApproval } from '../../api/approval';
 import DocumentForm from './DocumentForm';
 import DocumentDetail from './DocumentDetail';
+import SpellTextArea from '../../components/common/SpellTextArea';
+import { avatarColor } from '../../utils/listkit';
 import useAuthStore from '../../store/authStore';
 import dayjs from 'dayjs';
 
@@ -40,21 +42,34 @@ export default function ApprovalPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [formState, setFormState] = useState({ open: false, docId: null });
+  const [formState, setFormState] = useState({ open: false, docId: null, copyFromId: null });
   const [detailId, setDetailId] = useState(null);
   const screens = Grid.useBreakpoint();
+  const [q, setQ] = useState('');
+  const [qInput, setQInput] = useState('');
+  const [formTypeId, setFormTypeId] = useState(undefined);
+  const [formTypes, setFormTypes] = useState([]);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [rejectModal, setRejectModal] = useState(null); // { id } | null
+  const [rejectReason, setRejectReason] = useState('');
+
+  useEffect(() => { getApprovalFormTypes().then(setFormTypes).catch(() => {}); }, []);
+
+  // 내 차례(승인 대기) 여부
+  const isMyPendingTurn = (d) => d.status === 'pending'
+    && (d.steps || []).some(s => s.stepOrder === d.currentStep && s.approverId === user?.id && s.status === 'pending' && s.type !== 'reference');
 
   const tabs = isAdmin ? [...TAB_ITEMS, { key: 'all', label: '전체' }] : TAB_ITEMS;
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getApprovals({ tab, status: statusFilter, page, limit: 20 });
+      const data = await getApprovals({ tab, status: statusFilter, page, limit: 20, q: q || undefined, formTypeId });
       setDocuments(data.documents || []);
       setTotal(data.total || 0);
     } catch { message.error('목록을 불러오지 못했습니다.'); }
     finally { setLoading(false); }
-  }, [tab, statusFilter, page]);
+  }, [tab, statusFilter, page, q, formTypeId]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -68,15 +83,31 @@ export default function ApprovalPage() {
     catch (e) { message.error(e.response?.data?.error || '취소 실패'); }
   };
 
-  const pendingCount = documents.filter(d => d.status === 'pending' && d.steps?.some(s => s.approverId === user?.id && s.stepOrder === d.currentStep)).length;
-
-  // 결재자 아바타 배경색 (상태별)
-  const stepAvatarBg = (doc, s) => {
-    if (s.status === 'approved') return token.colorSuccess;
-    if (s.status === 'rejected') return token.colorError;
-    if (doc.status === 'pending' && s.stepOrder === doc.currentStep) return token.colorPrimary;
-    return token.colorTextQuaternary;
+  // 인라인 승인 / 반려 / 일괄 승인 (결재자)
+  const handleApproveOne = async (id) => {
+    try { await approveApproval(id, ''); message.success('승인되었습니다.'); load(); }
+    catch (e) { message.error(e.response?.data?.error || '승인 실패'); }
   };
+  const doReject = async () => {
+    if (!rejectReason.trim()) { message.warning('반려 사유를 입력하세요.'); return; }
+    try {
+      await rejectApproval(rejectModal.id, rejectReason);
+      message.success('반려되었습니다.'); setRejectModal(null); setRejectReason(''); load();
+    } catch (e) { message.error(e.response?.data?.error || '반려 실패'); }
+  };
+  const handleBulkApprove = async () => {
+    const targets = documents.filter(isMyPendingTurn);
+    if (targets.length === 0) return;
+    setBulkLoading(true);
+    let ok = 0;
+    for (const d of targets) { try { await approveApproval(d.id, ''); ok++; } catch {} }
+    setBulkLoading(false);
+    message.success(`${ok}건 승인되었습니다.`);
+    load();
+  };
+  const myTurnCount = documents.filter(isMyPendingTurn).length;
+
+  const pendingCount = documents.filter(d => d.status === 'pending' && d.steps?.some(s => s.approverId === user?.id && s.stepOrder === d.currentStep)).length;
 
   // 진행 상태 요약 문구
   const progressText = (doc) => {
@@ -86,25 +117,43 @@ export default function ApprovalPage() {
     if (doc.status === 'draft') return doc.totalSteps > 0 ? '임시저장' : '결재선 미지정';
     const cur = doc.steps?.find(s => s.stepOrder === doc.currentStep && s.type !== 'reference');
     const isMe = cur?.approverId === user?.id;
-    return `${doc.currentStep - 1} / ${doc.totalSteps} 단계 · ${isMe ? '내 차례' : (cur?.approver?.displayName || '') + ' 결재중'}`;
+    return `${doc.currentStep - 1}/${doc.totalSteps} · ${isMe ? '내 차례' : (cur?.approver?.displayName || '') + ' 결재중'}`;
   };
+
+  // 진행률(0~100) + 바 색상
+  const progressPct = (doc) => {
+    const total = doc.totalSteps || (doc.steps || []).filter(s => s.type !== 'reference').length || 1;
+    if (doc.status === 'approved') return 100;
+    if (doc.status === 'rejected') return Math.round(((doc.rejectedStep || 1) - 1) / total * 100);
+    if (doc.status === 'cancelled' || doc.status === 'draft') return 0;
+    return Math.round((doc.currentStep - 1) / total * 100);
+  };
+  const progressColor = (doc) => {
+    if (doc.status === 'approved') return token.colorSuccess;
+    if (doc.status === 'rejected') return token.colorError;
+    return token.colorPrimary;
+  };
+
+  // 컬럼 그리드 (헤더/행 공유)
+  const GRID_COLS = '92px 1fr 60px 188px 84px 72px 132px';
 
   const renderDoc = (doc) => {
     const cfg = STATUS_CONFIG[doc.status] || { color: 'default', label: doc.status };
     const isOwner = doc.createdBy === user?.id || isAdmin;
     const isMyTurn = doc.status === 'pending' && doc.steps?.some(s => s.stepOrder === doc.currentStep && s.approverId === user?.id && s.type !== 'reference');
-    const flow = (doc.steps || []).filter(s => s.type !== 'reference');
-    const shown = flow.slice(0, 4);
-    const rest = flow.length - shown.length;
+
+    const pct = progressPct(doc);
+    const over = doc.dueDate && doc.status === 'pending' && dayjs(doc.dueDate).endOf('day').isBefore(dayjs());
 
     return (
       <div
         key={doc.id}
         onClick={(e) => { if (e.target.closest('button')) return; setDetailId(doc.id); }}
         style={{
-          display: 'grid', gridTemplateColumns: '84px 1fr 200px 92px 34px', gap: 14, alignItems: 'center',
-          padding: '13px 16px', borderBottom: `1px solid ${token.colorBorderSecondary}`, cursor: 'pointer',
+          display: 'grid', gridTemplateColumns: GRID_COLS, gap: 14, alignItems: 'center',
+          padding: '12px 16px', borderBottom: `1px solid ${token.colorBorderSecondary}`, cursor: 'pointer',
           background: isMyTurn ? token.colorPrimaryBg : 'transparent',
+          borderLeft: `3px solid ${isMyTurn ? token.colorPrimary : 'transparent'}`,
         }}
         onMouseEnter={e => { if (!isMyTurn) e.currentTarget.style.background = token.colorFillQuaternary; }}
         onMouseLeave={e => { if (!isMyTurn) e.currentTarget.style.background = 'transparent'; }}
@@ -121,34 +170,38 @@ export default function ApprovalPage() {
 
         {/* 제목 + 양식 */}
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontWeight: 700, fontSize: 14, color: token.colorText, marginBottom: 3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {doc.title}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, minWidth: 0 }}>
+            {doc.isUrgent && (
+              <Tag color="error" style={{ margin: 0, fontSize: 10, lineHeight: '16px', flexShrink: 0, padding: '0 5px' }}>
+                <FireOutlined /> 긴급
+              </Tag>
+            )}
+            <span style={{ fontWeight: 700, fontSize: 14, color: token.colorText, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {doc.title}
+            </span>
           </div>
           <Text type="secondary" style={{ fontSize: 12 }}>
             {doc.template?.formType?.name && `${doc.template.formType.name} / `}{doc.template?.name}
-            {' · '}{doc.creator?.displayName} · {dayjs(doc.createdAt).format('MM.DD')}
           </Text>
         </div>
 
-        {/* 결재자 아바타 스택 + 진행 */}
+        {/* 기안자 */}
+        <div style={{ textAlign: 'center' }}>
+          <Tooltip title={doc.creator?.displayName}>
+            <Avatar size={26} style={{ background: avatarColor(doc.creator?.displayName), fontSize: 11 }}>
+              {getInitial(doc.creator?.displayName)}
+            </Avatar>
+          </Tooltip>
+        </div>
+
+        {/* 결재 진행 (텍스트 + 바) */}
         <div>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            {shown.map((s, i) => (
-              <Tooltip key={s.id} title={`${s.approver?.displayName || ''} (${STATUS_CONFIG[s.status]?.label || s.status})`}>
-                <Avatar size={24} style={{ background: stepAvatarBg(doc, s), fontSize: 10, marginLeft: i ? -6 : 0, border: `2px solid ${token.colorBgContainer}` }}>
-                  {getInitial(s.approver?.displayName)}
-                </Avatar>
-              </Tooltip>
-            ))}
-            {rest > 0 && (
-              <div style={{ width: 24, height: 24, borderRadius: '50%', background: token.colorFillQuaternary, color: token.colorTextTertiary, fontSize: 10, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', marginLeft: -6, border: `2px solid ${token.colorBgContainer}` }}>
-                +{rest}
-              </div>
-            )}
-          </div>
-          <Text type="secondary" style={{ fontSize: 11, marginTop: 4, display: 'block', color: isMyTurn ? token.colorPrimary : undefined, fontWeight: isMyTurn ? 600 : 400 }}>
+          <Text style={{ fontSize: 11, display: 'block', marginBottom: 5, color: isMyTurn ? token.colorPrimary : token.colorTextSecondary, fontWeight: isMyTurn ? 600 : 400 }}>
             {progressText(doc)}
           </Text>
+          <div style={{ height: 4, borderRadius: 999, background: token.colorFillQuaternary, overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${pct}%`, background: progressColor(doc), borderRadius: 999, transition: 'width .3s' }} />
+          </div>
         </div>
 
         {/* 상태 */}
@@ -156,22 +209,61 @@ export default function ApprovalPage() {
           <Tag color={cfg.color} style={{ margin: 0, borderRadius: 999, fontWeight: 600 }}>{cfg.label}</Tag>
         </div>
 
+        {/* 기한 */}
+        <div style={{ textAlign: 'center' }}>
+          {doc.dueDate ? (
+            <Text style={{ fontSize: 12, color: over ? token.colorError : token.colorTextSecondary, fontWeight: over ? 600 : 400 }}>
+              {dayjs(doc.dueDate).format('MM/DD')}{over ? ' !' : ''}
+            </Text>
+          ) : <Text type="secondary" style={{ fontSize: 12 }}>-</Text>}
+        </div>
+
         {/* 액션 */}
-        <div style={{ textAlign: 'right' }}>
-          {isOwner && ['draft', 'pending'].includes(doc.status) && (
-            <Popconfirm title="취소하시겠습니까?" onConfirm={() => handleCancel(doc.id)} okText="취소" cancelText="아니요">
-              <Tooltip title="취소"><Button size="small" type="text" icon={<CloseCircleOutlined />} /></Tooltip>
-            </Popconfirm>
-          )}
-          {isOwner && doc.status === 'draft' && (
-            <Popconfirm title="삭제하시겠습니까?" onConfirm={() => handleDelete(doc.id)} okText="삭제" cancelText="취소">
-              <Tooltip title="삭제"><Button size="small" type="text" danger icon={<DeleteOutlined />} /></Tooltip>
-            </Popconfirm>
+        <div style={{ textAlign: 'right', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 4 }}>
+          {tab === 'pending' && isMyTurn ? (
+            <>
+              <Button size="small" type="primary" onClick={() => handleApproveOne(doc.id)}>승인</Button>
+              <Button size="small" danger ghost onClick={() => { setRejectModal({ id: doc.id }); setRejectReason(''); }}>반려</Button>
+            </>
+          ) : (
+            <>
+              <Tooltip title="이 문서로 복제">
+                <Button size="small" type="text" icon={<CopyOutlined />}
+                  onClick={() => setFormState({ open: true, docId: null, copyFromId: doc.id })} />
+              </Tooltip>
+              {isOwner && ['draft', 'pending'].includes(doc.status) && (
+                <Popconfirm title="취소하시겠습니까?" onConfirm={() => handleCancel(doc.id)} okText="취소" cancelText="아니요">
+                  <Tooltip title="취소"><Button size="small" type="text" icon={<CloseCircleOutlined />} /></Tooltip>
+                </Popconfirm>
+              )}
+              {isOwner && doc.status === 'draft' && (
+                <Popconfirm title="삭제하시겠습니까?" onConfirm={() => handleDelete(doc.id)} okText="삭제" cancelText="취소">
+                  <Tooltip title="삭제"><Button size="small" type="text" danger icon={<DeleteOutlined />} /></Tooltip>
+                </Popconfirm>
+              )}
+            </>
           )}
         </div>
       </div>
     );
   };
+
+  const renderHeader = () => (
+    <div style={{
+      display: 'grid', gridTemplateColumns: GRID_COLS, gap: 14, alignItems: 'center',
+      padding: '9px 16px 9px 19px', borderBottom: `1px solid ${token.colorBorderSecondary}`,
+      background: token.colorFillQuaternary,
+      fontSize: 11.5, fontWeight: 600, color: token.colorTextTertiary, letterSpacing: 0.2,
+    }}>
+      <div>문서번호</div>
+      <div>제목</div>
+      <div style={{ textAlign: 'center' }}>기안자</div>
+      <div>결재 진행</div>
+      <div style={{ textAlign: 'center' }}>상태</div>
+      <div style={{ textAlign: 'center' }}>기한</div>
+      <div />
+    </div>
+  );
 
   return (
     <div style={{ padding: '20px 24px' }}>
@@ -184,19 +276,35 @@ export default function ApprovalPage() {
             <Tag color="red" icon={<ClockCircleOutlined />}>{pendingCount}건 결재 대기</Tag>
           )}
         </Space>
-        <Space size={8}>
+        <Space size={6} align="center" wrap className="fd-toolbar">
+          <Input.Search
+            allowClear placeholder="제목·문서번호·기안자"
+            style={{ width: 180 }} size="small"
+            value={qInput}
+            onChange={e => setQInput(e.target.value)}
+            onSearch={v => { setQ((v || '').trim()); setPage(1); }}
+          />
+          <Select
+            allowClear placeholder="양식종류"
+            style={{ width: 116 }} size="small"
+            value={formTypeId}
+            onChange={v => { setFormTypeId(v); setPage(1); }}
+          >
+            {formTypes.map(t => (
+              <Select.Option key={t.id} value={t.id}>{t.icon} {t.name}</Select.Option>
+            ))}
+          </Select>
           <Select
             allowClear placeholder="상태 필터"
-            style={{ width: 120 }}
+            style={{ width: 116 }} size="small"
             value={statusFilter}
             onChange={v => { setStatusFilter(v); setPage(1); }}
-            size="small"
           >
             {Object.entries(STATUS_CONFIG).map(([k, v]) => (
               <Select.Option key={k} value={k}>{v.label}</Select.Option>
             ))}
           </Select>
-          <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => setFormState({ open: true, docId: null })}>
+          <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => setFormState({ open: true, docId: null, copyFromId: null })}>
             결재 요청
           </Button>
         </Space>
@@ -215,13 +323,31 @@ export default function ApprovalPage() {
         style={{ marginBottom: 12 }}
       />
 
+      {tab === 'pending' && myTurnCount > 0 && (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '8px 14px', marginBottom: 10, borderRadius: token.borderRadius,
+          background: token.colorPrimaryBg, border: `1px solid ${token.colorPrimaryBorder}`,
+        }}>
+          <Text style={{ fontSize: 13, color: token.colorPrimary, fontWeight: 600 }}>
+            <ClockCircleOutlined style={{ marginRight: 6 }} />내 차례 결재 대기 {myTurnCount}건 (이 페이지)
+          </Text>
+          <Popconfirm title={`표시된 ${myTurnCount}건을 모두 승인하시겠습니까?`} onConfirm={handleBulkApprove} okText="일괄 승인" cancelText="취소">
+            <Button type="primary" size="small" icon={<CheckOutlined />} loading={bulkLoading}>일괄 승인</Button>
+          </Popconfirm>
+        </div>
+      )}
+
       <div style={{ background: token.colorBgContainer, borderRadius: token.borderRadiusLG, border: `1px solid ${token.colorBorderSecondary}`, overflow: 'hidden' }}>
         {loading ? (
           <div style={{ padding: 60, textAlign: 'center' }}><Spin /></div>
         ) : documents.length === 0 ? (
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="문서가 없습니다." style={{ padding: '48px 0' }} />
         ) : (
-          documents.map(renderDoc)
+          <>
+            {renderHeader()}
+            {documents.map(renderDoc)}
+          </>
         )}
         {total > 20 && (
           <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 16px' }}>
@@ -232,11 +358,11 @@ export default function ApprovalPage() {
 
       {/* 결재 기안/수정 Drawer */}
       <Drawer
-        title={formState.docId ? '결재 문서 수정' : '결재 요청'}
+        title={formState.docId ? '결재 문서 수정' : (formState.copyFromId ? '결재 요청 (복제)' : '결재 요청')}
         placement="right"
         width={screens.md ? 720 : '100%'}
         open={formState.open}
-        onClose={() => setFormState({ open: false, docId: null })}
+        onClose={() => setFormState({ open: false, docId: null, copyFromId: null })}
         destroyOnClose
         styles={{ body: { padding: 20 } }}
       >
@@ -244,8 +370,9 @@ export default function ApprovalPage() {
           <DocumentForm
             embedded
             initialDocId={formState.docId}
-            onClose={() => setFormState({ open: false, docId: null })}
-            onSaved={() => { setFormState({ open: false, docId: null }); load(); }}
+            copyFromId={formState.copyFromId}
+            onClose={() => setFormState({ open: false, docId: null, copyFromId: null })}
+            onSaved={() => { setFormState({ open: false, docId: null, copyFromId: null }); load(); }}
           />
         )}
       </Drawer>
@@ -266,10 +393,26 @@ export default function ApprovalPage() {
             docId={detailId}
             onClose={() => setDetailId(null)}
             onChanged={load}
-            onEdit={(eid) => { setDetailId(null); setFormState({ open: true, docId: eid }); }}
+            onEdit={(eid) => { setDetailId(null); setFormState({ open: true, docId: eid, copyFromId: null }); }}
+            onCopy={(cid) => { setDetailId(null); setFormState({ open: true, docId: null, copyFromId: cid }); }}
+            onNext={(nid) => setDetailId(nid)}
           />
         )}
       </Drawer>
+
+      {/* 인라인 반려 사유 입력 */}
+      <Modal
+        title={<Space><CloseCircleOutlined style={{ color: token.colorError }} />반려</Space>}
+        open={!!rejectModal}
+        onOk={doReject}
+        onCancel={() => { setRejectModal(null); setRejectReason(''); }}
+        okText="반려" okButtonProps={{ danger: true }} cancelText="취소"
+      >
+        <div style={{ marginBottom: 8 }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>반려 사유를 입력하세요 (필수).</Text>
+        </div>
+        <SpellTextArea value={rejectReason} onChange={setRejectReason} rows={3} placeholder="반려 사유를 반드시 입력하세요." />
+      </Modal>
     </div>
   );
 }

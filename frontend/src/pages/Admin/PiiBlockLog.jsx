@@ -119,7 +119,7 @@ export default function PiiBlockLogPage() {
       </Typography.Paragraph>
 
       <Card style={{ borderRadius: 8 }}>
-        <Space style={{ marginBottom: 12 }} wrap>
+        <Space className="fd-toolbar" style={{ marginBottom: 12 }} wrap>
           <Select
             placeholder="유형 필터"
             allowClear

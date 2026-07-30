@@ -11,6 +11,7 @@ import {
 import dayjs from 'dayjs';
 import RichEditor from '../../components/RichEditor';
 import MarkdownLite from '../../components/ai/MarkdownLite';
+import FreeSlotFinder from '../../components/Schedule/FreeSlotFinder';
 import useAuthStore from '../../store/authStore';
 import { getUsers } from '../../api/users';
 import { getAiStatus } from '../../api/ai';
@@ -38,6 +39,8 @@ function MeetingModal({ open, onClose, onSaved, users, editing }) {
   const [form] = Form.useForm();
   const [agenda, setAgenda] = useState([]);
   const [saving, setSaving] = useState(false);
+  const [finderOpen, setFinderOpen] = useState(false);
+  const attendeeIds = Form.useWatch('attendeeUserIds', form) || [];
 
   useEffect(() => {
     if (open) {
@@ -90,10 +93,23 @@ function MeetingModal({ open, onClose, onSaved, users, editing }) {
         <Form.Item name="location" label="장소">
           <Input placeholder="예) 3층 회의실 / 온라인" />
         </Form.Item>
-        <Form.Item name="attendeeUserIds" label="참석자">
+        <Form.Item name="attendeeUserIds" label={
+          <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+            <span>참석자</span>
+            <Button size="small" type="link" icon={<ClockCircleOutlined />} onClick={() => setFinderOpen(true)}>빈 시간 찾기</Button>
+          </Space>
+        }>
           <Select mode="multiple" placeholder="참석자 선택 (주최자 자동 포함)" optionFilterProp="label"
             options={users.map((u) => ({ value: u.id, label: u.displayName }))} />
         </Form.Item>
+        <FreeSlotFinder
+          open={finderOpen}
+          onClose={() => setFinderOpen(false)}
+          attendeeIds={attendeeIds}
+          onPick={({ date, start, end }) => form.setFieldsValue({
+            range: [dayjs(`${date} ${start}`, 'YYYY-MM-DD HH:mm'), dayjs(`${date} ${end}`, 'YYYY-MM-DD HH:mm')],
+          })}
+        />
         <Divider style={{ margin: '8px 0' }}>안건</Divider>
         {agenda.map((a, i) => (
           <Space key={i} style={{ display: 'flex', marginBottom: 8 }} align="baseline">

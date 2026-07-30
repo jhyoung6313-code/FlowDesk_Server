@@ -83,12 +83,12 @@ export default function MemoCard({
     <div
       style={{
         background: p.bg,
-        border: `1px solid ${p.border}`,
-        borderRadius: 12,
+        border: `var(--fd-sk-border-w, 1px) solid ${p.border}`,
+        borderRadius: 'var(--fd-sk-radius-lg, 12px)',
         padding: compact ? '10px 12px' : '12px 14px',
         boxShadow: mode === 'board'
-          ? '0 6px 16px rgba(15,23,42,0.12)'
-          : '0 1px 4px rgba(15,23,42,0.06)',
+          ? 'var(--fd-sk-shadow-hover, 0 6px 16px rgba(15,23,42,0.12))'
+          : 'var(--fd-sk-shadow-sm, 0 1px 4px rgba(15,23,42,0.06))',
         width: mode === 'board' ? 220 : '100%',
         minHeight: mode === 'board' ? 150 : 'auto',
         display: 'flex',

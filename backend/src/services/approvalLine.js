@@ -31,6 +31,16 @@ async function resolvePresetLine(prisma, template, formData, drafterId) {
   if (template?.lineJson) {
     try { preset = JSON.parse(template.lineJson); } catch { preset = []; }
   }
+  // 템플릿에 결재선이 없으면 상위 '양식 종류'의 기본 결재선으로 폴백
+  if (preset.length === 0 && template?.formTypeId) {
+    try {
+      const ft = await prisma.approvalFormType.findUnique({
+        where: { id: template.formTypeId },
+        select: { lineJson: true },
+      });
+      if (ft?.lineJson) preset = JSON.parse(ft.lineJson);
+    } catch { /* ignore */ }
+  }
 
   const drafter = await prisma.user.findUnique({
     where: { id: drafterId },

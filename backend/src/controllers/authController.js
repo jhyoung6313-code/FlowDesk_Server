@@ -158,9 +158,30 @@ const verifyLoginTotp = async (req, res, next) => {
       return res.status(401).json({ error: '인증 정보가 올바르지 않습니다.' });
     }
 
+    // 계정 잠금 확인 (OTP 무차별 대입 방어 — 1단계와 동일 기준)
+    if (user.lockedUntil && user.lockedUntil > new Date()) {
+      const mins = Math.ceil((user.lockedUntil - new Date()) / 60000);
+      return res.status(423).json({ error: `계정이 잠겼습니다. ${mins}분 후 다시 시도해주세요.` });
+    }
+
     const isValid = authenticator.verify({ token: otpCode, secret: user.totpSecret });
     if (!isValid) {
-      await audit.record({ action: AUDIT_ACTION.LOGIN_FAIL, req, userId: user.id, username: user.username, resource: 'auth/verify-totp', success: false, detail: 'otp-mismatch' });
+      // OTP 실패도 실패 횟수에 누적 → 임계치 초과 시 잠금
+      const LOCK = settings.lockout();
+      const failed = (user.failedLoginCount || 0) + 1;
+      const lock = failed >= LOCK.MAX_FAILED_ATTEMPTS;
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          failedLoginCount: lock ? 0 : failed,
+          lockedUntil: lock ? new Date(Date.now() + LOCK.LOCK_DURATION_MINUTES * 60000) : user.lockedUntil,
+        },
+      });
+      await audit.record({ action: AUDIT_ACTION.LOGIN_FAIL, req, userId: user.id, username: user.username, resource: 'auth/verify-totp', success: false, detail: `otp-mismatch attempt=${failed}` });
+      if (lock) {
+        await audit.record({ action: AUDIT_ACTION.ACCOUNT_LOCKED, req, userId: user.id, username: user.username, resource: 'auth/verify-totp', success: false });
+        return res.status(423).json({ error: `OTP ${LOCK.MAX_FAILED_ATTEMPTS}회 실패로 계정이 잠겼습니다. ${LOCK.LOCK_DURATION_MINUTES}분 후 다시 시도해주세요.` });
+      }
       return res.status(401).json({ error: 'OTP 코드가 올바르지 않습니다.' });
     }
 
@@ -506,12 +527,10 @@ const requestPasswordReset = async (req, res, next) => {
     }
 
     const user = await prisma.user.findUnique({ where: { username } });
-    // 존재하지 않거나 비활성 또는 OTP 미설정 모두 동일 메시지 (열거 방지)
-    if (!user || !user.isActive || !user.totpEnabled || !user.totpSecret) {
-      return res.status(404).json({ error: '해당 계정을 찾을 수 없거나 OTP가 설정되지 않은 계정입니다.' });
-    }
-
-    const resetOtpToken = issueTempToken(user.id, 'reset-otp');
+    // 계정 열거 방지: 유효 여부와 무관하게 항상 동일한 200 응답을 준다.
+    // 무효 계정에는 매칭되지 않는 userId(0)로 토큰을 발급 → 다음 OTP 단계에서 401로 걸러진다.
+    const valid = user && user.isActive && user.totpEnabled && user.totpSecret;
+    const resetOtpToken = issueTempToken(valid ? user.id : 0, 'reset-otp');
     res.json({ resetOtpToken });
   } catch (err) {
     next(err);
