@@ -9,6 +9,7 @@ import useChatSocket from './hooks/useChatSocket';
 import { requestNotificationPermission } from './utils/desktopNotification';
 import { ChatSocketContext } from './contexts/ChatSocketContext';
 import useThemeStore from './store/themeStore';
+import { SKINS, DEFAULT_SKIN } from './utils/skins';
 import { getThemePrefs } from './api/settings';
 
 // 즉시 필요한 셸/진입/에러 화면은 eager 로드 (PrivateRoute에서 동기 렌더되는 에러 포함)
@@ -102,6 +103,13 @@ export default function App() {
   };
   const skinRadii = SKIN_RADII[skin] || SKIN_RADII.default;
 
+  // 스킨 표면/테두리를 AntD 토큰에 직접 연결 → 인라인 token.* 를 쓰는 화면
+  // (메일·게시판·전자결재 등 2-pane)까지 스킨이 자동 반영된다.
+  const skinSet = (SKINS[skin] || SKINS[DEFAULT_SKIN])[isDark ? 'dark' : 'light'];
+  const pageIsGradient = /gradient/.test(skinSet['page-bg']);
+  const SKIN_LINEW = { brutal: 2, mono: 1 };
+  const skinLineWidth = SKIN_LINEW[skin] || 1;
+
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const socketRef = useChatSocket(user ? token : null);
 
@@ -165,22 +173,20 @@ export default function App() {
           fontSize:           13,
           // 라이트는 흰 배경/짙은 텍스트 고정. 다크는 거의-검정 대신 부드러운 슬레이트 톤으로 상향
           // (페이지<콘텐츠<카드<엘리베이티드 단계로 대비를 줘서 카드·행 구분이 살아나도록).
+          // 표면/테두리는 스킨값으로 (인라인 token.* 화면까지 스킨 반영)
+          colorBgContainer:     skinSet['card-bg'],
+          colorBgLayout:        pageIsGradient ? skinSet['surface-sunken'] : skinSet['page-bg'],
+          colorBorder:          skinSet['border-color'],
+          colorBorderSecondary: skinSet['border-color'],
+          lineWidth:            skinLineWidth,
           ...(isDark
             ? {
                 colorBgBase:          '#1e222c',
-                colorBgLayout:        '#181b24',
-                colorBgContainer:     '#272c38',
                 colorBgElevated:      '#2f3543',
-                colorBorder:          '#3a4150',
-                colorBorderSecondary: '#2b313d',
               }
             : {
-                // 라이트: 따뜻한 종이(Notion Warm) 톤 — 흰 카드 위 종이색 배경, 웜 그레이 테두리
                 colorBgBase:          '#ffffff',
                 colorTextBase:        '#37352f',
-                colorBgLayout:        '#f4f4f2',
-                colorBorder:          '#e2e0da',
-                colorBorderSecondary: '#f1efea',
               }),
           controlHeight:      32,
           // 모션: 전역으로 끄지 않고 빠른 슬라이드로 통일 (Drawer/Modal이 번쩍이지 않고 매끄럽게 열림)
