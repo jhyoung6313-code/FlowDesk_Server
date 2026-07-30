@@ -251,7 +251,7 @@ function TypeChips({ value, onChange }) {
             key={t}
             onClick={() => onChange(t)}
             style={{
-              fontSize: 12.5, fontWeight: on ? 700 : 500, padding: '5px 11px', borderRadius: 8, cursor: 'pointer',
+              fontSize: 13, fontWeight: on ? 700 : 500, padding: '5px 11px', borderRadius: 8, cursor: 'pointer',
               border: `1px solid ${on ? m.color : '#CBD5E1'}`,
               background: on ? m.bg : 'transparent',
               color: on ? m.color : '#64748B',

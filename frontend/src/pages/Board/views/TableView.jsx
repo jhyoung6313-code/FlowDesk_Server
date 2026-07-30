@@ -88,7 +88,7 @@ function ColumnSelector({ properties, effective, toggle, toggleAll }) {
           </Checkbox>
         ))}
         {properties.length === 0 && (
-          <Text type="secondary" style={{ fontSize: 12 }}>속성이 없습니다.</Text>
+          <Text type="secondary" style={{ fontSize: 13 }}>속성이 없습니다.</Text>
         )}
       </div>
     </div>
@@ -255,7 +255,7 @@ export default function TableView({ board, cards, onAddCard, onEditCard, onDelet
                 컬럼 설정
                 {hiddenCount > 0 && (
                   <span style={{
-                    marginLeft: 4, fontSize: 11,
+                    marginLeft: 4, fontSize: 13,
                     background: '#1677ff', color: '#fff',
                     borderRadius: 10, padding: '0 5px',
                   }}>

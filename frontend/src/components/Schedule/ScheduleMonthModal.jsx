@@ -72,7 +72,7 @@ export default function ScheduleMonthModal({ open, initialDate, isDark, onClose,
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)' }}>
         {dow.map((d, i) => (
           <div key={d} style={{
-            padding: 8, textAlign: 'center', fontSize: 11, fontWeight: 700,
+            padding: 8, textAlign: 'center', fontSize: 13, fontWeight: 700,
             color: i === 0 ? '#DC2626' : i === 6 ? '#3B82F6' : T.text2,
             borderBottom: `1px solid ${T.border}`,
           }}>{d}</div>
@@ -99,19 +99,19 @@ export default function ScheduleMonthModal({ open, initialDate, isDark, onClose,
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 1, minWidth: 0 }}>
                 <span style={{
-                  fontSize: 11.5, fontWeight: 700,
+                  fontSize: 13, fontWeight: 700,
                   color: outMonth ? (isDark ? '#475569' : '#CBD5E1') : (holiday || d.day() === 0) ? '#DC2626' : d.day() === 6 ? '#3B82F6' : T.text1,
                   ...(isToday ? { display: 'inline-flex', width: 20, height: 20, alignItems: 'center', justifyContent: 'center', background: '#F97316', color: '#fff', borderRadius: '50%' } : {}),
                 }}>{d.date()}</span>
                 {holiday && !outMonth && (
                   <span title={holiday} style={{
-                    fontSize: 10, fontWeight: 700, color: '#DC2626',
+                    fontSize: 13, fontWeight: 700, color: '#DC2626',
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   }}>{holiday}</span>
                 )}
               </div>
               {dayEvents.slice(0, 3).map((ev) => <Pill key={ev.id} ev={ev} day={d} onClick={onPickEvent} />)}
-              {dayEvents.length > 3 && <span style={{ fontSize: 10, color: T.text2, fontWeight: 600, paddingLeft: 3 }}>+{dayEvents.length - 3}</span>}
+              {dayEvents.length > 3 && <span style={{ fontSize: 13, color: T.text2, fontWeight: 600, paddingLeft: 3 }}>+{dayEvents.length - 3}</span>}
             </div>
           );
         })}
@@ -130,7 +130,7 @@ function Pill({ ev, day, onClick }) {
       onClick={(e) => { e.stopPropagation(); onClick?.(ev); }}
       title={eventShortLabel(ev)}
       style={{
-        fontSize: 10.5, fontWeight: 600, lineHeight: 1.3,
+        fontSize: 13, fontWeight: 600, lineHeight: 1.3,
         padding: g.showLabel ? '2px 6px' : '2px 4px',
         marginLeft: g.marginLeft, marginRight: g.marginRight,
         borderTopLeftRadius: g.borderTopLeftRadius, borderBottomLeftRadius: g.borderBottomLeftRadius,
@@ -148,7 +148,7 @@ function Pill({ ev, day, onClick }) {
 function FilterChip({ on, onClick, label, dot, T }) {
   return (
     <span onClick={onClick} style={{
-      fontSize: 11, fontWeight: 600, padding: '4px 11px', borderRadius: 20, cursor: 'pointer',
+      fontSize: 13, fontWeight: 600, padding: '4px 11px', borderRadius: 20, cursor: 'pointer',
       border: `1px solid ${on ? '#0F172A' : T.border}`,
       background: on ? '#0F172A' : 'transparent', color: on ? '#fff' : T.text2,
       display: 'flex', alignItems: 'center', gap: 5,

@@ -8,7 +8,7 @@ export default function DdayBadge({ dueDate, status }) {
   return (
     <span
       style={{
-        fontSize: 11,
+        fontSize: 13,
         fontWeight: 700,
         color,
         background: `${color}18`,

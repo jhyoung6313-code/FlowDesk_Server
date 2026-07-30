@@ -533,7 +533,7 @@ export default function DocumentForm({ embedded = false, initialDocId = null, co
             <Text type="secondary" style={{ fontSize: 13 }}>결재자를 추가하세요. 위 선택박스에서 추가합니다.</Text>
           ) : (
             <div>
-              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+              <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
                 <HolderOutlined /> 드래그로 순서 변경(차수 순차 재설정) · 같은 <b>차수</b>는 병렬 결재 · 참조는 열람 통보.
               </Text>
               {approvalLine.map((step, i) => (
@@ -550,7 +550,7 @@ export default function DocumentForm({ embedded = false, initialDocId = null, co
                     border: '1px solid var(--fd-border, #f0f0f0)',
                   }}>
                   <HolderOutlined style={{ color: '#bbb', flexShrink: 0 }} />
-                  <Avatar size={26} style={{ background: '#1677ff', fontSize: 12, flexShrink: 0 }}>
+                  <Avatar size={26} style={{ background: '#1677ff', fontSize: 13, flexShrink: 0 }}>
                     {step.approverName?.[0] || '?'}
                   </Avatar>
                   <Text style={{ fontSize: 13, flex: 1, minWidth: 0 }} ellipsis>{step.approverName}</Text>
@@ -560,7 +560,7 @@ export default function DocumentForm({ embedded = false, initialDocId = null, co
                     options={ROLE_OPTIONS}
                   />
                   {step.type === 'reference' ? (
-                    <Text type="secondary" style={{ width: 62, fontSize: 12, textAlign: 'center' }}>열람</Text>
+                    <Text type="secondary" style={{ width: 62, fontSize: 13, textAlign: 'center' }}>열람</Text>
                   ) : (
                     <Space size={2} style={{ width: 62 }}>
                       <InputNumber
@@ -568,7 +568,7 @@ export default function DocumentForm({ embedded = false, initialDocId = null, co
                         onChange={(v) => setGroup(i, v)}
                         style={{ width: 44 }}
                       />
-                      <Text type="secondary" style={{ fontSize: 12 }}>차</Text>
+                      <Text type="secondary" style={{ fontSize: 13 }}>차</Text>
                     </Space>
                   )}
                   <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => removeApprover(i)} />
@@ -579,12 +579,12 @@ export default function DocumentForm({ embedded = false, initialDocId = null, co
 
           {conditionalPreview.length > 0 && (
             <div style={{ marginTop: 10, padding: '8px 10px', background: '#fff7e6', border: '1px solid #ffe7ba', borderRadius: 6 }}>
-              <Text style={{ fontSize: 12, fontWeight: 600, color: '#d46b08' }}>
+              <Text style={{ fontSize: 13, fontWeight: 600, color: '#d46b08' }}>
                 조건 충족 · 상신 시 자동 추가될 결재자
               </Text>
               <div style={{ marginTop: 4 }}>
                 {conditionalPreview.map((s, i) => (
-                  <div key={`${s.approverId}-${i}`} style={{ fontSize: 12, color: '#874d00' }}>
+                  <div key={`${s.approverId}-${i}`} style={{ fontSize: 13, color: '#874d00' }}>
                     · {s.stepOrder ? `${s.stepOrder}차 ` : '참조 '}{s.approverName}
                     {s.ruleLabel ? ` (${s.ruleLabel})` : ''} — {ROLE_OPTIONS.find(o => o.value === s.type)?.label || s.type}
                   </div>
@@ -637,17 +637,17 @@ export default function DocumentForm({ embedded = false, initialDocId = null, co
               onChange={e => setPresetName(e.target.value)} onPressEnter={savePreset} />
             <Button type="primary" onClick={savePreset} disabled={approvalLine.length === 0}>저장</Button>
           </div>
-          {approvalLine.length === 0 && <Text type="secondary" style={{ fontSize: 11 }}>먼저 결재자를 추가하세요.</Text>}
+          {approvalLine.length === 0 && <Text type="secondary" style={{ fontSize: 13 }}>먼저 결재자를 추가하세요.</Text>}
         </div>
         <Divider style={{ margin: '12px 0' }} />
         <Text style={{ fontSize: 13, fontWeight: 600 }}>저장된 프리셋</Text>
         {presets.length === 0 ? (
-          <div style={{ color: '#999', fontSize: 12, padding: '8px 0' }}>저장된 프리셋이 없습니다.</div>
+          <div style={{ color: '#999', fontSize: 13, padding: '8px 0' }}>저장된 프리셋이 없습니다.</div>
         ) : (
           <div style={{ marginTop: 6 }}>
             {presets.map(p => (
               <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #f5f5f5' }}>
-                <span style={{ flex: 1, fontSize: 13 }}>{p.name} <Text type="secondary" style={{ fontSize: 11 }}>({(p.steps || []).length}명)</Text></span>
+                <span style={{ flex: 1, fontSize: 13 }}>{p.name} <Text type="secondary" style={{ fontSize: 13 }}>({(p.steps || []).length}명)</Text></span>
                 <Button size="small" onClick={() => { loadPreset(p.id); setSaveOpen(false); }}>불러오기</Button>
                 <Popconfirm title="삭제하시겠습니까?" onConfirm={() => deletePreset(p.id)} okText="삭제" cancelText="취소">
                   <Button size="small" danger type="text" icon={<DeleteOutlined />} />

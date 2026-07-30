@@ -97,7 +97,7 @@ function ThemePicker({ isDark, toggleDark, density, setDensity, skin, setSkin, o
 
       {/* ── 디자인 스킨 (형태 + 강조색) ── */}
       <div style={{
-        fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.6px',
+        fontSize: 13, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.6px',
         textTransform: 'uppercase', marginBottom: 12, padding: '0 2px',
       }}>
         디자인 스킨
@@ -123,11 +123,11 @@ function ThemePicker({ isDark, toggleDark, density, setDensity, skin, setSkin, o
                   width: 34, height: 24, flexShrink: 0,
                   borderRadius: pv.radius, border: pv.border, boxShadow: pv.shadow, background: pv.bg,
                 }} />
-                {on && <CheckOutlined style={{ marginLeft: 'auto', fontSize: 11, color: 'var(--fd-accent-mid,#3b82f6)' }} />}
+                {on && <CheckOutlined style={{ marginLeft: 'auto', fontSize: 13, color: 'var(--fd-accent-mid,#3b82f6)' }} />}
               </div>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', lineHeight: 1.3 }}>{s.name}</div>
-                <div style={{ fontSize: 10.5, color: '#94a3b8', marginTop: 1 }}>{s.desc}</div>
+                <div style={{ fontSize: 13, color: '#94a3b8', marginTop: 1 }}>{s.desc}</div>
               </div>
             </div>
           );
@@ -136,7 +136,7 @@ function ThemePicker({ isDark, toggleDark, density, setDensity, skin, setSkin, o
 
       {/* ── 화면 밀도 ── */}
       <div style={{
-        fontSize: 12, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.6px',
+        fontSize: 13, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.6px',
         textTransform: 'uppercase', margin: '18px 0 10px', padding: '0 2px',
       }}>
         화면 밀도
@@ -209,7 +209,7 @@ function NotificationPopup({ onClose }) {
         borderBottom: '1px solid #f0f0f0',
       }}>
         <Space align="center">
-          <Typography.Text strong style={{ fontSize: 14 }}>알림</Typography.Text>
+          <Typography.Text strong style={{ fontSize: 13 }}>알림</Typography.Text>
           {unreadCount > 0 && (
             <Badge count={unreadCount} style={{ backgroundColor: '#ff4d4f' }} />
           )}
@@ -259,21 +259,21 @@ function NotificationPopup({ onClose }) {
                   }
                   title={
                     <Space size={4} wrap>
-                      <Typography.Text strong style={{ fontSize: 12 }}>
+                      <Typography.Text strong style={{ fontSize: 13 }}>
                         {item.task?.title || item.message || NOTIFICATION_LABELS[item.type] || item.type}
                       </Typography.Text>
-                      <Tag color={NOTIFICATION_COLORS[item.type]} style={{ fontSize: 10, padding: '0 4px', lineHeight: '16px' }}>
+                      <Tag color={NOTIFICATION_COLORS[item.type]} style={{ fontSize: 13, padding: '0 4px', lineHeight: '16px' }}>
                         {NOTIFICATION_LABELS[item.type]}
                       </Tag>
                       {item.task?.dueDate && (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: getDdayColor(item.task.dueDate) }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: getDdayColor(item.task.dueDate) }}>
                           {calcDday(item.task.dueDate)}
                         </span>
                       )}
                     </Space>
                   }
                   description={
-                    <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                    <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                       {item.task?.dueDate ? `마감: ${dayjs(item.task.dueDate).format('MM/DD')} · ` : ''}
                       {dayjs(item.createdAt).format('MM/DD HH:mm')}
                     </Typography.Text>
@@ -451,7 +451,7 @@ export default function AppHeader({ collapsed, onCollapse }) {
           <FlowdeskIcon size={18} color={c.logoIcon} />
           <span
             style={{
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: 700,
               letterSpacing: 0.3,
               lineHeight: 1,
@@ -505,9 +505,9 @@ export default function AppHeader({ collapsed, onCollapse }) {
             onMouseLeave={(e) => { e.currentTarget.style.background = surf.iconBg; }}
           >
             <SearchOutlined />
-            <span style={{ fontSize: 12 }}>검색</span>
+            <span style={{ fontSize: 13 }}>검색</span>
             <kbd style={{
-              fontSize: 10, padding: '1px 5px', borderRadius: 4,
+              fontSize: 13, padding: '1px 5px', borderRadius: 4,
               border: `1px solid ${surf.iconBorder}`, background: surf.track, color: surf.iconColor,
             }}>Ctrl F</kbd>
           </div>

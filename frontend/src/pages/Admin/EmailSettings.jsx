@@ -128,7 +128,7 @@ export default function EmailSettings() {
               <Space>
                 <span>SMTP 비밀번호 / 앱 비밀번호</span>
                 {passSet && (
-                  <Text type="success" style={{ fontSize: 12 }}>
+                  <Text type="success" style={{ fontSize: 13 }}>
                     <CheckCircleOutlined /> 설정됨 (변경 시 입력)
                   </Text>
                 )}

@@ -74,7 +74,7 @@ export default function AiAsk({ compact = false }) {
             <MarkdownLite text={result.answer} />
             {result.sources?.length > 0 && (
               <div style={{ marginTop: 16, borderTop: '1px solid var(--fd-border)', paddingTop: 12 }}>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>출처</Typography.Text>
+                <Typography.Text type="secondary" style={{ fontSize: 13 }}>출처</Typography.Text>
                 <div style={{ marginTop: 8 }}>
                   {result.sources.map((s) => (
                     <div key={s.n} style={{ marginBottom: 4 }}>

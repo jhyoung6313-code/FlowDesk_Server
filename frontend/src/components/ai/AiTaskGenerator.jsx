@@ -161,7 +161,7 @@ export default function AiTaskGenerator({ open, onClose }) {
                           <Tag key={h} color={d.assigneeIds?.length ? 'blue' : 'default'}>{h}</Tag>
                         ))}
                         {!d.assigneeIds?.length && (
-                          <Typography.Text type="secondary" style={{ fontSize: 12 }}>(미매칭)</Typography.Text>
+                          <Typography.Text type="secondary" style={{ fontSize: 13 }}>(미매칭)</Typography.Text>
                         )}
                       </span>
                     )}

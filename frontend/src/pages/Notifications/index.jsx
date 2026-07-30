@@ -132,14 +132,14 @@ export default function NotificationsPage() {
                         {NOTIFICATION_LABELS[item.type]}
                       </Tag>
                       {item.task?.dueDate && (
-                        <span style={{ fontSize: 12, fontWeight: 700, color: getDdayColor(item.task.dueDate) }}>
+                        <span style={{ fontSize: 13, fontWeight: 700, color: getDdayColor(item.task.dueDate) }}>
                           {calcDday(item.task.dueDate)}
                         </span>
                       )}
                     </Space>
                   }
                   description={
-                    <Text type="secondary" style={{ fontSize: 12 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>
                       {item.task?.dueDate
                         ? `마감일: ${dayjs(item.task.dueDate).format('YYYY년 MM월 DD일')} · `
                         : ''}

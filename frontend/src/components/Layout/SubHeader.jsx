@@ -76,7 +76,7 @@ export default function SubHeader() {
       flexShrink: 0,
     }}>
       <div>
-        <div style={{ fontSize: 10.5, color: TEXT2, fontWeight: 500, marginBottom: 2 }}>
+        <div style={{ fontSize: 13, color: TEXT2, fontWeight: 500, marginBottom: 2 }}>
           {greet()} · {dateStr}
         </div>
         <div style={{ fontSize: 16, fontWeight: 800, color: TEXT1, letterSpacing: '-0.5px' }}>
@@ -104,7 +104,7 @@ export default function SubHeader() {
             }}
           >
             <span style={{ fontSize: 17, fontWeight: 800, color: c, letterSpacing: '-0.5px', lineHeight: 1 }}>{v}</span>
-            <span style={{ fontSize: 9, fontWeight: 500, color: TEXT2, textTransform: 'uppercase', letterSpacing: '.5px' }}>{l}</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: TEXT2, textTransform: 'uppercase', letterSpacing: '.5px' }}>{l}</span>
           </div>
         ))}
       </div>

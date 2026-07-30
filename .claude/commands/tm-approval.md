@@ -47,7 +47,7 @@ ApprovalFormType (양식종류, 트리)     예: 인사 > 휴가
 - 결재 시 **결재자 직위(User.position)·서명이미지(signImagePath)·서명 IP·대결(actingType) 스냅샷** 저장
 
 ### 워크플로 API
-- 문서: `GET /api/approvals/pending-count`, `GET/POST /api/approvals`, `GET/PUT/DELETE /api/approvals/:id`
+- 문서: `GET /api/approvals/pending-count`, `GET /api/approvals/tree`(결재종류 트리+건수), `GET/POST /api/approvals`(`templateId`/`formTypeId` 필터), `GET/PUT/DELETE /api/approvals/:id`
 - 액션: `POST /api/approvals/:id/{submit,approve,reject,cancel,resubmit,resume}`
   - `submit` 상신 · `approve` 승인 · `reject` 반려 · `cancel` 취소 · `resubmit` 재상신 · `resume` 반려 후 재개
 - 첨부: `POST /api/approvals/:id/attachments`, `GET .../attachments/:aid/download`, `DELETE .../attachments/:aid`

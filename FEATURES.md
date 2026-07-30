@@ -569,10 +569,11 @@
 - **결재선(Step)**: 순번(stepOrder)·결재자(approverId)·유형(approval)·상태(pending/approved/rejected/skipped). 결재 시 **결재자 직위·서명이미지·서명 IP·대결(actingType) 스냅샷** 저장 (User.`position`·`signImagePath` 활용)
 - **워크플로 API**: `submit`(상신)·`approve`(승인)·`reject`(반려)·`cancel`(취소)·`resubmit`(재상신)·`resume`(반려 후 재개)
 - **결재선 자동 해석**: `services/approvalLine.js` — 양식의 lineJson을 실제 결재자로 치환(`resolve-line`)
+- **[v2.14.1] 결재종류 트리 네비게이션**: 문서함 좌측 2-pane 트리로 결재종류(자기중첩) → 양식 계층 탐색. 각 노드에 현재 탭·검색 가시성 기준 문서 **건수 롤업** 표시, 노드 선택 시 목록을 `formTypeId`/`templateId`로 필터(탭=역할 축과 직교). `GET /api/approvals/tree`, 목록 API에 `templateId` 필터 추가. 탭은 상단 전체 폭, 트리·결재내역 그리드는 같은 높이로 정렬.
 - **API**:
   - 양식종류: `GET/POST /api/approval-types`, `PUT /api/approval-types/reorder`, `PUT/DELETE /api/approval-types/:id`
   - 양식: `GET /api/approval-templates(/:id)`, `POST/PUT/DELETE /api/approval-templates(/:id)`, `GET/POST /api/approval-templates/:id/resolve-line`
-  - 문서: `GET /api/approvals/pending-count`, `GET/POST /api/approvals`, `GET/PUT/DELETE /api/approvals/:id`, `POST /api/approvals/:id/{submit,approve,reject,cancel,resubmit,resume}`
+  - 문서: `GET /api/approvals/pending-count`, `GET /api/approvals/tree`, `GET/POST /api/approvals`, `GET/PUT/DELETE /api/approvals/:id`, `POST /api/approvals/:id/{submit,approve,reject,cancel,resubmit,resume}`
   - 첨부: `POST /api/approvals/:id/attachments`, `GET /api/approvals/:id/attachments/:aid/download`, `DELETE /api/approvals/:id/attachments/:aid`
   - 댓글: `GET/POST /api/approvals/:id/comments`, `PUT/DELETE /api/approvals/:id/comments/:cid`
 - **파일**: `controllers/approvalController.js`·`approvalTemplateController.js`·`approvalFormTypeController.js`, `services/approvalLine.js`, `routes/approvals.js`, `pages/Approval/*`, `pages/Admin/ApprovalAdmin.jsx`

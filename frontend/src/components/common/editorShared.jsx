@@ -15,7 +15,7 @@ export const btn = (active = false) => ({
   border: active ? '1px solid #1677ff' : '1px solid transparent',
   borderRadius: 4,
   background: active ? '#e6f4ff' : 'transparent',
-  cursor: 'pointer', fontSize: 12,
+  cursor: 'pointer', fontSize: 13,
   color: active ? '#1677ff' : 'var(--fd-text-secondary)',
   flexShrink: 0,
 });

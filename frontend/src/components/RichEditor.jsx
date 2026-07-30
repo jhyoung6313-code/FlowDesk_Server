@@ -30,14 +30,14 @@ function TableInsertPopover({ editor, onClose }) {
   const [cols, setCols] = useState(3);
   return (
     <div style={{ width: 180 }}>
-      <div style={{ marginBottom: 8, fontSize: 12, fontWeight: 600 }}>표 삽입</div>
+      <div style={{ marginBottom: 8, fontSize: 13, fontWeight: 600 }}>표 삽입</div>
       <Space direction="vertical" style={{ width: '100%' }} size={6}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12, width: 20 }}>행</span>
+          <span style={{ fontSize: 13, width: 20 }}>행</span>
           <InputNumber min={1} max={20} value={rows} onChange={v => setRows(v || 1)} size="small" style={{ flex: 1 }} />
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 12, width: 20 }}>열</span>
+          <span style={{ fontSize: 13, width: 20 }}>열</span>
           <InputNumber min={1} max={10} value={cols} onChange={v => setCols(v || 1)} size="small" style={{ flex: 1 }} />
         </div>
         <Button type="primary" size="small" block onClick={() => {
@@ -146,7 +146,7 @@ export default function RichEditor({
           setFontFamily(v);
           if (v) editor.chain().focus().setFontFamily(v).run();
           else editor.chain().focus().unsetFontFamily().run();
-        }} style={{ height: 24, fontSize: 11, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', background: 'var(--fd-surface)', width: 82 }}>
+        }} style={{ height: 24, fontSize: 13, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', background: 'var(--fd-surface)', width: 82 }}>
           {FONT_FAMILIES.map(f => <option key={f.value ?? '_'} value={f.value ?? ''}>{f.label}</option>)}
         </select>
 
@@ -154,7 +154,7 @@ export default function RichEditor({
         <select value={fontSize} onChange={(e) => {
           setFontSize(e.target.value);
           editor.chain().focus().setFontSize(e.target.value).run();
-        }} style={{ height: 24, fontSize: 11, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', background: 'var(--fd-surface)', width: 56 }}>
+        }} style={{ height: 24, fontSize: 13, border: '1px solid var(--fd-border)', borderRadius: 4, padding: '0 2px', background: 'var(--fd-surface)', width: 56 }}>
           {FONT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
         <Separator />
@@ -185,7 +185,7 @@ export default function RichEditor({
         {/* 형광펜 */}
         <Tooltip title="형광펜">
           <label style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0 3px', flexShrink: 0 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--fd-text-secondary)' }}>H</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--fd-text-secondary)' }}>H</span>
             <div style={{ position: 'absolute', bottom: -1, left: 2, right: 2, height: 3, background: bgColor, borderRadius: 1 }} />
             <input type="color" value={bgColor}
               onChange={(e) => { setBgColor(e.target.value); editor.chain().focus().toggleHighlight({ color: e.target.value }).run(); }}
@@ -241,7 +241,7 @@ export default function RichEditor({
         <div style={{
           display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6,
           padding: '6px 10px', borderTop: '1px solid var(--fd-border)',
-          background: 'var(--fd-surface-sunken)', fontSize: 12,
+          background: 'var(--fd-surface-sunken)', fontSize: 13,
         }}>
           <span style={{ color: '#e0483d', fontWeight: 600 }}>오타 의심 {spellMatches.length}건</span>
           {spellMatches.slice(0, 8).map((m, i) => (

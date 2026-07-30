@@ -76,7 +76,7 @@ export default function ActivityLogPage() {
       width: 100,
       render: (u) => (
         <Space size={4}>
-          <UserOutlined style={{ fontSize: 11, color: '#8c8c8c' }} />
+          <UserOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />
           <span style={{ fontSize: 13 }}>{u?.displayName || '-'}</span>
         </Space>
       ),
@@ -87,7 +87,7 @@ export default function ActivityLogPage() {
       width: 90,
       render: (v) => {
         const cfg = ACTION_LABELS[v] || { label: v, color: 'default' };
-        return <Tag color={cfg.color} style={{ fontSize: 11 }}>{cfg.label}</Tag>;
+        return <Tag color={cfg.color} style={{ fontSize: 13 }}>{cfg.label}</Tag>;
       },
     },
     {
@@ -103,7 +103,7 @@ export default function ActivityLogPage() {
       title: '필드',
       dataIndex: 'field',
       width: 90,
-      render: (v) => v ? <span style={{ fontSize: 12, color: 'var(--fd-text-secondary)' }}>{FIELD_LABELS[v] || v}</span> : '-',
+      render: (v) => v ? <span style={{ fontSize: 13, color: 'var(--fd-text-secondary)' }}>{FIELD_LABELS[v] || v}</span> : '-',
     },
     {
       title: '변경 내용',
@@ -111,7 +111,7 @@ export default function ActivityLogPage() {
       render: (_, rec) => {
         if (!rec.oldValue && !rec.newValue) return '-';
         return (
-          <Space size={4} style={{ fontSize: 12 }}>
+          <Space size={4} style={{ fontSize: 13 }}>
             {rec.oldValue && <span style={{ color: '#ff4d4f', textDecoration: 'line-through' }}>{rec.oldValue}</span>}
             {rec.oldValue && rec.newValue && <span style={{ color: '#8c8c8c' }}>→</span>}
             {rec.newValue && <span style={{ color: '#52c41a' }}>{rec.newValue}</span>}

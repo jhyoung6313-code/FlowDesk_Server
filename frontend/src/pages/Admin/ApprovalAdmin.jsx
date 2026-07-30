@@ -206,7 +206,7 @@ function FormTypeTab() {
       title: '이름', dataIndex: 'name',
       render: (name, rec) => (
         <Space>
-          {rec.parentId && <Text type="secondary" style={{ fontSize: 11 }}>└ </Text>}
+          {rec.parentId && <Text type="secondary" style={{ fontSize: 13 }}>└ </Text>}
           <Text>{name}</Text>
         </Space>
       ),
@@ -263,7 +263,7 @@ function FormTypeTab() {
         </Form>
 
         <Divider style={{ margin: '12px 0' }}>기본 결재 라인 (이 종류 공통, 선택)</Divider>
-        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+        <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
           이 종류의 <b>공통 기본 결재선</b>입니다. 하위 양식(템플릿)에 자체 결재선이 없으면 이 결재선이 상속됩니다.
         </Text>
         <Space size={6} wrap style={{ marginBottom: 8 }}>
@@ -281,7 +281,7 @@ function FormTypeTab() {
           </Input.Group>
         </Space>
         {ftLine.length === 0 ? (
-          <Text type="secondary" style={{ fontSize: 12 }}>지정된 기본 결재선이 없습니다.</Text>
+          <Text type="secondary" style={{ fontSize: 13 }}>지정된 기본 결재선이 없습니다.</Text>
         ) : ftLine.map((step, i) => (
           <div key={step.key || i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px dashed #f0f0f0' }}>
             {step.kind === 'rule'
@@ -289,11 +289,11 @@ function FormTypeTab() {
               : <Text style={{ fontSize: 13, minWidth: 90 }}>{step.approverName}</Text>}
             <Select size="small" value={step.type} style={{ width: 78 }} onChange={v => ftSetRole(i, v)} options={ROLE_OPTIONS} />
             {step.type === 'reference'
-              ? <Text type="secondary" style={{ fontSize: 12, width: 56 }}>열람</Text>
+              ? <Text type="secondary" style={{ fontSize: 13, width: 56 }}>열람</Text>
               : (
                 <Space size={2} style={{ width: 56 }}>
                   <InputNumber size="small" min={1} value={step.stepOrder} controls={false} onChange={v => ftSetGroup(i, v)} style={{ width: 42 }} />
-                  <Text type="secondary" style={{ fontSize: 12 }}>차</Text>
+                  <Text type="secondary" style={{ fontSize: 13 }}>차</Text>
                 </Space>
               )}
             <Button size="small" danger icon={<MinusCircleOutlined />} onClick={() => ftRemove(i)} />
@@ -614,7 +614,7 @@ function TemplateTab() {
         ))}
 
         <Divider style={{ margin: '12px 0' }}>기본 결재 라인 프리셋 (선택)</Divider>
-        <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+        <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
           지정 사용자 또는 직급/직책 규칙으로 프리셋을 만들면, 기안 시 기안자의 조직 기준으로 자동 지정됩니다.
           같은 <b>차수</b>는 병렬 결재입니다.
         </Text>
@@ -644,11 +644,11 @@ function TemplateTab() {
                 : <Text style={{ fontSize: 13, minWidth: 90 }}>{step.approverName}</Text>}
               <Select size="small" value={step.type} style={{ width: 78 }} onChange={v => setLineRole(i, v)} options={ROLE_OPTIONS} />
               {step.type === 'reference'
-                ? <Text type="secondary" style={{ fontSize: 12, width: 56 }}>열람</Text>
+                ? <Text type="secondary" style={{ fontSize: 13, width: 56 }}>열람</Text>
                 : (
                   <Space size={2} style={{ width: 56 }}>
                     <InputNumber size="small" min={1} value={step.stepOrder} controls={false} onChange={v => setLineGroup(i, v)} style={{ width: 42 }} />
-                    <Text type="secondary" style={{ fontSize: 12 }}>차</Text>
+                    <Text type="secondary" style={{ fontSize: 13 }}>차</Text>
                   </Space>
                 )}
               <Button
@@ -659,7 +659,7 @@ function TemplateTab() {
             </div>
             {step.condition && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, paddingLeft: 12 }}>
-                <Text type="secondary" style={{ fontSize: 12 }}>조건:</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>조건:</Text>
                 <Select
                   size="small" placeholder="필드" style={{ width: 120 }}
                   value={step.condition.field || undefined}
@@ -670,7 +670,7 @@ function TemplateTab() {
                 {!['truthy'].includes(step.condition.op) && (
                   <Input size="small" placeholder="값" style={{ width: 90 }} value={step.condition.value} onChange={e => setCondition(i, { value: e.target.value })} />
                 )}
-                <Text type="secondary" style={{ fontSize: 11 }}>일 때만 결재</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>일 때만 결재</Text>
               </div>
             )}
           </div>
@@ -697,7 +697,7 @@ function TemplateTab() {
           return (
             <>
               <Divider style={{ margin: '12px 0' }}>조건 결재선 미리보기</Divider>
-              <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+              <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
                 샘플 값을 입력하면 조건에 따라 상신 시 최종 결재선이 어떻게 구성되는지 시뮬레이션합니다.
               </Text>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 10 }}>
@@ -705,16 +705,16 @@ function TemplateTab() {
                   const f = fields.find(x => x.id === fid);
                   return (
                     <div key={fid} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                      <Text style={{ fontSize: 11, color: '#888' }}>{f?.label || fid}</Text>
+                      <Text style={{ fontSize: 13, color: '#888' }}>{f?.label || fid}</Text>
                       {renderSampleInput(fid)}
                     </div>
                   );
                 })}
               </div>
               <div style={{ background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 6, padding: '8px 10px' }}>
-                <Text style={{ fontSize: 12, fontWeight: 600, color: '#389e0d', display: 'block', marginBottom: 6 }}>최종 결재선</Text>
+                <Text style={{ fontSize: 13, fontWeight: 600, color: '#389e0d', display: 'block', marginBottom: 6 }}>최종 결재선</Text>
                 {resolved.length === 0 ? (
-                  <Text type="secondary" style={{ fontSize: 12 }}>포함될 결재자가 없습니다.</Text>
+                  <Text type="secondary" style={{ fontSize: 13 }}>포함될 결재자가 없습니다.</Text>
                 ) : (
                   <Space size={[4, 4]} wrap>
                     {resolved.map((s, i) => (

@@ -119,12 +119,12 @@ export default function MemoCard({
           {editing ? (
             <>
               <Tooltip title="저장">
-                <span onClick={save} style={{ cursor: 'pointer', color: '#059669', fontSize: 14 }}>
+                <span onClick={save} style={{ cursor: 'pointer', color: '#059669', fontSize: 13 }}>
                   <CheckOutlined />
                 </span>
               </Tooltip>
               <Tooltip title="취소">
-                <span onClick={cancelEdit} style={{ cursor: 'pointer', color: '#94a3b8', fontSize: 14 }}>
+                <span onClick={cancelEdit} style={{ cursor: 'pointer', color: '#94a3b8', fontSize: 13 }}>
                   <CloseOutlined />
                 </span>
               </Tooltip>

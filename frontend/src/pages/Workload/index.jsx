@@ -48,7 +48,7 @@ export default function WorkloadPage() {
         <Space align="center">
           <TeamOutlined style={{ fontSize: 20, color: '#1677ff' }} />
           <Typography.Title level={4} style={{ margin: 0 }}>워크로드 밸런싱</Typography.Title>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
             진행 중 업무 기준 · 주의 {thresholds.warning}건 / 과부하 {thresholds.overload}건
           </Typography.Text>
         </Space>
@@ -68,7 +68,7 @@ export default function WorkloadPage() {
               <WarningOutlined style={{ color: '#ff4d4f', marginRight: 6 }} />
               과부하 멤버 <b style={{ color: '#ff4d4f' }}>{overloaded.length}명</b>
               {overloaded.length > 0 && (
-                <Typography.Text type="secondary" style={{ marginLeft: 6, fontSize: 12 }}>
+                <Typography.Text type="secondary" style={{ marginLeft: 6, fontSize: 13 }}>
                   {overloaded.map((u) => u.displayName).join(', ')}
                 </Typography.Text>
               )}
@@ -76,7 +76,7 @@ export default function WorkloadPage() {
             <span>
               여유 멤버 <b style={{ color: '#52c41a' }}>{idle.length}명</b>
               {idle.length > 0 && (
-                <Typography.Text type="secondary" style={{ marginLeft: 6, fontSize: 12 }}>
+                <Typography.Text type="secondary" style={{ marginLeft: 6, fontSize: 13 }}>
                   업무 배정 추천: {idle.map((u) => u.displayName).join(', ')}
                 </Typography.Text>
               )}
@@ -102,8 +102,8 @@ export default function WorkloadPage() {
                     {u.displayName?.slice(0, 1)}
                   </Avatar>
                   <div>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{u.displayName}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8' }}>
+                    <div style={{ fontWeight: 600, fontSize: 13 }}>{u.displayName}</div>
+                    <div style={{ fontSize: 13, color: '#94a3b8' }}>
                       {[u.department?.name, u.team?.name, u.position].filter(Boolean).join(' · ') || u.username}
                     </div>
                   </div>
@@ -112,7 +112,7 @@ export default function WorkloadPage() {
 
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 4 }}>
                   <span style={{ fontSize: 22, fontWeight: 700, color: meta.color }}>{u.counts.total}</span>
-                  <span style={{ fontSize: 12, color: '#94a3b8' }}>건 진행 중</span>
+                  <span style={{ fontSize: 13, color: '#94a3b8' }}>건 진행 중</span>
                 </div>
                 <Progress
                   percent={pct}

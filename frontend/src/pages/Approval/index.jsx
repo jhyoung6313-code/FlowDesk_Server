@@ -1,10 +1,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Tabs, Button, Space, Typography, Tag, Select, message, Popconfirm,
-  theme as antTheme, Badge, Tooltip, Avatar, Pagination, Empty, Spin, Drawer, Grid, Input, Modal,
+  theme as antTheme, Badge, Tooltip, Avatar, Pagination, Empty, Spin, Drawer, Grid, Input, Modal, Tree,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined, CloseCircleOutlined, FileDoneOutlined, ClockCircleOutlined, CopyOutlined, FireOutlined, CheckOutlined } from '@ant-design/icons';
-import { getApprovals, deleteApproval, cancelApproval, getApprovalFormTypes, approveApproval, rejectApproval } from '../../api/approval';
+import { PlusOutlined, DeleteOutlined, CloseCircleOutlined, FileDoneOutlined, ClockCircleOutlined, CopyOutlined, FireOutlined, CheckOutlined, FolderOutlined, FileTextOutlined, AppstoreOutlined } from '@ant-design/icons';
+import { getApprovals, getApprovalTree, deleteApproval, cancelApproval, approveApproval, rejectApproval } from '../../api/approval';
 import DocumentForm from './DocumentForm';
 import DocumentDetail from './DocumentDetail';
 import SpellTextArea from '../../components/common/SpellTextArea';
@@ -48,12 +48,16 @@ export default function ApprovalPage() {
   const [q, setQ] = useState('');
   const [qInput, setQInput] = useState('');
   const [formTypeId, setFormTypeId] = useState(undefined);
-  const [formTypes, setFormTypes] = useState([]);
+  const [templateId, setTemplateId] = useState(undefined);
+  // ── 결재종류 트리 ──
+  const [tree, setTree] = useState([]);
+  const [treeKey, setTreeKey] = useState('all');       // 선택 노드 키
+  const [treeExpanded, setTreeExpanded] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('approval_tree_expanded') || '[]'); } catch { return []; }
+  });
   const [bulkLoading, setBulkLoading] = useState(false);
   const [rejectModal, setRejectModal] = useState(null); // { id } | null
   const [rejectReason, setRejectReason] = useState('');
-
-  useEffect(() => { getApprovalFormTypes().then(setFormTypes).catch(() => {}); }, []);
 
   // 내 차례(승인 대기) 여부
   const isMyPendingTurn = (d) => d.status === 'pending'
@@ -64,14 +68,67 @@ export default function ApprovalPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getApprovals({ tab, status: statusFilter, page, limit: 20, q: q || undefined, formTypeId });
+      const data = await getApprovals({ tab, status: statusFilter, page, limit: 20, q: q || undefined, formTypeId, templateId });
       setDocuments(data.documents || []);
       setTotal(data.total || 0);
     } catch { message.error('목록을 불러오지 못했습니다.'); }
     finally { setLoading(false); }
-  }, [tab, statusFilter, page, q, formTypeId]);
+  }, [tab, statusFilter, page, q, formTypeId, templateId]);
 
   useEffect(() => { load(); }, [load]);
+
+  // 트리(결재종류→양식 + 건수)는 탭·상태·검색 변경 시 갱신 (선택/페이지와 무관)
+  useEffect(() => {
+    getApprovalTree({ tab, status: statusFilter, q: q || undefined })
+      .then(d => setTree(d.tree || [])).catch(() => {});
+  }, [tab, statusFilter, q]);
+
+  // 트리 노드 선택 → 목록 필터 (formType/template)
+  const onTreeSelect = (keys) => {
+    const key = keys[0] || 'all';
+    setTreeKey(key);
+    setPage(1);
+    if (key === 'all') { setFormTypeId(undefined); setTemplateId(undefined); }
+    else if (key.startsWith('ft-')) { setFormTypeId(Number(key.slice(3))); setTemplateId(undefined); }
+    else if (key.startsWith('tpl-')) { setTemplateId(Number(key.slice(4))); setFormTypeId(undefined); }
+  };
+  const onTreeExpand = (keys) => {
+    setTreeExpanded(keys);
+    localStorage.setItem('approval_tree_expanded', JSON.stringify(keys));
+  };
+
+  // API 트리 → AntD Tree treeData (건수 배지 포함)
+  const buildTreeData = useCallback((nodes) => nodes.map((ft) => ({
+    key: `ft-${ft.id}`,
+    icon: <FolderOutlined style={{ color: ft.color || token.colorPrimary }} />,
+    title: (
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+        {ft.icon ? <span>{ft.icon}</span> : null}
+        <span>{ft.name}</span>
+        <span style={{ fontSize: 13, color: token.colorTextTertiary }}>{ft.count}</span>
+      </span>
+    ),
+    children: [
+      ...buildTreeData(ft.children || []),
+      ...(ft.templates || []).map((tp) => ({
+        key: `tpl-${tp.id}`,
+        icon: <FileTextOutlined style={{ color: token.colorTextTertiary }} />,
+        isLeaf: true,
+        title: (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span>{tp.name}</span>
+            <span style={{ fontSize: 13, color: token.colorTextTertiary }}>{tp.count}</span>
+          </span>
+        ),
+      })),
+    ],
+  })), [token]);
+
+  const treeData = [
+    { key: 'all', icon: <AppstoreOutlined style={{ color: token.colorPrimary }} />, isLeaf: true,
+      title: <span style={{ fontWeight: 600 }}>전체</span> },
+    ...buildTreeData(tree),
+  ];
 
   const handleDelete = async (id) => {
     try { await deleteApproval(id); message.success('삭제되었습니다.'); load(); }
@@ -160,7 +217,7 @@ export default function ApprovalPage() {
       >
         {/* 문서번호 */}
         <div style={{
-          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 11, fontWeight: 700,
+          fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace', fontSize: 13, fontWeight: 700,
           color: doc.docNo ? token.colorPrimary : token.colorTextTertiary,
           background: doc.docNo ? token.colorPrimaryBg : token.colorFillQuaternary,
           padding: '5px 6px', borderRadius: 7, textAlign: 'center', lineHeight: 1.3, wordBreak: 'break-all',
@@ -172,15 +229,15 @@ export default function ApprovalPage() {
         <div style={{ minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3, minWidth: 0 }}>
             {doc.isUrgent && (
-              <Tag color="error" style={{ margin: 0, fontSize: 10, lineHeight: '16px', flexShrink: 0, padding: '0 5px' }}>
+              <Tag color="error" style={{ margin: 0, fontSize: 13, lineHeight: '16px', flexShrink: 0, padding: '0 5px' }}>
                 <FireOutlined /> 긴급
               </Tag>
             )}
-            <span style={{ fontWeight: 700, fontSize: 14, color: token.colorText, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontWeight: 700, fontSize: 13, color: token.colorText, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {doc.title}
             </span>
           </div>
-          <Text type="secondary" style={{ fontSize: 12 }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>
             {doc.template?.formType?.name && `${doc.template.formType.name} / `}{doc.template?.name}
           </Text>
         </div>
@@ -188,7 +245,7 @@ export default function ApprovalPage() {
         {/* 기안자 */}
         <div style={{ textAlign: 'center' }}>
           <Tooltip title={doc.creator?.displayName}>
-            <Avatar size={26} style={{ background: avatarColor(doc.creator?.displayName), fontSize: 11 }}>
+            <Avatar size={26} style={{ background: avatarColor(doc.creator?.displayName), fontSize: 13 }}>
               {getInitial(doc.creator?.displayName)}
             </Avatar>
           </Tooltip>
@@ -196,7 +253,7 @@ export default function ApprovalPage() {
 
         {/* 결재 진행 (텍스트 + 바) */}
         <div>
-          <Text style={{ fontSize: 11, display: 'block', marginBottom: 5, color: isMyTurn ? token.colorPrimary : token.colorTextSecondary, fontWeight: isMyTurn ? 600 : 400 }}>
+          <Text style={{ fontSize: 13, display: 'block', marginBottom: 5, color: isMyTurn ? token.colorPrimary : token.colorTextSecondary, fontWeight: isMyTurn ? 600 : 400 }}>
             {progressText(doc)}
           </Text>
           <div style={{ height: 4, borderRadius: 999, background: token.colorFillQuaternary, overflow: 'hidden' }}>
@@ -212,10 +269,10 @@ export default function ApprovalPage() {
         {/* 기한 */}
         <div style={{ textAlign: 'center' }}>
           {doc.dueDate ? (
-            <Text style={{ fontSize: 12, color: over ? token.colorError : token.colorTextSecondary, fontWeight: over ? 600 : 400 }}>
+            <Text style={{ fontSize: 13, color: over ? token.colorError : token.colorTextSecondary, fontWeight: over ? 600 : 400 }}>
               {dayjs(doc.dueDate).format('MM/DD')}{over ? ' !' : ''}
             </Text>
-          ) : <Text type="secondary" style={{ fontSize: 12 }}>-</Text>}
+          ) : <Text type="secondary" style={{ fontSize: 13 }}>-</Text>}
         </div>
 
         {/* 액션 */}
@@ -253,7 +310,7 @@ export default function ApprovalPage() {
       display: 'grid', gridTemplateColumns: GRID_COLS, gap: 14, alignItems: 'center',
       padding: '9px 16px 9px 19px', borderBottom: `1px solid ${token.colorBorderSecondary}`,
       background: token.colorFillQuaternary,
-      fontSize: 11.5, fontWeight: 600, color: token.colorTextTertiary, letterSpacing: 0.2,
+      fontSize: 13, fontWeight: 600, color: token.colorTextTertiary, letterSpacing: 0.2,
     }}>
       <div>문서번호</div>
       <div>제목</div>
@@ -285,16 +342,6 @@ export default function ApprovalPage() {
             onSearch={v => { setQ((v || '').trim()); setPage(1); }}
           />
           <Select
-            allowClear placeholder="양식종류"
-            style={{ width: 116 }} size="small"
-            value={formTypeId}
-            onChange={v => { setFormTypeId(v); setPage(1); }}
-          >
-            {formTypes.map(t => (
-              <Select.Option key={t.id} value={t.id}>{t.icon} {t.name}</Select.Option>
-            ))}
-          </Select>
-          <Select
             allowClear placeholder="상태 필터"
             style={{ width: 116 }} size="small"
             value={statusFilter}
@@ -310,6 +357,7 @@ export default function ApprovalPage() {
         </Space>
       </div>
 
+      {/* 탭 (상단 전체 폭) */}
       <Tabs
         activeKey={tab}
         onChange={k => { setTab(k); setPage(1); }}
@@ -338,23 +386,46 @@ export default function ApprovalPage() {
         </div>
       )}
 
-      <div style={{ background: token.colorBgContainer, borderRadius: token.borderRadiusLG, border: `1px solid ${token.colorBorderSecondary}`, overflow: 'hidden' }}>
-        {loading ? (
-          <div style={{ padding: 60, textAlign: 'center' }}><Spin /></div>
-        ) : documents.length === 0 ? (
-          <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="문서가 없습니다." style={{ padding: '48px 0' }} />
-        ) : (
-          <>
-            {renderHeader()}
-            {documents.map(renderDoc)}
-          </>
-        )}
-        {total > 20 && (
-          <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 16px' }}>
-            <Pagination current={page} pageSize={20} total={total} onChange={setPage} showSizeChanger={false} size="small" />
-          </div>
-        )}
-      </div>
+      {/* ── 트리 | 결재내역 그리드 (같은 높이로 나란히) ── */}
+      <div style={{ display: 'flex', gap: 16, alignItems: 'stretch' }}>
+        {/* 좌측: 결재 종류 트리 */}
+        <div style={{
+          width: 230, flexShrink: 0, alignSelf: 'stretch',
+          background: token.colorBgContainer, borderRadius: token.borderRadiusLG,
+          border: `1px solid ${token.colorBorderSecondary}`, padding: '10px 6px',
+          overflow: 'auto',
+        }}>
+          <div style={{ fontSize: 'var(--fd-fs-caption, 12px)', fontWeight: 700, color: token.colorTextTertiary, padding: '2px 8px 8px', letterSpacing: 0.2 }}>결재 종류</div>
+          <Tree
+            blockNode
+            showIcon
+            treeData={treeData}
+            selectedKeys={[treeKey]}
+            expandedKeys={treeExpanded}
+            onSelect={onTreeSelect}
+            onExpand={onTreeExpand}
+          />
+        </div>
+
+        {/* 우측: 결재내역 그리드 */}
+        <div style={{ flex: 1, minWidth: 0, background: token.colorBgContainer, borderRadius: token.borderRadiusLG, border: `1px solid ${token.colorBorderSecondary}`, overflow: 'hidden' }}>
+          {loading ? (
+            <div style={{ padding: 60, textAlign: 'center' }}><Spin /></div>
+          ) : documents.length === 0 ? (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="문서가 없습니다." style={{ padding: '48px 0' }} />
+          ) : (
+            <>
+              {renderHeader()}
+              {documents.map(renderDoc)}
+            </>
+          )}
+          {total > 20 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '10px 16px' }}>
+              <Pagination current={page} pageSize={20} total={total} onChange={setPage} showSizeChanger={false} size="small" />
+            </div>
+          )}
+        </div>
+      </div>{/* 2-pane 끝 */}
 
       {/* 결재 기안/수정 Drawer */}
       <Drawer

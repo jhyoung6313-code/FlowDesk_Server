@@ -59,7 +59,7 @@ function OptionEditor({ options, onChange }) {
 
   return (
     <div style={{ marginTop: 8 }}>
-      <Text type="secondary" style={{ fontSize: 12 }}>옵션</Text>
+      <Text type="secondary" style={{ fontSize: 13 }}>옵션</Text>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
         {options.map(o => (
           <Tag
@@ -167,11 +167,11 @@ function PropertyRow({ prop, boardId, onUpdated, onDeleted }) {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
             <Text strong style={{ fontSize: 13 }}>{prop.name}</Text>
-            <Tag style={{ marginLeft: 8, fontSize: 11 }}>{typeLabel}</Tag>
+            <Tag style={{ marginLeft: 8, fontSize: 13 }}>{typeLabel}</Tag>
             {hasOptions && (
               <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 {(prop.options ?? []).map(o => (
-                  <Tag key={o.id} color={o.color} style={{ fontSize: 11, margin: 0 }}>{o.value}</Tag>
+                  <Tag key={o.id} color={o.color} style={{ fontSize: 13, margin: 0 }}>{o.value}</Tag>
                 ))}
               </div>
             )}
@@ -247,7 +247,7 @@ export default function PropertyEditor({ open, onClose, boardId, properties, onP
     >
       {/* ── 기본 항목 (카드 내장 필드) ── */}
       <div style={{ marginBottom: 16 }}>
-        <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.5 }}>
+        <Text type="secondary" style={{ fontSize: 13, fontWeight: 600, letterSpacing: 0.5 }}>
           기본 항목 (그리드 컬럼 표시)
         </Text>
         <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px' }}>
@@ -266,7 +266,7 @@ export default function PropertyEditor({ open, onClose, boardId, properties, onP
       <Divider style={{ margin: '12px 0' }} />
 
       {/* ── 커스텀 속성 ── */}
-      <Text type="secondary" style={{ fontSize: 12, fontWeight: 600, letterSpacing: 0.5 }}>
+      <Text type="secondary" style={{ fontSize: 13, fontWeight: 600, letterSpacing: 0.5 }}>
         커스텀 속성
       </Text>
 

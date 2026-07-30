@@ -94,7 +94,7 @@ export default function SystemSettings() {
 
               <Divider style={{ margin: '8px 0 16px' }} />
 
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                 아래 항목은 서버 환경변수(.env)로만 변경 가능한 참고 값입니다.
               </Typography.Text>
               <Descriptions column={1} size="small" bordered style={{ marginTop: 12 }}
@@ -128,7 +128,7 @@ export default function SystemSettings() {
                 description="계정 잠금·비밀번호 정책은 저장 즉시 다음 로그인/비밀번호 변경부터 반영됩니다. 세션 만료 변경은 새로 발급되는 토큰부터 적용됩니다."
               />
 
-              <Typography.Text strong style={{ fontSize: 12, color: '#94a3b8' }}>인증 · 세션</Typography.Text>
+              <Typography.Text strong style={{ fontSize: 13, color: '#94a3b8' }}>인증 · 세션</Typography.Text>
               <Row gutter={12} style={{ marginTop: 8 }}>
                 <Col span={12}>
                   <Form.Item name="enforceOtp" label="2단계 인증(OTP) 강제" valuePropName="checked" tooltip="전사 강제 시 모든 사용자가 OTP를 등록·사용해야 합니다.">
@@ -143,7 +143,7 @@ export default function SystemSettings() {
               </Row>
 
               <Divider style={{ margin: '4px 0 12px' }} />
-              <Typography.Text strong style={{ fontSize: 12, color: '#94a3b8' }}>계정 잠금</Typography.Text>
+              <Typography.Text strong style={{ fontSize: 13, color: '#94a3b8' }}>계정 잠금</Typography.Text>
               <Row gutter={12} style={{ marginTop: 8 }}>
                 <Col span={12}>
                   <Form.Item
@@ -166,7 +166,7 @@ export default function SystemSettings() {
               </Row>
 
               <Divider style={{ margin: '4px 0 12px' }} />
-              <Typography.Text strong style={{ fontSize: 12, color: '#94a3b8' }}>비밀번호 정책</Typography.Text>
+              <Typography.Text strong style={{ fontSize: 13, color: '#94a3b8' }}>비밀번호 정책</Typography.Text>
               <Row gutter={12} style={{ marginTop: 8 }}>
                 <Col span={12}>
                   <Form.Item

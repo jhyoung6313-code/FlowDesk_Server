@@ -327,13 +327,13 @@ export default function BbsPage() {
             color: isTop ? token.colorTextHeading : undefined,
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>{cat.name}</span>
-          {cat.writeRole === 'admin' && <LockOutlined style={{ fontSize: 10, color: token.colorWarning, flexShrink: 0 }} />}
+          {cat.writeRole === 'admin' && <LockOutlined style={{ fontSize: 13, color: token.colorWarning, flexShrink: 0 }} />}
         </Space>
         {isAdmin && (
           <Space size={2} className="cat-actions" style={{ flexShrink: 0 }} onClick={e => e.stopPropagation()}>
-            <Button size="small" type="text" icon={<EditOutlined style={{ fontSize: 11 }} />} onClick={() => openCatEdit(cat)} style={{ width: 20, height: 20, padding: 0 }} />
+            <Button size="small" type="text" icon={<EditOutlined style={{ fontSize: 13 }} />} onClick={() => openCatEdit(cat)} style={{ width: 20, height: 20, padding: 0 }} />
             <Popconfirm title="삭제하시겠습니까?" onConfirm={() => handleCatDelete(cat)} okText="삭제" cancelText="취소">
-              <Button size="small" type="text" danger icon={<DeleteOutlined style={{ fontSize: 11 }} />} style={{ width: 20, height: 20, padding: 0 }} />
+              <Button size="small" type="text" danger icon={<DeleteOutlined style={{ fontSize: 13 }} />} style={{ width: 20, height: 20, padding: 0 }} />
             </Popconfirm>
           </Space>
         )}
@@ -361,7 +361,7 @@ export default function BbsPage() {
       return (
       <div style={{ minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          {row.isPinned && <PushpinOutlined style={{ color: token.colorWarning, fontSize: 12, flexShrink: 0 }} />}
+          {row.isPinned && <PushpinOutlined style={{ color: token.colorWarning, fontSize: 13, flexShrink: 0 }} />}
           <Text
             ellipsis={{ tooltip: displayTitle }}
             style={{ fontWeight: row.isPinned ? 600 : 400, color: token.colorText, fontSize: 13, flex: 1, minWidth: 0 }}
@@ -370,18 +370,18 @@ export default function BbsPage() {
             {`[${title}]`}
           </Text>
           {row._count?.attachments > 0 && (
-            <span style={{ fontSize: 11, color: token.colorTextTertiary, flexShrink: 0 }}>
+            <span style={{ fontSize: 13, color: token.colorTextTertiary, flexShrink: 0 }}>
               <PaperClipOutlined /> {row._count.attachments}
             </span>
           )}
           {row._count?.comments > 0 && (
-            <span style={{ fontSize: 11, color: token.colorPrimary, flexShrink: 0 }}>
+            <span style={{ fontSize: 13, color: token.colorPrimary, flexShrink: 0 }}>
               <CommentOutlined /> {row._count.comments}
             </span>
           )}
         </div>
         {compact && (
-          <div style={{ marginTop: 3, display: 'flex', gap: 10, fontSize: 11, color: token.colorTextTertiary }}>
+          <div style={{ marginTop: 3, display: 'flex', gap: 10, fontSize: 13, color: token.colorTextTertiary }}>
             <span>{row.creator?.displayName}</span>
             <span>{dayjs(row.createdAt).format('MM.DD HH:mm')}</span>
             <span><EyeOutlined /> {row.viewCount}</span>
@@ -400,8 +400,8 @@ export default function BbsPage() {
       width: 120,
       ellipsis: true,
       render: (v) => v
-        ? <Text style={{ fontSize: 12 }} ellipsis={{ tooltip: v }}>{v}</Text>
-        : <Text type="secondary" style={{ fontSize: 12 }}>-</Text>,
+        ? <Text style={{ fontSize: 13 }} ellipsis={{ tooltip: v }}>{v}</Text>
+        : <Text type="secondary" style={{ fontSize: 13 }}>-</Text>,
     },
     {
       title: '수신부서',
@@ -409,8 +409,8 @@ export default function BbsPage() {
       width: 140,
       ellipsis: true,
       render: (v) => (v?.length)
-        ? <Text style={{ fontSize: 12 }} ellipsis={{ tooltip: v.join(', ') }}>{v.join(', ')}</Text>
-        : <Text type="secondary" style={{ fontSize: 12 }}>-</Text>,
+        ? <Text style={{ fontSize: 13 }} ellipsis={{ tooltip: v.join(', ') }}>{v.join(', ')}</Text>
+        : <Text type="secondary" style={{ fontSize: 13 }}>-</Text>,
     },
     {
       title: '처리기한',
@@ -418,10 +418,10 @@ export default function BbsPage() {
       width: 100,
       align: 'center',
       render: (v) => {
-        if (!v) return <Text type="secondary" style={{ fontSize: 12 }}>-</Text>;
+        if (!v) return <Text type="secondary" style={{ fontSize: 13 }}>-</Text>;
         const overdue = dayjs(v).isBefore(dayjs(), 'day');
         return (
-          <Text style={{ fontSize: 12, color: overdue ? token.colorError : token.colorText, fontWeight: overdue ? 600 : 400 }}>
+          <Text style={{ fontSize: 13, color: overdue ? token.colorError : token.colorText, fontWeight: overdue ? 600 : 400 }}>
             {dayjs(v).format('YYYY.MM.DD')}
           </Text>
         );
@@ -431,20 +431,20 @@ export default function BbsPage() {
       title: '작성자',
       dataIndex: ['creator', 'displayName'],
       width: 90,
-      render: (v) => <Text type="secondary" style={{ fontSize: 12 }}>{v}</Text>,
+      render: (v) => <Text type="secondary" style={{ fontSize: 13 }}>{v}</Text>,
     },
     {
       title: <EyeOutlined />,
       dataIndex: 'viewCount',
       width: 56,
       align: 'center',
-      render: (v) => <Text type="secondary" style={{ fontSize: 12 }}>{v}</Text>,
+      render: (v) => <Text type="secondary" style={{ fontSize: 13 }}>{v}</Text>,
     },
     {
       title: '작성일',
       dataIndex: 'createdAt',
       width: 90,
-      render: (v) => <Text type="secondary" style={{ fontSize: 12 }}>{dayjs(v).format('MM.DD HH:mm')}</Text>,
+      render: (v) => <Text type="secondary" style={{ fontSize: 13 }}>{dayjs(v).format('MM.DD HH:mm')}</Text>,
     },
     ...(isAdmin ? [{
       title: '',
@@ -507,7 +507,7 @@ export default function BbsPage() {
         </div>
 
         {treeData.length === 0 ? (
-          <div style={{ padding: '20px 14px', color: token.colorTextTertiary, fontSize: 12, textAlign: 'center' }}>
+          <div style={{ padding: '20px 14px', color: token.colorTextTertiary, fontSize: 13, textAlign: 'center' }}>
             {isAdmin ? '+ 버튼으로 게시판을 추가하세요.' : '등록된 게시판이 없습니다.'}
           </div>
         ) : (
@@ -553,7 +553,7 @@ export default function BbsPage() {
                     {selectedCat?.icon && <span style={{ fontSize: 18 }}>{selectedCat.icon}</span>}
                     <Title level={5} style={{ margin: 0 }}>{selectedCat?.name}</Title>
                     {selectedCat?.writeRole === 'admin' && (
-                      <Tag icon={<LockOutlined />} color="warning" style={{ fontSize: 11 }}>관리자 전용</Tag>
+                      <Tag icon={<LockOutlined />} color="warning" style={{ fontSize: 13 }}>관리자 전용</Tag>
                     )}
                   </Space>
                 }

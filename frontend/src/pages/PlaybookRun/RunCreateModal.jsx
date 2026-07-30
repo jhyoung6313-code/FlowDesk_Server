@@ -133,7 +133,7 @@ export default function RunCreateModal({ open, onClose, onCreated, defaultPlaybo
         {variables.length > 0 && (
           <>
             <Divider style={{ margin: '12px 0' }}>변수 입력</Divider>
-            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+            <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
               단계 내용에서 {'{{변수키}}'} 로 자동 치환됩니다.
             </Text>
             {variables.map((v) => (

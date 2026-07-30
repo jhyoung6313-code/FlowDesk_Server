@@ -421,7 +421,7 @@ export default function LedgerPage() {
           <Card
             title={`${selectedYear}년 월별 수입/지출`}
             style={cardStyle}
-            extra={<Typography.Text type="secondary" style={{ fontSize: 12 }}>막대 클릭 시 해당 월로 이동</Typography.Text>}
+            extra={<Typography.Text type="secondary" style={{ fontSize: 13 }}>막대 클릭 시 해당 월로 이동</Typography.Text>}
           >
             <ResponsiveContainer width="100%" height={220}>
               <BarChart
@@ -439,8 +439,8 @@ export default function LedgerPage() {
                 style={{ cursor: 'pointer' }}
               >
                 <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#333' : '#f0f0f0'} />
-                <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                <YAxis tickFormatter={(v) => v >= 10000 ? `${(v / 10000).toFixed(0)}만` : v} tick={{ fontSize: 11 }} />
+                <XAxis dataKey="name" tick={{ fontSize: 13 }} />
+                <YAxis tickFormatter={(v) => v >= 10000 ? `${(v / 10000).toFixed(0)}만` : v} tick={{ fontSize: 13 }} />
                 <RTooltip formatter={(v) => `${fmt(v)}원`} />
                 <Legend />
                 <Bar dataKey="수입" fill="#52c41a" radius={[3, 3, 0, 0]}>
@@ -505,7 +505,7 @@ export default function LedgerPage() {
                         </Tooltip>
                       )}
                     </Space>
-                    <Text style={{ fontSize: 12, color: isOver ? '#ff4d4f' : '#666' }}>
+                    <Text style={{ fontSize: 13, color: isOver ? '#ff4d4f' : '#666' }}>
                       {fmt(b.actual)}원 {b.budget ? `/ ${fmt(b.budget)}원` : '(예산 미설정)'}
                     </Text>
                   </div>
@@ -567,7 +567,7 @@ export default function LedgerPage() {
               {categories.map((c) => (
                 <Option key={c.id} value={c.id}>
                   <Tag color={c.color} style={{ marginRight: 6 }}>{c.name}</Tag>
-                  <span style={{ fontSize: 11, color: '#888' }}>{c.type === 'income' ? '수입' : '지출'}</span>
+                  <span style={{ fontSize: 13, color: '#888' }}>{c.type === 'income' ? '수입' : '지출'}</span>
                 </Option>
               ))}
             </Select>

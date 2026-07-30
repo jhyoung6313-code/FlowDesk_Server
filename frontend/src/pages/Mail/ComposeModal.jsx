@@ -230,8 +230,8 @@ export default function ComposeModal({
           </Form.Item>
 
           <div style={{ display: 'flex', gap: 8, marginTop: -8, marginBottom: 8 }}>
-            {!showCc && <Typography.Link style={{ fontSize: 12 }} onClick={() => setShowCc(true)}>참조 추가</Typography.Link>}
-            {!showBcc && <Typography.Link style={{ fontSize: 12 }} onClick={() => setShowBcc(true)}>숨은참조 추가</Typography.Link>}
+            {!showCc && <Typography.Link style={{ fontSize: 13 }} onClick={() => setShowCc(true)}>참조 추가</Typography.Link>}
+            {!showBcc && <Typography.Link style={{ fontSize: 13 }} onClick={() => setShowBcc(true)}>숨은참조 추가</Typography.Link>}
           </div>
 
           {showCc && (
@@ -269,7 +269,7 @@ export default function ComposeModal({
 
         {/* 리치 에디터 — Form 외부에서 별도 state로 관리 */}
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 12, color: token.colorTextSecondary, marginBottom: 4 }}>내용</div>
+          <div style={{ fontSize: 13, color: token.colorTextSecondary, marginBottom: 4 }}>내용</div>
           <RichEditor
             key={`${mode}-${sourceMail?.id}-${open}`}
             defaultValue={body}
@@ -282,7 +282,7 @@ export default function ComposeModal({
         {/* 첨부파일 목록 */}
         {attachments.length > 0 && (
           <div style={{ borderTop: `1px solid ${token.colorBorderSecondary}`, paddingTop: 10 }}>
-            <Typography.Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 6 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 6 }}>
               첨부파일 ({attachments.length})
             </Typography.Text>
             <Space direction="vertical" style={{ width: '100%' }} size={4}>
@@ -293,8 +293,8 @@ export default function ComposeModal({
                 }}>
                   <Space size={6}>
                     <PaperClipOutlined style={{ color: token.colorTextSecondary }} />
-                    <Typography.Text style={{ fontSize: 12 }}>{att.originalName}</Typography.Text>
-                    <Typography.Text type="secondary" style={{ fontSize: 11 }}>{formatSize(att.size)}</Typography.Text>
+                    <Typography.Text style={{ fontSize: 13 }}>{att.originalName}</Typography.Text>
+                    <Typography.Text type="secondary" style={{ fontSize: 13 }}>{formatSize(att.size)}</Typography.Text>
                   </Space>
                   <Button size="small" type="text" danger icon={<DeleteOutlined />} onClick={() => handleRemoveAtt(att)} />
                 </div>

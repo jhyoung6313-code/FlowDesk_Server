@@ -224,10 +224,10 @@ export default function MailPage() {
         time={timeStr}
         subject={row.subject || '(제목 없음)'}
         subjectPrefix={row.priority === 'urgent'
-          ? <Tag color="red" style={{ fontSize: 10, margin: 0, padding: '0 4px', lineHeight: '16px', flexShrink: 0 }}>긴급</Tag>
+          ? <Tag color="red" style={{ fontSize: 13, margin: 0, padding: '0 4px', lineHeight: '16px', flexShrink: 0 }}>긴급</Tag>
           : null}
         subjectSuffix={row.attachments?.length > 0
-          ? <PaperClipOutlined style={{ fontSize: 11, color: token.colorTextTertiary, flexShrink: 0 }} />
+          ? <PaperClipOutlined style={{ fontSize: 13, color: token.colorTextTertiary, flexShrink: 0 }} />
           : null}
         preview={preview || <span style={{ fontStyle: 'italic', opacity: 0.6 }}>(내용 없음)</span>}
         labelDots={(row.labels || []).slice(0, 2).map(lb => lb.color)}
@@ -286,13 +286,13 @@ export default function MailPage() {
 
         {/* 라벨 섹션 */}
         <div style={{ marginTop: 16, padding: '8px 16px 4px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <Text type="secondary" style={{ fontSize: 11, fontWeight: 600, letterSpacing: 0.5 }}>라벨</Text>
+          <Text type="secondary" style={{ fontSize: 13, fontWeight: 600, letterSpacing: 0.5 }}>라벨</Text>
           <Tooltip title="라벨 관리">
             <Button size="small" type="text" icon={<SettingOutlined />} onClick={() => setLabelMgrOpen(true)} style={{ height: 20, width: 20, minWidth: 20 }} />
           </Tooltip>
         </div>
         {labels.length === 0 ? (
-          <Text type="secondary" style={{ fontSize: 11, padding: '4px 16px' }}>
+          <Text type="secondary" style={{ fontSize: 13, padding: '4px 16px' }}>
             <a onClick={() => setLabelMgrOpen(true)}>+ 라벨 추가</a>
           </Text>
         ) : labels.map(lb => {
@@ -363,13 +363,13 @@ export default function MailPage() {
               {activeLabelId
                 ? <TagOutlined style={{ color: labels.find(l => l.id === activeLabelId)?.color }} />
                 : <MailOutlined style={{ color: token.colorPrimary }} />}
-              <Text strong style={{ fontSize: 14 }}>{folderTitle}</Text>
-              {searchQuery && <Tag closable onClose={clearSearch} style={{ fontSize: 11 }}>"{searchQuery}"</Tag>}
+              <Text strong style={{ fontSize: 13 }}>{folderTitle}</Text>
+              {searchQuery && <Tag closable onClose={clearSearch} style={{ fontSize: 13 }}>"{searchQuery}"</Tag>}
               <div style={{ flex: 1 }} />
               {total > 0 && (
                 folder === 'inbox' && !activeLabelId && !searchQuery && unread > 0
-                  ? <Tag color="red" style={{ fontSize: 11, margin: 0, padding: '0 6px', lineHeight: '18px' }}>미열람 {unread}</Tag>
-                  : <Text type="secondary" style={{ fontSize: 12 }}>{total}</Text>
+                  ? <Tag color="red" style={{ fontSize: 13, margin: 0, padding: '0 6px', lineHeight: '18px' }}>미열람 {unread}</Tag>
+                  : <Text type="secondary" style={{ fontSize: 13 }}>{total}</Text>
               )}
             </div>
 
@@ -379,7 +379,7 @@ export default function MailPage() {
                 padding: '8px 14px', borderBottom: `1px solid ${token.colorBorderSecondary}`,
                 background: token.colorPrimaryBg, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
               }}>
-                <Text strong style={{ fontSize: 12, color: token.colorPrimary }}>{selectedKeys.length}건</Text>
+                <Text strong style={{ fontSize: 13, color: token.colorPrimary }}>{selectedKeys.length}건</Text>
                 <Button size="small" icon={<MailFilled />} onClick={() => doBulk('read')}>읽음</Button>
                 <Button size="small" icon={<EyeInvisibleOutlined />} onClick={() => doBulk('unread')}>안읽음</Button>
                 <Button size="small" icon={<StarOutlined />} onClick={() => doBulk('star')}>별표</Button>

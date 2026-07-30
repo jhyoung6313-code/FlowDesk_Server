@@ -17,7 +17,7 @@ const ROLE_OPTIONS = [
 
 function RoleTag({ role }) {
   const r = ROLE_OPTIONS.find(o => o.value === role) ?? { label: role, color: 'default' };
-  return <Tag color={r.color} style={{ fontSize: 11 }}>{r.label}</Tag>;
+  return <Tag color={r.color} style={{ fontSize: 13 }}>{r.label}</Tag>;
 }
 
 export default function MemberManager({
@@ -100,13 +100,13 @@ export default function MemberManager({
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid var(--fd-border)' }}
           >
             <Space>
-              <Avatar style={{ backgroundColor: m.user?.avatarColor || '#1677ff', fontSize: 12 }} size="small">
+              <Avatar style={{ backgroundColor: m.user?.avatarColor || '#1677ff', fontSize: 13 }} size="small">
                 {m.user?.displayName?.[0]}
               </Avatar>
               <div>
                 <Text>{m.user?.displayName}</Text>
                 <br />
-                <Text type="secondary" style={{ fontSize: 11 }}>
+                <Text type="secondary" style={{ fontSize: 13 }}>
                   {ROLE_OPTIONS.find(r => r.value === m.role)?.desc ?? m.role}
                 </Text>
               </div>
@@ -124,7 +124,7 @@ export default function MemberManager({
                 >
                   {ROLE_OPTIONS.filter(r => r.value !== 'owner').map(r => (
                     <Select.Option key={r.value} value={r.value}>
-                      <Tag color={r.color} style={{ fontSize: 11, margin: 0 }}>{r.label}</Tag>
+                      <Tag color={r.color} style={{ fontSize: 13, margin: 0 }}>{r.label}</Tag>
                     </Select.Option>
                   ))}
                 </Select>
@@ -148,11 +148,11 @@ export default function MemberManager({
 
       {/* 역할 설명 */}
       <div style={{ background: 'var(--fd-surface-sunken)', borderRadius: 6, padding: '8px 12px', marginBottom: 16 }}>
-        <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 4, fontWeight: 600 }}>역할 안내</Text>
+        <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 4, fontWeight: 600 }}>역할 안내</Text>
         {ROLE_OPTIONS.map(r => (
           <div key={r.value} style={{ display: 'flex', gap: 6, marginBottom: 2 }}>
-            <Tag color={r.color} style={{ fontSize: 10, margin: 0 }}>{r.label}</Tag>
-            <Text type="secondary" style={{ fontSize: 11 }}>{r.desc}</Text>
+            <Tag color={r.color} style={{ fontSize: 13, margin: 0 }}>{r.label}</Tag>
+            <Text type="secondary" style={{ fontSize: 13 }}>{r.desc}</Text>
           </div>
         ))}
       </div>

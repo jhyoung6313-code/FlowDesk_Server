@@ -268,7 +268,7 @@ export default function GanttPage({ embedded = false }) {
         <Typography.Title level={4} style={{ margin: 0 }}>
           {!embedded && '간트 차트'}
           {hasFilter && (
-            <Tag color="blue" style={{ marginLeft: embedded ? 0 : 8, fontSize: 12, fontWeight: 400 }}>
+            <Tag color="blue" style={{ marginLeft: embedded ? 0 : 8, fontSize: 13, fontWeight: 400 }}>
               {filteredTasks.length}/{tasks.length}건 표시
             </Tag>
           )}
@@ -353,7 +353,7 @@ export default function GanttPage({ embedded = false }) {
               display: 'inline-block', width: 12, height: 12, borderRadius: 2,
               backgroundColor: STATUS_COLORS[key]?.color || '#ccc',
             }} />
-            <Typography.Text style={{ fontSize: 12 }}>{label}</Typography.Text>
+            <Typography.Text style={{ fontSize: 13 }}>{label}</Typography.Text>
           </Space>
         ))}
         <Space size={4}>
@@ -361,11 +361,11 @@ export default function GanttPage({ embedded = false }) {
             display: 'inline-block', width: 12, height: 12, borderRadius: 2,
             backgroundColor: '#ff4d4f',
           }} />
-          <Typography.Text style={{ fontSize: 12 }}>마감초과</Typography.Text>
+          <Typography.Text style={{ fontSize: 13 }}>마감초과</Typography.Text>
         </Space>
         <Space size={4}>
-          <FlagOutlined style={{ fontSize: 12, color: '#722ed1' }} />
-          <Typography.Text style={{ fontSize: 12 }}>마일스톤</Typography.Text>
+          <FlagOutlined style={{ fontSize: 13, color: '#722ed1' }} />
+          <Typography.Text style={{ fontSize: 13 }}>마일스톤</Typography.Text>
         </Space>
       </Space>
 
@@ -380,13 +380,13 @@ export default function GanttPage({ embedded = false }) {
               style={{ cursor: isAdmin ? 'pointer' : 'default' }}
             >
               <span>{m.name}</span>
-              <span style={{ marginLeft: 4, opacity: 0.8, fontSize: 11 }}>
+              <span style={{ marginLeft: 4, opacity: 0.8, fontSize: 13 }}>
                 {dayjs(m.date).format('MM/DD')}
               </span>
               {isAdmin && (
                 <>
                   <EditOutlined
-                    style={{ marginLeft: 6, fontSize: 11 }}
+                    style={{ marginLeft: 6, fontSize: 13 }}
                     onClick={(e) => { e.stopPropagation(); openMsEdit(m); }}
                   />
                   <Popconfirm
@@ -394,7 +394,7 @@ export default function GanttPage({ embedded = false }) {
                     onConfirm={() => handleMsDelete(m.id)}
                     onPopupClick={(e) => e.stopPropagation()}
                   >
-                    <DeleteOutlined style={{ marginLeft: 4, fontSize: 11 }} onClick={(e) => e.stopPropagation()} />
+                    <DeleteOutlined style={{ marginLeft: 4, fontSize: 13 }} onClick={(e) => e.stopPropagation()} />
                   </Popconfirm>
                 </>
               )}
@@ -424,7 +424,7 @@ export default function GanttPage({ embedded = false }) {
                 return (
                   <div style={{
                     background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 6,
-                    padding: '8px 12px', minWidth: 160, fontSize: 12,
+                    padding: '8px 12px', minWidth: 160, fontSize: 13,
                   }}>
                     <div style={{ fontWeight: 600, marginBottom: 4, color: m.color }}>
                       <FlagOutlined /> {m.name}
@@ -438,7 +438,7 @@ export default function GanttPage({ embedded = false }) {
               return (
                 <div style={{
                   background: 'var(--fd-surface)', border: '1px solid var(--fd-border)', borderRadius: 6,
-                  padding: '8px 12px', minWidth: 200, fontSize: 12,
+                  padding: '8px 12px', minWidth: 200, fontSize: 13,
                 }}>
                   <div style={{ fontWeight: 600, marginBottom: 4 }}>{raw?.title}</div>
                   {raw?.part && <div>팀: {raw.part.name}</div>}

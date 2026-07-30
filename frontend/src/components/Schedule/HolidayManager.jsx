@@ -45,7 +45,7 @@ export default function HolidayManager({ open, onClose }) {
 
   return (
     <Modal open={open} onCancel={onClose} footer={null} width={460} title="🇰🇷 공휴일 관리" destroyOnClose>
-      <div style={{ fontSize: 12, color: '#94A3B8', marginBottom: 12, lineHeight: 1.5 }}>
+      <div style={{ fontSize: 13, color: '#94A3B8', marginBottom: 12, lineHeight: 1.5 }}>
         임시공휴일·대체공휴일 등 추가 지정분을 등록하세요. 같은 날짜에 등록하면 내장 기본값을 덮어씁니다.
       </div>
 
@@ -59,7 +59,7 @@ export default function HolidayManager({ open, onClose }) {
       <Button type="primary" block onClick={handleAdd} loading={saving} style={{ marginBottom: 16 }}>+ 등록 / 덮어쓰기</Button>
 
       {/* 등록 목록 */}
-      <div style={{ fontSize: 12, fontWeight: 700, color: '#475569', marginBottom: 6 }}>등록된 공휴일</div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: '#475569', marginBottom: 6 }}>등록된 공휴일</div>
       <div style={{ maxHeight: 280, overflowY: 'auto' }}>
         {list.length === 0 ? (
           <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="등록된 공휴일이 없습니다" />
@@ -68,8 +68,8 @@ export default function HolidayManager({ open, onClose }) {
             display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px',
             borderBottom: '1px solid #F1F5F9',
           }}>
-            <span style={{ fontSize: 12.5, fontWeight: 700, color: '#DC2626', width: 92 }}>{dayjs(h.date).format('YYYY-MM-DD')}</span>
-            <span style={{ fontSize: 10.5, fontWeight: 700, padding: '1px 7px', borderRadius: 5, background: '#FEE2E2', color: '#DC2626' }}>{TYPE_LABEL[h.type] || h.type}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#DC2626', width: 92 }}>{dayjs(h.date).format('YYYY-MM-DD')}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, padding: '1px 7px', borderRadius: 5, background: '#FEE2E2', color: '#DC2626' }}>{TYPE_LABEL[h.type] || h.type}</span>
             <span style={{ flex: 1, fontSize: 13, color: '#0F172A' }}>{h.name}</span>
             <Popconfirm title="삭제할까요?" okText="삭제" cancelText="취소" onConfirm={() => handleDelete(h.id)} okButtonProps={{ danger: true }}>
               <Button size="small" danger type="text">삭제</Button>

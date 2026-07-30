@@ -175,7 +175,7 @@ function StepCard({ step, runStatus, users, onAction, runId, onUpdate }) {
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
         {/* 유형 아이콘 */}
         <Tooltip title={step.type}>
-          <span style={{ fontSize: 14, color: '#888', marginTop: 1 }}>{STEP_TYPE_ICON[step.type]}</span>
+          <span style={{ fontSize: 13, color: '#888', marginTop: 1 }}>{STEP_TYPE_ICON[step.type]}</span>
         </Tooltip>
 
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -215,22 +215,22 @@ function StepCard({ step, runStatus, users, onAction, runId, onUpdate }) {
                     onClick: ({ key }) => { if (key !== step.status) handleAction(key); },
                   }}
                 >
-                  <Tag color={sm.color} style={{ fontSize: 11, margin: 0, cursor: 'pointer' }}>
+                  <Tag color={sm.color} style={{ fontSize: 13, margin: 0, cursor: 'pointer' }}>
                     {sm.label} ▾
                   </Tag>
                 </Dropdown>
               ) : (
-                <Tag color={sm.color} style={{ fontSize: 11, margin: 0 }}>{sm.label}</Tag>
+                <Tag color={sm.color} style={{ fontSize: 13, margin: 0 }}>{sm.label}</Tag>
               )}
               {step.assignee && (
                 <Tooltip title={step.assignee.displayName}>
-                  <Avatar size="small" style={{ backgroundColor: step.assignee.avatarColor || '#1677ff', fontSize: 10 }}>
+                  <Avatar size="small" style={{ backgroundColor: step.assignee.avatarColor || '#1677ff', fontSize: 13 }}>
                     {step.assignee.displayName?.slice(0, 1)}
                   </Avatar>
                 </Tooltip>
               )}
               {step.dueAt && (
-                <Tag icon={<ClockCircleOutlined />} color="orange" style={{ fontSize: 11, margin: 0 }}>
+                <Tag icon={<ClockCircleOutlined />} color="orange" style={{ fontSize: 13, margin: 0 }}>
                   {dayjs(step.dueAt).format('MM/DD HH:mm')}
                 </Tag>
               )}
@@ -240,7 +240,7 @@ function StepCard({ step, runStatus, users, onAction, runId, onUpdate }) {
                     try { await pbApi.deleteRunStep(runId, step.id); onUpdate?.(); }
                     catch { message.error('삭제 실패'); }
                   }}>
-                  <Button type="text" size="small" danger icon={<DeleteOutlined style={{ fontSize: 11 }} />} style={{ padding: '0 2px' }} />
+                  <Button type="text" size="small" danger icon={<DeleteOutlined style={{ fontSize: 13 }} />} style={{ padding: '0 2px' }} />
                 </Popconfirm>
               )}
             </Space>
@@ -248,13 +248,13 @@ function StepCard({ step, runStatus, users, onAction, runId, onUpdate }) {
 
           {/* SLA 경고 */}
           {slaWarn && (
-            <Alert message={slaWarn} type="warning" showIcon banner style={{ marginTop: 4, fontSize: 11 }} />
+            <Alert message={slaWarn} type="warning" showIcon banner style={{ marginTop: 4, fontSize: 13 }} />
           )}
 
           {/* 지침 */}
           {/* 상세 내용 */}
           <div style={{ marginTop: 6 }}>
-            <Text type="secondary" style={{ fontSize: 11, display: 'block', marginBottom: 2 }}>상세 내용</Text>
+            <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 2 }}>상세 내용</Text>
             {isActive ? (
               <TextArea
                 value={instrInput}
@@ -271,18 +271,18 @@ function StepCard({ step, runStatus, users, onAction, runId, onUpdate }) {
                 placeholder="상세 내용을 입력하세요 (Enter=저장, Shift+Enter=줄바꿈)"
               />
             ) : step.instructions ? (
-              <Text type="secondary" style={{ fontSize: 12, display: 'block', whiteSpace: 'pre-wrap' }}>
+              <Text type="secondary" style={{ fontSize: 13, display: 'block', whiteSpace: 'pre-wrap' }}>
                 {step.instructions}
               </Text>
             ) : (
-              <Text type="secondary" style={{ fontSize: 12, color: '#bbb' }}>-</Text>
+              <Text type="secondary" style={{ fontSize: 13, color: '#bbb' }}>-</Text>
             )}
           </div>
 
           {/* 완료 증거 */}
           {step.evidence && (
             <div style={{ marginTop: 6, padding: '6px 10px', background: '#f6ffed', borderRadius: 4 }}>
-              <Text style={{ fontSize: 12 }}>
+              <Text style={{ fontSize: 13 }}>
                 <CheckCircleFilled style={{ color: '#52c41a', marginRight: 4 }} />
                 {step.evidence}
               </Text>
@@ -291,7 +291,7 @@ function StepCard({ step, runStatus, users, onAction, runId, onUpdate }) {
 
           {/* 완료자 정보 */}
           {isDone && step.completer && (
-            <Text type="secondary" style={{ fontSize: 11, marginTop: 4, display: 'block' }}>
+            <Text type="secondary" style={{ fontSize: 13, marginTop: 4, display: 'block' }}>
               {step.completer.displayName} · {dayjs(step.completedAt).format('MM/DD HH:mm')}
             </Text>
           )}
@@ -315,7 +315,7 @@ function StepCard({ step, runStatus, users, onAction, runId, onUpdate }) {
               <Space size={4} wrap>
                 {step.status === 'pending' && (
                   <Button size="small" type="primary" onClick={() => handleAction('in_progress')} loading={actionLoading}
-                    style={{ fontSize: 11, padding: '0 6px', height: 20, color: '#fff' }}>
+                    style={{ fontSize: 13, padding: '0 6px', height: 20, color: '#fff' }}>
                     시작
                   </Button>
                 )}
@@ -360,18 +360,18 @@ function StepCard({ step, runStatus, users, onAction, runId, onUpdate }) {
                       })()
                     ) : (
                       <Button size="small" type="primary" onClick={handleComplete} loading={actionLoading}
-                        style={{ fontSize: 11, padding: '0 6px', height: 20 }}>
+                        style={{ fontSize: 13, padding: '0 6px', height: 20 }}>
                         {step.requireEvidence && !showEvidence ? '완료 (증거 필요)' : '완료'}
                       </Button>
                     )}
                     {showEvidence && (
                       <Button size="small" onClick={handleComplete} loading={actionLoading}
-                        style={{ fontSize: 11, padding: '0 6px', height: 20 }}>
+                        style={{ fontSize: 13, padding: '0 6px', height: 20 }}>
                         제출
                       </Button>
                     )}
                     <Button size="small" onClick={() => handleAction('skipped')} loading={actionLoading}
-                      style={{ fontSize: 11, padding: '0 6px', height: 20 }}>
+                      style={{ fontSize: 13, padding: '0 6px', height: 20 }}>
                       건너뜀
                     </Button>
                   </>
@@ -383,7 +383,7 @@ function StepCard({ step, runStatus, users, onAction, runId, onUpdate }) {
 
           {/* 분기 선택 결과 */}
           {step.decisionChosen && (
-            <Tag color="purple" style={{ marginTop: 4, fontSize: 11 }}>선택: {step.decisionChosen}</Tag>
+            <Tag color="purple" style={{ marginTop: 4, fontSize: 13 }}>선택: {step.decisionChosen}</Tag>
           )}
 
           {/* 체크리스트 토글 */}
@@ -392,7 +392,7 @@ function StepCard({ step, runStatus, users, onAction, runId, onUpdate }) {
               type="text"
               size="small"
               icon={<CheckSquareOutlined />}
-              style={{ fontSize: 11, color: '#888', padding: 0 }}
+              style={{ fontSize: 13, color: '#888', padding: 0 }}
               onClick={() => setShowChecklist((v) => !v)}
             >
               체크리스트 {showChecklist ? '▲' : '▼'}
@@ -410,11 +410,11 @@ function StepCard({ step, runStatus, users, onAction, runId, onUpdate }) {
                     onChange={() => handleCheckToggle(item)}
                     style={{ cursor: 'pointer' }}
                   />
-                  <span style={{ flex: 1, fontSize: 12, textDecoration: item.checked ? 'line-through' : 'none', color: item.checked ? '#aaa' : 'inherit' }}>
+                  <span style={{ flex: 1, fontSize: 13, textDecoration: item.checked ? 'line-through' : 'none', color: item.checked ? '#aaa' : 'inherit' }}>
                     {item.content}
                   </span>
                   {isActive && (
-                    <Button type="text" size="small" danger onClick={() => handleDeleteChecklistItem(item.id)} style={{ padding: 0, fontSize: 11 }}>✕</Button>
+                    <Button type="text" size="small" danger onClick={() => handleDeleteChecklistItem(item.id)} style={{ padding: 0, fontSize: 13 }}>✕</Button>
                   )}
                 </div>
               ))}
@@ -426,7 +426,7 @@ function StepCard({ step, runStatus, users, onAction, runId, onUpdate }) {
                     onPressEnter={handleAddChecklistItem}
                     placeholder="새 항목 추가..."
                     size="small"
-                    style={{ flex: 1, fontSize: 12 }}
+                    style={{ flex: 1, fontSize: 13 }}
                   />
                   <Button size="small" onClick={handleAddChecklistItem}>추가</Button>
                 </div>
@@ -457,7 +457,7 @@ function StepGroup({ steps, runStatus, allUsers, handleStepAction, runId, onUpda
       group.forEach((x) => visited.add(x.id));
       result.push(
         <div key={`pg-${s.parallelGroup}-${i}`} style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 11, color: '#888', marginBottom: 4, paddingLeft: 4 }}>
+          <div style={{ fontSize: 13, color: '#888', marginBottom: 4, paddingLeft: 4 }}>
             ⊞ 병렬 그룹 {s.parallelGroup}
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -498,7 +498,7 @@ function PhaseProgress({ phases, steps }) {
                 flex: 1,
                 padding: '6px 4px',
                 textAlign: 'center',
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: 600,
                 backgroundColor: allDone ? ph.color : inProg ? `${ph.color}44` : '#f5f5f5',
                 color: allDone ? '#fff' : inProg ? ph.color : '#aaa',
@@ -571,16 +571,16 @@ function UpdatesTab({ run, onRefresh }) {
         run.updates.map((u) => (
           <Card key={u.id} size="small" style={{ marginBottom: 8 }} bodyStyle={{ padding: '10px 14px' }}>
             <div style={{ display: 'flex', gap: 8 }}>
-              <Avatar size="small" style={{ backgroundColor: u.creator?.avatarColor || '#1677ff', fontSize: 11, flexShrink: 0 }}>
+              <Avatar size="small" style={{ backgroundColor: u.creator?.avatarColor || '#1677ff', fontSize: 13, flexShrink: 0 }}>
                 {u.creator?.displayName?.slice(0, 1)}
               </Avatar>
               <div style={{ flex: 1 }}>
                 <div style={{ marginBottom: 4, display: 'flex', justifyContent: 'space-between' }}>
                   <Space size={4}>
-                    <Text strong style={{ fontSize: 12 }}>{u.creator?.displayName}</Text>
-                    {u.type === 'alert' && <Tag color="red" style={{ fontSize: 10 }}>경고</Tag>}
+                    <Text strong style={{ fontSize: 13 }}>{u.creator?.displayName}</Text>
+                    {u.type === 'alert' && <Tag color="red" style={{ fontSize: 13 }}>경고</Tag>}
                   </Space>
-                  <Text type="secondary" style={{ fontSize: 11 }}>
+                  <Text type="secondary" style={{ fontSize: 13 }}>
                     {dayjs(u.createdAt).format('MM/DD HH:mm')}
                   </Text>
                 </div>
@@ -588,7 +588,7 @@ function UpdatesTab({ run, onRefresh }) {
               </div>
               {(user?.role === 'admin' || u.createdBy === user?.id) && (
                 <Popconfirm title="삭제?" onConfirm={() => handleDelete(u.id)}>
-                  <Button type="text" size="small" danger style={{ fontSize: 11 }}>삭제</Button>
+                  <Button type="text" size="small" danger style={{ fontSize: 13 }}>삭제</Button>
                 </Popconfirm>
               )}
             </div>
@@ -657,11 +657,11 @@ function ParticipantsTab({ run, allUsers, onRefresh }) {
           <Card key={p.id} size="small" style={{ marginBottom: 8 }} bodyStyle={{ padding: '10px 14px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Space>
-                <Avatar size="small" style={{ backgroundColor: p.user?.avatarColor || '#1677ff', fontSize: 11 }}>
+                <Avatar size="small" style={{ backgroundColor: p.user?.avatarColor || '#1677ff', fontSize: 13 }}>
                   {p.user?.displayName?.slice(0, 1)}
                 </Avatar>
                 <Text>{p.user?.displayName}</Text>
-                <Tag color={ROLE_COLORS[p.role] || 'default'} style={{ fontSize: 11 }}>
+                <Tag color={ROLE_COLORS[p.role] || 'default'} style={{ fontSize: 13 }}>
                   {ROLE_LABELS[p.role] || p.role}
                 </Tag>
               </Space>
@@ -708,10 +708,10 @@ function TimelineTab({ run }) {
           color: 'blue',
           children: (
             <div>
-              <Text strong style={{ fontSize: 12 }}>{label}</Text>
-              {extra && <Text type="secondary" style={{ fontSize: 12, marginLeft: 8 }}>— {extra}</Text>}
+              <Text strong style={{ fontSize: 13 }}>{label}</Text>
+              {extra && <Text type="secondary" style={{ fontSize: 13, marginLeft: 8 }}>— {extra}</Text>}
               <div>
-                <Text type="secondary" style={{ fontSize: 11 }}>
+                <Text type="secondary" style={{ fontSize: 13 }}>
                   {t.creator?.displayName && `${t.creator.displayName} · `}
                   {dayjs(t.createdAt).format('MM/DD HH:mm')}
                 </Text>
@@ -887,7 +887,7 @@ export default function RunDetailPage() {
                 <Divider orientation="left" orientationMargin={0} style={{ fontSize: 19.5, margin: '12px 0 8px' }}>
                   <span style={{ color: ph.color || '#1677ff' }}>■</span>{' '}
                   {ph.name}
-                  <span style={{ marginLeft: 8, fontSize: 11, color: '#aaa', fontWeight: 400 }}>
+                  <span style={{ marginLeft: 8, fontSize: 13, color: '#aaa', fontWeight: 400 }}>
                     {pSteps.filter((s) => ['done','skipped','rejected'].includes(s.status)).length}/{pSteps.length} 완료
                   </span>
                 </Divider>
@@ -1065,7 +1065,7 @@ export default function RunDetailPage() {
           <Descriptions.Item label="Owner">
             {run.owner && (
               <Space size={4}>
-                <Avatar size="small" style={{ backgroundColor: run.owner.avatarColor || '#1677ff', fontSize: 10 }}>
+                <Avatar size="small" style={{ backgroundColor: run.owner.avatarColor || '#1677ff', fontSize: 13 }}>
                   {run.owner.displayName?.slice(0, 1)}
                 </Avatar>
                 {run.owner.displayName}

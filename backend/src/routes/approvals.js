@@ -63,6 +63,7 @@ router.delete('/approval-templates/:id', authenticate, adminOnly, approvalTempla
 
 // ── 결재 문서 ──────────────────────────────────────────────────
 router.get('/approvals/pending-count', authenticate, approvalController.pendingCount);
+router.get('/approvals/tree', authenticate, approvalController.tree);
 router.get('/approvals', authenticate, approvalController.list);
 router.post('/approvals', authenticate, approvalController.create);
 router.get('/approvals/:id', authenticate, approvalController.get);

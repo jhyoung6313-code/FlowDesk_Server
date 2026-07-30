@@ -241,7 +241,7 @@ export default function MeetingsPage() {
                       <span style={{ fontWeight: 600, fontSize: 13 }}>{m.title}</span>
                       <Tag color={STATUS[m.status]?.color} style={{ margin: 0 }}>{STATUS[m.status]?.label}</Tag>
                     </div>
-                    <div style={{ fontSize: 11, color: 'var(--fd-text-secondary)', marginTop: 3 }}>
+                    <div style={{ fontSize: 13, color: 'var(--fd-text-secondary)', marginTop: 3 }}>
                       <ClockCircleOutlined /> {dayjs(m.startAt).format('MM-DD(ddd) HH:mm')}
                       {m._count?.actionItems > 0 && <span style={{ marginLeft: 8 }}>✅ {m._count.actionItems}</span>}
                     </div>
@@ -365,7 +365,7 @@ export default function MeetingsPage() {
                     <span style={{ textDecoration: it.status === 'done' ? 'line-through' : 'none', flex: 1 }}>
                       {it.content}
                       {it.assignee && <Tag style={{ marginLeft: 8 }}>{it.assignee.displayName}</Tag>}
-                      {it.dueDate && <span style={{ color: 'var(--fd-text-secondary)', fontSize: 12, marginLeft: 4 }}>~{dayjs(it.dueDate).format('MM-DD')}</span>}
+                      {it.dueDate && <span style={{ color: 'var(--fd-text-secondary)', fontSize: 13, marginLeft: 4 }}>~{dayjs(it.dueDate).format('MM-DD')}</span>}
                     </span>
                   </List.Item>
                 )} />

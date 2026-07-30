@@ -43,7 +43,7 @@ export default function CalendarView({ board, cards, onAddCard, onEditCard }) {
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 16 }}>
         <Button type="primary" icon={<PlusOutlined />} onClick={() => onAddCard()}>카드 추가</Button>
         <div>
-          <Text type="secondary" style={{ marginRight: 8, fontSize: 12 }}>날짜 기준 속성:</Text>
+          <Text type="secondary" style={{ marginRight: 8, fontSize: 13 }}>날짜 기준 속성:</Text>
           <Select
             value={selectedPropId}
             onChange={setSelectedPropId}

@@ -155,7 +155,7 @@ export default function DepartmentsAdminPage() {
             <Space>
               <TeamOutlined style={{ color: '#52c41a' }} />
               <span>{t.name}</span>
-              {t.description && <Typography.Text type="secondary" style={{ fontSize: 12 }}>{t.description}</Typography.Text>}
+              {t.description && <Typography.Text type="secondary" style={{ fontSize: 13 }}>{t.description}</Typography.Text>}
               <Tag>업무 {t._count?.tasks ?? 0}</Tag>
               <Tag>인원 {t._count?.users ?? 0}</Tag>
             </Space>

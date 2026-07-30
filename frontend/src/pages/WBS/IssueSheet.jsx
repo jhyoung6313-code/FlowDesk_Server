@@ -38,7 +38,7 @@ function EditableCell({ value, onChange, type = 'text', options = [], style = {}
     if (type === 'date') {
       return (
         <div style={{ minHeight: 22, cursor: 'pointer', ...style }} onClick={() => { setVal(value); setEditing(true); }}>
-          {value ? dayjs(value).format('MM/DD') : <span style={{ color: '#bbb', fontSize: 12 }}>-</span>}
+          {value ? dayjs(value).format('MM/DD') : <span style={{ color: '#bbb', fontSize: 13 }}>-</span>}
         </div>
       );
     }
@@ -56,14 +56,14 @@ function EditableCell({ value, onChange, type = 'text', options = [], style = {}
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <Progress percent={num} size="small" style={{ flex: 1, margin: 0 }} showInfo={false}
               strokeColor={num >= 100 ? '#52c41a' : num >= 50 ? '#1890ff' : '#faad14'} />
-            <span style={{ fontSize: 11, minWidth: 30 }}>{num}%</span>
+            <span style={{ fontSize: 13, minWidth: 30 }}>{num}%</span>
           </div>
         </div>
       );
     }
     return (
       <div style={{ minHeight: 22, cursor: 'pointer', ...style }} onClick={() => { setVal(value); setEditing(true); }}>
-        {value || <span style={{ color: '#bbb', fontSize: 12 }}>입력</span>}
+        {value || <span style={{ color: '#bbb', fontSize: 13 }}>입력</span>}
       </div>
     );
   }
@@ -162,7 +162,7 @@ function WbsLinkCell({ value, onChange, wbsTasks }) {
             </Tag>
           </Tooltip>
         ) : (
-          <span style={{ color: '#bbb', fontSize: 12 }}>연결 없음</span>
+          <span style={{ color: '#bbb', fontSize: 13 }}>연결 없음</span>
         )}
       </div>
     );
@@ -210,7 +210,7 @@ function WbsLinkCell({ value, onChange, wbsTasks }) {
             <span>
               <span style={{
                 display: 'inline-block', minWidth: 36,
-                fontSize: 11, color: '#1890ff', fontWeight: 700,
+                fontSize: 13, color: '#1890ff', fontWeight: 700,
                 marginRight: 6, fontVariantNumeric: 'tabular-nums',
               }}>
                 {t._num}
@@ -291,7 +291,7 @@ export default function IssueSheet({ projectId, issues, onRefresh, wbsTasks = []
       align: 'center',
       ...noWrapHeader,
       render: (_, __, idx) => (
-        <span style={{ fontSize: 12, color: '#999' }}>{idx + 1}</span>
+        <span style={{ fontSize: 13, color: '#999' }}>{idx + 1}</span>
       ),
     },
     {
@@ -343,8 +343,8 @@ export default function IssueSheet({ projectId, issues, onRefresh, wbsTasks = []
         return (
           <div style={{ color: over ? '#ff4d4f' : soon ? '#fa8c16' : undefined }}>
             <EditableCell value={val} type="date" onChange={(v) => handleUpdate(record.id, 'targetDate', v)} />
-            {over && <div style={{ fontSize: 10, color: '#ff4d4f' }}>지연</div>}
-            {!over && soon && <div style={{ fontSize: 10, color: '#fa8c16' }}>임박</div>}
+            {over && <div style={{ fontSize: 13, color: '#ff4d4f' }}>지연</div>}
+            {!over && soon && <div style={{ fontSize: 13, color: '#fa8c16' }}>임박</div>}
           </div>
         );
       },
@@ -443,7 +443,7 @@ export default function IssueSheet({ projectId, issues, onRefresh, wbsTasks = []
             {label} {counts[key] > 0 ? `(${counts[key]})` : ''}
           </Tag>
         ))}
-        <span style={{ fontSize: 12, color: '#aaa', marginLeft: 4 }}>
+        <span style={{ fontSize: 13, color: '#aaa', marginLeft: 4 }}>
           표시: {filtered.length} / 전체 {issues.length}건
         </span>
       </div>

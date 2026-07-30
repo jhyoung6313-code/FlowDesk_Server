@@ -52,11 +52,11 @@ export default function MemoWidget() {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--fd-border)',
       }}>
-        <span style={{ fontSize: 14, fontWeight: 700 }}>메모지</span>
+        <span style={{ fontSize: 13, fontWeight: 700 }}>메모지</span>
         <Button
           type="text" size="small"
           onClick={() => { setOpen(false); navigate('/memos'); }}
-          style={{ fontSize: 12, color: '#64748b' }}
+          style={{ fontSize: 13, color: '#64748b' }}
         >
           전체 보기 <ArrowRightOutlined />
         </Button>

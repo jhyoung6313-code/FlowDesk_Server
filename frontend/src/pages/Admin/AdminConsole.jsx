@@ -142,7 +142,7 @@ export default function AdminConsole() {
                 <div key={grp.title} style={{ marginBottom: 20 }}>
                   <Typography.Text
                     strong
-                    style={{ fontSize: 12, color: '#94a3b8', letterSpacing: 0.5, textTransform: 'uppercase' }}
+                    style={{ fontSize: 13, color: '#94a3b8', letterSpacing: 0.5, textTransform: 'uppercase' }}
                   >
                     {grp.title}
                   </Typography.Text>
@@ -160,11 +160,11 @@ export default function AdminConsole() {
                             <Space align="center" size={12}>
                               <span style={{ fontSize: 18, color: '#2563eb' }}>{it.icon}</span>
                               <div>
-                                <div style={{ fontWeight: 600, fontSize: 14 }}>{it.label}</div>
-                                <Typography.Text type="secondary" style={{ fontSize: 12 }}>{it.desc}</Typography.Text>
+                                <div style={{ fontWeight: 600, fontSize: 13 }}>{it.label}</div>
+                                <Typography.Text type="secondary" style={{ fontSize: 13 }}>{it.desc}</Typography.Text>
                               </div>
                             </Space>
-                            <RightOutlined style={{ color: '#cbd5e1', fontSize: 12 }} />
+                            <RightOutlined style={{ color: '#cbd5e1', fontSize: 13 }} />
                           </Space>
                         </Card>
                       </Col>
@@ -200,7 +200,7 @@ export default function AdminConsole() {
                               </Space>
                             }
                             description={
-                              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
                                 {dayjs(log.createdAt).format('MM/DD HH:mm')}
                                 {log.ipAddress ? ` · ${log.ipAddress}` : ''}
                               </Typography.Text>

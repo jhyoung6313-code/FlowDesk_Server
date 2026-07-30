@@ -138,22 +138,22 @@ export default function PlaybookWorkspace() {
                       padding: '6px 8px', borderRadius: 6, userSelect: 'none',
                     }}
                   >
-                    {isOpen ? <DownOutlined style={{ fontSize: 12, color: '#8c8c8c' }} /> : <RightOutlined style={{ fontSize: 12, color: '#8c8c8c' }} />}
+                    {isOpen ? <DownOutlined style={{ fontSize: 13, color: '#8c8c8c' }} /> : <RightOutlined style={{ fontSize: 13, color: '#8c8c8c' }} />}
                     <BookOutlined style={{ color: '#1677ff', flexShrink: 0 }} />
-                    <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: 'var(--fd-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={pb.name}>
+                    <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: 'var(--fd-text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={pb.name}>
                       {pb.name}
                     </span>
-                    <span style={{ fontSize: 12, color: '#bfbfbf' }}>{runCount}</span>
+                    <span style={{ fontSize: 13, color: '#bfbfbf' }}>{runCount}</span>
                     <span className="fd-pb-actions" style={{ display: 'flex', alignItems: 'center', gap: 4, flexShrink: 0 }} onClick={(e) => e.stopPropagation()}>
                       <Tooltip title="새 Run 시작">
                         <PlayCircleOutlined style={{ color: '#52c41a', fontSize: 15 }} onClick={(e) => openRunModal(e, pb.id)} />
                       </Tooltip>
                       <Tooltip title="보기">
-                        <EyeOutlined style={{ color: '#8c8c8c', fontSize: 14 }} onClick={() => navigate(`/playbooks/${pb.id}`)} />
+                        <EyeOutlined style={{ color: '#8c8c8c', fontSize: 13 }} onClick={() => navigate(`/playbooks/${pb.id}`)} />
                       </Tooltip>
                       {canEdit && (
                         <Tooltip title="편집">
-                          <EditOutlined style={{ color: '#8c8c8c', fontSize: 14 }} onClick={() => navigate(`/playbooks/${pb.id}/edit`)} />
+                          <EditOutlined style={{ color: '#8c8c8c', fontSize: 13 }} onClick={() => navigate(`/playbooks/${pb.id}/edit`)} />
                         </Tooltip>
                       )}
                     </span>
@@ -184,7 +184,7 @@ export default function PlaybookWorkspace() {
                                 <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--fd-text-primary)' }} title={run.name}>
                                   {run.name}
                                 </span>
-                                <Tag color={st.color === '#bfbfbf' ? 'default' : undefined} style={{ fontSize: 10, margin: 0, padding: '0 6px', lineHeight: '16px', color: st.color, borderColor: st.color, background: 'transparent' }}>
+                                <Tag color={st.color === '#bfbfbf' ? 'default' : undefined} style={{ fontSize: 13, margin: 0, padding: '0 6px', lineHeight: '16px', color: st.color, borderColor: st.color, background: 'transparent' }}>
                                   {st.label}
                                 </Tag>
                               </div>
@@ -199,7 +199,7 @@ export default function PlaybookWorkspace() {
                               padding: '5px 8px 5px 30px', borderRadius: 6, fontSize: 13, color: '#52c41a',
                             }}
                           >
-                            <PlusOutlined style={{ fontSize: 11 }} /> 새 Run
+                            <PlusOutlined style={{ fontSize: 13 }} /> 새 Run
                           </div>
                         </>
                       )}

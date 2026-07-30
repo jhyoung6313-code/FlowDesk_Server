@@ -169,7 +169,7 @@ export default function MailDetail({ mailId, folder, labels = [], onBack, onRefr
                       key: lb.id,
                       label: (
                         <Space size={6}>
-                          {checked ? <CheckOutlined style={{ color: token.colorPrimary, fontSize: 11 }} /> : <span style={{ width: 11 }} />}
+                          {checked ? <CheckOutlined style={{ color: token.colorPrimary, fontSize: 13 }} /> : <span style={{ width: 11 }} />}
                           <span style={{ width: 12, height: 12, borderRadius: 3, background: lb.color, display: 'inline-block' }} />
                           {lb.name}
                         </Space>
@@ -194,11 +194,11 @@ export default function MailDetail({ mailId, folder, labels = [], onBack, onRefr
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px 32px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
           {mail.priority === 'urgent' && (
-            <Tag color="red" icon={<ThunderboltFilled />} style={{ fontSize: 12, margin: 0 }}>긴급</Tag>
+            <Tag color="red" icon={<ThunderboltFilled />} style={{ fontSize: 13, margin: 0 }}>긴급</Tag>
           )}
           <Title level={4} style={{ margin: 0 }}>{mail.subject}</Title>
           {(mail.labels || []).map(lb => (
-            <Tag key={lb.id} color={lb.color} closable onClose={(e) => { e.preventDefault(); handleSetLabel(lb.id); }} style={{ fontSize: 11, border: 'none' }}>
+            <Tag key={lb.id} color={lb.color} closable onClose={(e) => { e.preventDefault(); handleSetLabel(lb.id); }} style={{ fontSize: 13, border: 'none' }}>
               {lb.name}
             </Tag>
           ))}
@@ -212,7 +212,7 @@ export default function MailDetail({ mailId, folder, labels = [], onBack, onRefr
           }}>
             <Space size={6} style={{ marginBottom: 8 }}>
               <CommentOutlined style={{ color: token.colorPrimary }} />
-              <Text strong style={{ fontSize: 12 }}>대화 ({mail.thread.length})</Text>
+              <Text strong style={{ fontSize: 13 }}>대화 ({mail.thread.length})</Text>
             </Space>
             <Space direction="vertical" style={{ width: '100%' }} size={2}>
               {mail.thread.map(t => {
@@ -229,13 +229,13 @@ export default function MailDetail({ mailId, folder, labels = [], onBack, onRefr
                     }}
                   >
                     {active
-                      ? <CheckOutlined style={{ color: token.colorPrimary, fontSize: 11 }} />
+                      ? <CheckOutlined style={{ color: token.colorPrimary, fontSize: 13 }} />
                       : <span style={{ width: 11 }} />}
-                    <Text style={{ fontSize: 12, fontWeight: active ? 600 : 400, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <Text style={{ fontSize: 13, fontWeight: active ? 600 : 400, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {t.from?.displayName} · {t.subject}
                     </Text>
-                    {t.attachmentCount > 0 && <PaperClipOutlined style={{ fontSize: 10, color: token.colorTextSecondary }} />}
-                    <Text type="secondary" style={{ fontSize: 11, flexShrink: 0 }}>{dayjs(t.createdAt).format('MM.DD HH:mm')}</Text>
+                    {t.attachmentCount > 0 && <PaperClipOutlined style={{ fontSize: 13, color: token.colorTextSecondary }} />}
+                    <Text type="secondary" style={{ fontSize: 13, flexShrink: 0 }}>{dayjs(t.createdAt).format('MM.DD HH:mm')}</Text>
                   </div>
                 );
               })}
@@ -258,21 +258,21 @@ export default function MailDetail({ mailId, folder, labels = [], onBack, onRefr
           </Avatar>
           <div style={{ flex: 1, minWidth: 0 }}>
             <Space size={8} wrap>
-              <Text strong style={{ fontSize: 14 }}>{mail.from?.displayName || '-'}</Text>
-              {isMine && <Tag color="blue" style={{ fontSize: 11 }}>내가 보냄</Tag>}
+              <Text strong style={{ fontSize: 13 }}>{mail.from?.displayName || '-'}</Text>
+              {isMine && <Tag color="blue" style={{ fontSize: 13 }}>내가 보냄</Tag>}
             </Space>
             <div style={{ marginTop: 4, display: 'flex', flexWrap: 'wrap', gap: '2px 12px' }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
+              <Text type="secondary" style={{ fontSize: 13 }}>
                 받는 사람: {toRecipients.map(r => r.user?.displayName).join(', ') || '-'}
               </Text>
               {ccRecipients.length > 0 && (
-                <Text type="secondary" style={{ fontSize: 12 }}>
+                <Text type="secondary" style={{ fontSize: 13 }}>
                   참조: {ccRecipients.map(r => r.user?.displayName).join(', ')}
                 </Text>
               )}
             </div>
           </div>
-          <Text type="secondary" style={{ fontSize: 12, flexShrink: 0 }}>
+          <Text type="secondary" style={{ fontSize: 13, flexShrink: 0 }}>
             {dayjs(mail.createdAt).format('YYYY.MM.DD HH:mm')}
           </Text>
         </div>
@@ -294,12 +294,12 @@ export default function MailDetail({ mailId, folder, labels = [], onBack, onRefr
                       {r.isRead
                         ? <CheckCircleFilled style={{ color: '#52c41a', fontSize: 13 }} />
                         : <ClockCircleOutlined style={{ color: token.colorTextQuaternary, fontSize: 13 }} />}
-                      <Text style={{ fontSize: 12 }}>{r.user?.displayName}</Text>
-                      <Tag style={{ fontSize: 10, margin: 0, padding: '0 4px', lineHeight: '16px' }}>
+                      <Text style={{ fontSize: 13 }}>{r.user?.displayName}</Text>
+                      <Tag style={{ fontSize: 13, margin: 0, padding: '0 4px', lineHeight: '16px' }}>
                         {r.type === 'to' ? '받는사람' : r.type === 'cc' ? '참조' : '숨은참조'}
                       </Tag>
                     </Space>
-                    <Text type="secondary" style={{ fontSize: 11 }}>
+                    <Text type="secondary" style={{ fontSize: 13 }}>
                       {r.isRead ? (r.readAt ? dayjs(r.readAt).format('MM.DD HH:mm') : '읽음') : '대기'}
                     </Text>
                   </div>
@@ -313,12 +313,12 @@ export default function MailDetail({ mailId, folder, labels = [], onBack, onRefr
               border: `1px solid ${token.colorBorderSecondary}`, background: token.colorBgContainer,
             }}>
               <EyeOutlined style={{ color: token.colorPrimary, fontSize: 13 }} />
-              <Text style={{ fontSize: 12 }}>
+              <Text style={{ fontSize: 13 }}>
                 열람 <Text strong style={{ color: readCount === allRecipients.length ? '#52c41a' : token.colorPrimary }}>{readCount}</Text>
                 {' / '}{allRecipients.length}
               </Text>
               {readCount < allRecipients.length && (
-                <Text type="secondary" style={{ fontSize: 11 }}>· 미열람 {allRecipients.length - readCount}명</Text>
+                <Text type="secondary" style={{ fontSize: 13 }}>· 미열람 {allRecipients.length - readCount}명</Text>
               )}
             </div>
           </Popover>
@@ -332,7 +332,7 @@ export default function MailDetail({ mailId, folder, labels = [], onBack, onRefr
             border: `1px solid ${token.colorBorderSecondary}`,
             borderRadius: 8,
           }}>
-            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 8 }}>
+            <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
               <PaperClipOutlined /> 첨부파일 ({mail.attachments.length})
             </Text>
             <Space wrap>
@@ -349,15 +349,15 @@ export default function MailDetail({ mailId, folder, labels = [], onBack, onRefr
                     background: token.colorBgContainer,
                     border: `1px solid ${token.colorBorderSecondary}`,
                     borderRadius: 6,
-                    fontSize: 12,
+                    fontSize: 13,
                     color: token.colorText,
                     textDecoration: 'none',
                   }}
                 >
                   <PaperClipOutlined />
                   {att.originalName}
-                  <Text type="secondary" style={{ fontSize: 11 }}>({formatSize(att.size)})</Text>
-                  <DownloadOutlined style={{ fontSize: 11 }} />
+                  <Text type="secondary" style={{ fontSize: 13 }}>({formatSize(att.size)})</Text>
+                  <DownloadOutlined style={{ fontSize: 13 }} />
                 </a>
               ))}
             </Space>
@@ -366,7 +366,7 @@ export default function MailDetail({ mailId, folder, labels = [], onBack, onRefr
 
         {/* 본문 */}
         <div
-          style={{ minHeight: 160, lineHeight: 1.8, fontSize: 14, color: token.colorText }}
+          style={{ minHeight: 160, lineHeight: 1.8, fontSize: 13, color: token.colorText }}
           dangerouslySetInnerHTML={{ __html: mail.body || '<span style="color:#aaa;font-style:italic">(내용 없음)</span>' }}
         />
 
@@ -375,14 +375,14 @@ export default function MailDetail({ mailId, folder, labels = [], onBack, onRefr
         <div>
           <Space align="center" size={6} style={{ marginBottom: 12 }}>
             <MessageOutlined style={{ color: token.colorPrimary }} />
-            <Text strong style={{ fontSize: 14 }}>댓글</Text>
+            <Text strong style={{ fontSize: 13 }}>댓글</Text>
             <Badge count={comments.length} showZero style={{ backgroundColor: token.colorPrimary }} />
           </Space>
 
           {/* 댓글 목록 */}
           {comments.length === 0 ? (
             <div style={{ padding: '16px 0', textAlign: 'center' }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>아직 댓글이 없습니다. 메일 참여자끼리 의견을 남겨보세요.</Text>
+              <Text type="secondary" style={{ fontSize: 13 }}>아직 댓글이 없습니다. 메일 참여자끼리 의견을 남겨보세요.</Text>
             </div>
           ) : (
             <Space direction="vertical" style={{ width: '100%' }} size={10}>
@@ -394,8 +394,8 @@ export default function MailDetail({ mailId, folder, labels = [], onBack, onRefr
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <Space size={6}>
-                        <Text strong style={{ fontSize: 12 }}>{c.user?.displayName}</Text>
-                        <Text type="secondary" style={{ fontSize: 11 }}>{dayjs(c.createdAt).format('MM.DD HH:mm')}</Text>
+                        <Text strong style={{ fontSize: 13 }}>{c.user?.displayName}</Text>
+                        <Text type="secondary" style={{ fontSize: 13 }}>{dayjs(c.createdAt).format('MM.DD HH:mm')}</Text>
                       </Space>
                       {(c.userId === user?.id || user?.role === 'admin') && (
                         <Popconfirm title="댓글을 삭제하시겠습니까?" onConfirm={() => handleDeleteComment(c.id)} okText="삭제" cancelText="취소">

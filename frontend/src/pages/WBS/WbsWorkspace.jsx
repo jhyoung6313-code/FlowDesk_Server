@@ -30,7 +30,7 @@ function MemberEditor({ members, onChange }) {
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
       {members.map((m, i) => (
-        <Tag key={i} closable onClose={() => onChange(members.filter((_, idx) => idx !== i))} style={{ fontSize: 12 }}>
+        <Tag key={i} closable onClose={() => onChange(members.filter((_, idx) => idx !== i))} style={{ fontSize: 13 }}>
           <span style={{ color: '#888', marginRight: 4 }}>{m.role}</span>
           <span style={{ fontWeight: 600 }}>{m.memberName}</span>
         </Tag>
@@ -185,7 +185,7 @@ export default function WbsWorkspace() {
                   className="fd-wbs-row"
                   style={{
                     display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
-                    padding: '7px 8px', borderRadius: 6, fontSize: 14, marginBottom: 1,
+                    padding: '7px 8px', borderRadius: 6, fontSize: 13, marginBottom: 1,
                     background: active ? '#e6f4ff' : 'transparent',
                     color: active ? '#1677ff' : 'var(--fd-text-primary)',
                     fontWeight: active ? 600 : 400,

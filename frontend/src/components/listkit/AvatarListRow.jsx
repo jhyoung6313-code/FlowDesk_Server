@@ -58,17 +58,17 @@ export default function AvatarListRow({
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           {unread && <span style={{ width: 7, height: 7, borderRadius: '50%', background: token.colorPrimary, flexShrink: 0 }} />}
           <Text style={{ fontSize: 13, fontWeight: unread ? 800 : 500, flex: 1, minWidth: 0 }} ellipsis>{name}</Text>
-          {time && <Text style={{ fontSize: 11, color: token.colorTextQuaternary, fontWeight: 600, flexShrink: 0 }}>{time}</Text>}
+          {time && <Text style={{ fontSize: 13, color: token.colorTextQuaternary, fontWeight: 600, flexShrink: 0 }}>{time}</Text>}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, margin: '2px 0' }}>
           {subjectPrefix}
-          <Text style={{ fontSize: 12.5, fontWeight: unread ? 700 : 400, color: token.colorText, flex: 1, minWidth: 0 }} ellipsis={{ tooltip: typeof subject === 'string' ? subject : undefined }}>
+          <Text style={{ fontSize: 13, fontWeight: unread ? 700 : 400, color: token.colorText, flex: 1, minWidth: 0 }} ellipsis={{ tooltip: typeof subject === 'string' ? subject : undefined }}>
             {subject}
           </Text>
           {subjectSuffix}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Text style={{ fontSize: 11.5, color: token.colorTextTertiary, flex: 1, minWidth: 0 }} ellipsis>{preview}</Text>
+          <Text style={{ fontSize: 13, color: token.colorTextTertiary, flex: 1, minWidth: 0 }} ellipsis>{preview}</Text>
           {labelDots.map((c, i) => <span key={i} style={{ width: 8, height: 8, borderRadius: 2, background: c, flexShrink: 0 }} />)}
         </div>
       </div>

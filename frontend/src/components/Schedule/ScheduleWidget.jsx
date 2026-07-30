@@ -50,7 +50,7 @@ export default function ScheduleWidget({ isDark, D, fill }) {
 
   const navBtn = {
     height: 26, minWidth: 26, padding: '0 8px', border: `1px solid ${border}`, borderRadius: 7,
-    background: cardBg, cursor: 'pointer', fontSize: 12, fontWeight: 600, color: text2,
+    background: cardBg, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: text2,
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 4,
   };
 
@@ -62,18 +62,18 @@ export default function ScheduleWidget({ isDark, D, fill }) {
       {/* 헤더 */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '7px 14px', borderBottom: `1px solid ${border}` }}>
         <div style={{ width: 24, height: 24, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, background: isDark ? 'rgba(59,130,246,.15)' : '#EFF6FF', color: '#3B82F6' }}>📅</div>
-        <div style={{ fontSize: 13.5, fontWeight: 700, color: text1 }}>이번 주 일정 · 자원</div>
+        <div style={{ fontSize: 13, fontWeight: 700, color: text1 }}>이번 주 일정 · 자원</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginLeft: 4 }}>
-          <span style={navBtn} onClick={() => setWeekStart((w) => w.subtract(1, 'week'))}><LeftOutlined style={{ fontSize: 10 }} /></span>
-          <span style={{ fontSize: 12.5, fontWeight: 700, color: text1, padding: '0 2px' }}>
+          <span style={navBtn} onClick={() => setWeekStart((w) => w.subtract(1, 'week'))}><LeftOutlined style={{ fontSize: 13 }} /></span>
+          <span style={{ fontSize: 13, fontWeight: 700, color: text1, padding: '0 2px' }}>
             {weekStart.format('MM.DD')} ~ {weekStart.add(6, 'day').format('MM.DD')}
           </span>
-          <span style={navBtn} onClick={() => setWeekStart((w) => w.add(1, 'week'))}><RightOutlined style={{ fontSize: 10 }} /></span>
+          <span style={navBtn} onClick={() => setWeekStart((w) => w.add(1, 'week'))}><RightOutlined style={{ fontSize: 13 }} /></span>
           <span style={navBtn} onClick={() => setWeekStart(dayjs().startOf('week'))}>오늘</span>
         </div>
         <div style={{ flex: 1 }} />
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#3B82F6', cursor: 'pointer' }} onClick={() => openMonth()}>📆 월간 전체보기 →</span>
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#fff', background: '#3B82F6', padding: '6px 13px', borderRadius: 8, cursor: 'pointer', marginLeft: 10 }} onClick={() => openCreate()}>+ 등록</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#3B82F6', cursor: 'pointer' }} onClick={() => openMonth()}>📆 월간 전체보기 →</span>
+        <span style={{ fontSize: 13, fontWeight: 600, color: '#fff', background: '#3B82F6', padding: '6px 13px', borderRadius: 8, cursor: 'pointer', marginLeft: 10 }} onClick={() => openCreate()}>+ 등록</span>
       </div>
 
       {/* 7일 그리드 */}
@@ -93,10 +93,10 @@ export default function ScheduleWidget({ isDark, D, fill }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3,
             }}>
               <span style={{
-                fontSize: 12.5, fontWeight: 700, color: holiday ? '#DC2626' : text1,
+                fontSize: 13, fontWeight: 700, color: holiday ? '#DC2626' : text1,
                 ...(isToday ? { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 19, height: 19, padding: '0 4px', background: '#F97316', color: '#fff', borderRadius: 10 } : {}),
               }}>{d.date()}</span>
-              <span style={{ fontSize: 10.5, fontWeight: 700, color: dowColor }}>({dow[d.day()]})</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: dowColor }}>({dow[d.day()]})</span>
             </div>
           );
         })}
@@ -118,7 +118,7 @@ export default function ScheduleWidget({ isDark, D, fill }) {
             >
               {holiday && (
                 <span title={holiday} style={{
-                  fontSize: 10, fontWeight: 700, color: '#DC2626', lineHeight: 1.25,
+                  fontSize: 13, fontWeight: 700, color: '#DC2626', lineHeight: 1.25,
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                 }}>🇰🇷 {holiday}</span>
               )}
@@ -130,7 +130,7 @@ export default function ScheduleWidget({ isDark, D, fill }) {
                     onClick={(e) => { e.stopPropagation(); setDetail(ev); }}
                     title={eventShortLabel(ev)}
                     style={{
-                      fontSize: 10.5, fontWeight: 600, lineHeight: 1.3,
+                      fontSize: 13, fontWeight: 600, lineHeight: 1.3,
                       padding: g.showLabel ? '3px 7px' : '3px 4px',
                       marginLeft: g.marginLeft, marginRight: g.marginRight,
                       borderTopLeftRadius: g.borderTopLeftRadius, borderBottomLeftRadius: g.borderBottomLeftRadius,
@@ -145,7 +145,7 @@ export default function ScheduleWidget({ isDark, D, fill }) {
                 );
               })}
               {dayEvents.length > 3 && (
-                <span style={{ fontSize: 10, color: text2, fontWeight: 600, paddingLeft: 3 }}
+                <span style={{ fontSize: 13, color: text2, fontWeight: 600, paddingLeft: 3 }}
                   onClick={(e) => { e.stopPropagation(); openMonth(d.format('YYYY-MM-DD')); }}>
                   +{dayEvents.length - 3}개 더
                 </span>
