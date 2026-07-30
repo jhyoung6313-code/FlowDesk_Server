@@ -7,6 +7,32 @@ Types: `Added` / `Changed` / `Fixed` / `Removed`
 
 ---
 
+## [2.14.0] - 2026-07-30
+
+> 화면 전체 디자인을 바꾸는 **디자인 스킨** 시스템 도입. 기존 색상 테마 선택 기능을 대체한다(F-20). 스킨은 형태(모서리·테두리·그림자·표면·폰트)와 강조색·자연 모드를 함께 정의하는 단일 커스터마이즈 축이다.
+
+### Added
+- **디자인 스킨 8종**: 기본(노션 웜)·뉴브루탈·클레이·미니멀 모노·아우로라 글래스·소프트 팝·슬릭 다크·페이퍼. 각 스킨 라이트/다크 2벌 + 자연 모드(선택 시 자동 전환).
+- `frontend/src/utils/skins.js`: 스킨별 `--fd-sk-*` 변수(모서리·테두리·그림자·표면·레일·KPI) + 강조색 + `mode` 정의, `applySkin()` 주입.
+- 헤더 디자인 팝오버에 스킨 갤러리(미니 미리보기) 추가.
+- 서버 저장: `settings` 테마 프리퍼런스에 `skin` 필드 추가(`settingsController`).
+
+### Changed
+- `store/themeStore.js`: `skin` 축 추가, 강조색을 스킨이 결정, 스킨의 자연 모드로 라이트/다크 자동 전환, localStorage + 서버 저장.
+- `App.jsx`: ConfigProvider의 AntD 표면/테두리 토큰(`colorBgContainer`·`colorBgLayout`·`colorBorder`·`colorBorderSecondary`·`lineWidth`·`borderRadius*`)을 현재 스킨값에 연결 → 인라인 `token.*`을 쓰는 화면(메일·게시판·전자결재 등)까지 스킨 자동 반영.
+- `index.css`: 전역 AntD 컴포넌트(카드·테이블·버튼·입력·태그·모달)를 `--fd-sk-*`로 구동 + 스킨별 특수 처리(브루탈 하드그림자·클레이 뉴모픽·모노 에디토리얼·글래스 blur·팝 오프셋·페이퍼 세리프).
+- 셸(사이드바 레일·헤더·서브헤더·상태바)·대시보드·칸반·가계부·Chat/Board/WBS/Playbook·메모지의 인라인 표면/테두리/모서리/그림자를 스킨 변수로 전환.
+
+### Removed
+- **색상 테마 선택 기능**(테마 6종 그리드 + 커스텀 강조색 피커) 제거 — 강조색은 이제 스킨이 담당. `themeStore`의 `setTheme`/`customAccent` 제거.
+
+### Fixed
+- 입력창 이중 테두리(affix 래퍼 안쪽 input) 제거.
+- 검색·allowClear 입력 내부 텍스트 세로 하단 쏠림 보정.
+- `Input.Search` 검색 버튼 높이를 입력창과 일치.
+
+---
+
 ## [2.5.0] - 2026-07-10
 
 > 2025~2026 트렌드 반영 4대 신규 도메인 추가 (F-58~F-61). 각 기능은 기존 컨벤션(싱글턴 Prisma, `delYn` 소프트삭제, 감사로그, `RichEditor` 재사용)을 따름. 상세: `FEATURES.md`, 기획: `docs/제안기능_기획서.md`.
