@@ -42,6 +42,13 @@
   --fd-font-base:      17px;
   --fd-font-lg:        20px;
 
+  /* ── 통일 텍스트 스케일 (3단) ──
+     전 화면 폰트 크기를 이 세 단계로만 쓴다: 본문/컨트롤 · 보조/캡션 · 제목.
+     AntD 토큰 fontSize(13, App.jsx) = 본문. 위계는 굵기·색으로 표현. */
+  --fd-fs-body:    13px;   /* 본문·버튼·입력·셀렉트·탭·테이블 셀·리스트·알럿·드롭다운 */
+  --fd-fs-caption: 12px;   /* 보조·메타·태그·테이블 헤더·통계 라벨·설명 */
+  --fd-fs-title:   15px;   /* 카드/모달/드로어/섹션 제목 */
+
   /* ── 시맨틱 표면/테두리 변수 (라이트 기본값) ──
      컴포넌트 인라인 하드코딩(#fff/#f8fafc/#e2e8f0 등) 대체용.
      themeStore가 :root에 inline으로 쓰지 않는 변수라 [data-dark] 캐스케이드가 동작한다. */
@@ -317,7 +324,7 @@ span.ant-typography-secondary {
 
 /* Ant Design 통계/카드/목록 크기 상향 */
 .ant-card-head-title {
-  font-size: var(--fd-font-sm);
+  font-size: var(--fd-fs-title);
   font-weight: 600;
 }
 .ant-list-item-meta-description {
@@ -325,7 +332,7 @@ span.ant-typography-secondary {
 }
 .ant-statistic-title {
   color: var(--fd-text-muted) !important;
-  font-size: var(--fd-font-xs) !important;
+  font-size: var(--fd-fs-caption) !important;
 }
 
 /* ═══════════════════════════════════════════════════════
@@ -354,7 +361,7 @@ span.ant-typography-secondary {
 :root:not([data-dark="true"]) .ant-card-head-title {
   color: var(--fd-text-primary) !important;
   font-weight: 700 !important;
-  font-size: 15px !important;
+  font-size: var(--fd-fs-title) !important;
   letter-spacing: -0.01em;
 }
 
@@ -373,7 +380,7 @@ span.ant-typography-secondary {
   background: #faf9f6 !important;
   border-bottom: 1px solid var(--fd-border) !important;
   font-weight: 700 !important;
-  font-size: 12px !important;
+  font-size: var(--fd-fs-caption) !important;
   color: var(--fd-text-muted) !important;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -385,7 +392,7 @@ span.ant-typography-secondary {
 :root:not([data-dark="true"]) .ant-table-tbody > tr > td {
   border-bottom: 1px solid #f1efea !important;
   color: var(--fd-text-primary) !important;
-  font-size: 14px !important;
+  font-size: var(--fd-fs-body) !important;
   padding: 15px 16px !important;
 }
 /* 리스트/카드 내부 여백도 살짝 여유 */
@@ -398,7 +405,7 @@ span.ant-typography-secondary {
 :root:not([data-dark="true"]) .ant-tabs-tabpane { padding-top: 6px; }
 :root:not([data-dark="true"]) .ant-tabs-tab {
   color: var(--fd-text-secondary) !important;
-  font-size: 15px !important;
+  font-size: var(--fd-fs-body) !important;
   font-weight: 500 !important;
 }
 /* 탭 라벨을 Badge 등으로 감싸도 폰트 크기가 탭과 동일하게 (혼합 크기 방지) */
@@ -430,7 +437,7 @@ span.ant-typography-secondary {
 /* ── Statistic ── */
 :root:not([data-dark="true"]) .ant-statistic-title {
   color: var(--fd-text-muted) !important;
-  font-size: 13px !important;
+  font-size: var(--fd-fs-caption) !important;
   font-weight: 500 !important;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -460,13 +467,13 @@ span.ant-typography-secondary {
 :root:not([data-dark="true"]) .fc-toolbar-title {
   color: var(--fd-text-primary) !important;
   font-weight: 700 !important;
-  font-size: 15px !important;
+  font-size: var(--fd-fs-title) !important;
   letter-spacing: -0.02em;
 }
 :root:not([data-dark="true"]) .fc-col-header-cell {
   background: #faf9f6 !important;
   font-weight: 600 !important;
-  font-size: 14px !important;
+  font-size: var(--fd-fs-caption) !important;
   color: var(--fd-text-muted) !important;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -479,7 +486,7 @@ span.ant-typography-secondary {
 
 /* ── Tag: 부드러운 캡슐형 ── */
 :root:not([data-dark="true"]) .ant-tag {
-  font-size: 12px !important;
+  font-size: var(--fd-fs-caption) !important;
   font-weight: 600;
   border-radius: 6px;
   padding: 0 8px;
@@ -490,7 +497,7 @@ span.ant-typography-secondary {
 :root:not([data-dark="true"]) .ant-alert {
   border-radius: 6px;
   border-left-width: 3px !important;
-  font-size: 13px;
+  font-size: var(--fd-fs-body);
 }
 
 /* ── Select / Input / Picker ── */
@@ -501,7 +508,7 @@ span.ant-typography-secondary {
   background: #ffffff !important;
   border-color: var(--fd-border) !important;
   border-radius: 9px !important;
-  font-size: 15px !important;
+  font-size: var(--fd-fs-body) !important;
 }
 :root:not([data-dark="true"]) .ant-input-affix-wrapper:hover,
 :root:not([data-dark="true"]) .ant-input:hover,
@@ -518,7 +525,7 @@ span.ant-typography-secondary {
 /* ── Button ── */
 :root:not([data-dark="true"]) .ant-btn {
   border-radius: 9px !important;
-  font-size: 15px !important;
+  font-size: var(--fd-fs-body) !important;
   font-weight: 500 !important;
   height: 32px !important;
   padding: 0 12px !important;
@@ -561,7 +568,7 @@ span.ant-typography-secondary {
   padding: 16px 20px 14px !important;
 }
 :root:not([data-dark="true"]) .ant-modal-title {
-  font-size: 15px !important;
+  font-size: var(--fd-fs-title) !important;
   font-weight: 700 !important;
   color: var(--fd-text-primary) !important;
   letter-spacing: -0.02em;
@@ -587,7 +594,7 @@ span.ant-typography-secondary {
 :root:not([data-dark="true"]) .ant-select-dropdown {
   border-radius: 8px !important;
   box-shadow: 0 8px 30px rgba(0,0,0,0.12), 0 0 0 1px rgba(0,0,0,0.06) !important;
-  font-size: 15px !important;
+  font-size: var(--fd-fs-body) !important;
 }
 
 /* ── Badge ── */
