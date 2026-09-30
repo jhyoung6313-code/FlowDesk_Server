@@ -35,15 +35,15 @@ const catalog = (req, res) => {
 
 const list = async (req, res, next) => {
   try {
-    const rules = await prisma.automationRule.findMany({ orderBy: { createdAt: 'desc' } });
+    const rules = await prisma.automationRule.findMany({ where: { delYn: '0' }, orderBy: { createdAt: 'desc' } });
     res.json(rules.map(serializeOut));
   } catch (err) { next(err); }
 };
 
 const detail = async (req, res, next) => {
   try {
-    const rule = await prisma.automationRule.findUnique({
-      where: { id: Number(req.params.id) },
+    const rule = await prisma.automationRule.findFirst({
+      where: { id: Number(req.params.id), delYn: '0' },
       include: { logs: { orderBy: { createdAt: 'desc' }, take: 50 } },
     });
     if (!rule) return res.status(404).json({ error: '규칙을 찾을 수 없습니다.' });
@@ -66,14 +66,20 @@ const update = async (req, res, next) => {
     const data = serializeIn(req.body);
     if (!data.name) return res.status(400).json({ error: '규칙 이름은 필수입니다.' });
     if (!VALID_EVENTS.has(data.event)) return res.status(400).json({ error: '유효하지 않은 이벤트입니다.' });
+    const existing = await prisma.automationRule.findFirst({ where: { id: Number(req.params.id), delYn: '0' } });
+    if (!existing) return res.status(404).json({ error: '규칙을 찾을 수 없습니다.' });
     const rule = await prisma.automationRule.update({ where: { id: Number(req.params.id) }, data });
     res.json(serializeOut(rule));
   } catch (err) { next(err); }
 };
 
+// 소프트 삭제(delYn) — 다른 신규 도메인(Form 등)과 동일한 관행. AutomationLog가 규칙을 FK로
+// 참조하므로 하드 삭제하면 로그가 고아 레코드로 남고 실행 이력을 잃는다.
 const remove = async (req, res, next) => {
   try {
-    await prisma.automationRule.delete({ where: { id: Number(req.params.id) } });
+    const existing = await prisma.automationRule.findFirst({ where: { id: Number(req.params.id), delYn: '0' } });
+    if (!existing) return res.status(404).json({ error: '규칙을 찾을 수 없습니다.' });
+    await prisma.automationRule.update({ where: { id: Number(req.params.id) }, data: { delYn: '1', isActive: false } });
     res.json({ message: '규칙이 삭제되었습니다.' });
   } catch (err) { next(err); }
 };
@@ -81,10 +87,10 @@ const remove = async (req, res, next) => {
 // 수동 테스트 실행: 저장된 규칙을 임의 컨텍스트로 즉시 실행
 const testRun = async (req, res, next) => {
   try {
-    const rule = await prisma.automationRule.findUnique({ where: { id: Number(req.params.id) } });
+    const rule = await prisma.automationRule.findFirst({ where: { id: Number(req.params.id), delYn: '0' } });
     if (!rule) return res.status(404).json({ error: '규칙을 찾을 수 없습니다.' });
     const ctx = req.body?.context || {};
-    await automation.emit(rule.event, { ...ctx, actorId: req.user.id, __test: true });
+    await automation.emit(rule.event, { ...ctx, actorId: req.user.id, __test: true }, { onlyRuleId: rule.id });
     res.json({ message: '테스트 실행 요청됨. 실행 로그를 확인하세요.' });
   } catch (err) { next(err); }
 };

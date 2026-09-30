@@ -99,9 +99,11 @@ async function findResourceConflict({ resourceId, startDate, endDate, allDay, st
   });
   for (const ev of candidates) {
     if (allDay || ev.allDay) return ev; // 한쪽이라도 종일 → 날짜 구간 전체 충돌
-    // 둘 다 시간 지정: HH:MM 문자열 비교(zero-padded)로 시간대 겹침 판정
-    const aS = startTime || '00:00', aE = endTime || '23:59';
-    const bS = ev.startTime || '00:00', bE = ev.endTime || '23:59';
+    // 둘 다 시간 지정: schedulingService(F-65)와 동일하게 분(minute-of-day) 정수로 변환해 겹침
+    // 판정 — 문자열 HH:MM 비교와 산술적으로는 동일하지만, 두 서비스가 서로 다른 시간 표현을
+    // 쓰면 자정 관련 엣지케이스 수정이 한쪽에만 반영될 위험이 있어 표현을 통일한다.
+    const aS = toMin(startTime, 0), aE = toMin(endTime, 1439);
+    const bS = toMin(ev.startTime, 0), bE = toMin(ev.endTime, 1439);
     if (aS < bE && bS < aE) return ev;
   }
   return null;
@@ -448,8 +450,12 @@ const freeSlots = async (req, res, next) => {
           startAt: { gte: rangeStart, lt: rangeEnd },
           OR: [{ organizerId: { in: ids } }, { attendees: { some: { userId: { in: ids } } } }],
         },
-        select: { startAt: true, endAt: true },
-      }),
+        select: { startAt: true, endAt: true, organizerId: true, attendees: { select: { userId: true, rsvp: true } } },
+      }).then((rows) => rows.filter((m) =>
+        // 초대를 거절(rsvp: 'declined')한 사용자는 그 회의로 바쁜 것이 아니다 — 주최자이거나
+        // 참석을 거절하지 않은 대상자가 하나라도 있을 때만 이 시간대를 "바쁨"으로 집계한다.
+        ids.includes(m.organizerId) || m.attendees.some((a) => ids.includes(a.userId) && a.rsvp !== 'declined')
+      )),
       prisma.scheduleEvent.findMany({
         where: {
           type: { in: BUSY_TYPES },

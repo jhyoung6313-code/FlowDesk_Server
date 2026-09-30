@@ -8,7 +8,7 @@ import { getApprovals, getApprovalTree, deleteApproval, cancelApproval, approveA
 import DocumentForm from './DocumentForm';
 import DocumentDetail from './DocumentDetail';
 import SpellTextArea from '../../components/common/SpellTextArea';
-import { avatarColor } from '../../utils/listkit';
+import { getAvatarColor } from '../../utils/colors';
 import useAuthStore from '../../store/authStore';
 import dayjs from 'dayjs';
 
@@ -164,7 +164,7 @@ export default function ApprovalPage() {
   };
   const myTurnCount = documents.filter(isMyPendingTurn).length;
 
-  const pendingCount = documents.filter(d => d.status === 'pending' && d.steps?.some(s => s.approverId === user?.id && s.stepOrder === d.currentStep)).length;
+  const pendingCount = myTurnCount;
 
   // 진행 상태 요약 문구
   const progressText = (doc) => {
@@ -197,7 +197,7 @@ export default function ApprovalPage() {
   const renderDoc = (doc) => {
     const cfg = STATUS_CONFIG[doc.status] || { color: 'default', label: doc.status };
     const isOwner = doc.createdBy === user?.id || isAdmin;
-    const isMyTurn = doc.status === 'pending' && doc.steps?.some(s => s.stepOrder === doc.currentStep && s.approverId === user?.id && s.type !== 'reference');
+    const isMyTurn = isMyPendingTurn(doc);
 
     const pct = progressPct(doc);
     const over = doc.dueDate && doc.status === 'pending' && dayjs(doc.dueDate).endOf('day').isBefore(dayjs());
@@ -245,7 +245,7 @@ export default function ApprovalPage() {
         {/* 기안자 */}
         <div style={{ textAlign: 'center' }}>
           <Tooltip title={doc.creator?.displayName}>
-            <Avatar size={26} style={{ background: avatarColor(doc.creator?.displayName), fontSize: 13 }}>
+            <Avatar size={26} style={{ background: getAvatarColor(doc.creator?.id, doc.creator?.avatarColor), fontSize: 13 }}>
               {getInitial(doc.creator?.displayName)}
             </Avatar>
           </Tooltip>

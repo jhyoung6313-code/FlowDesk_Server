@@ -3,6 +3,8 @@ const fs = require('fs');
 const prisma = require('../lib/prisma');
 const { pushNotification } = require('../services/sseService');
 const { resolvePresetLine } = require('../services/approvalLine');
+const automation = require('../services/automationService');
+const { canViewApprovalDoc, myPendingStepWhere, isMyTurnNow } = require('../services/approvalAccess');
 
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/approval');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -51,47 +53,55 @@ async function sendApprovalNotification(userId, type, documentId, message, actor
   }
 }
 
+// 결재문서 목록/트리 공통 가시성·필터 where절 — 탭(mine/pending/reference/all)·상태·검색어·기간.
+// list()의 templateId/formTypeId 필터만 이 함수 밖에서 별도로 얹는다(트리 자체 선택 축이라 트리 쪽엔 없음).
+// 두 엔드포인트가 이 규칙을 각자 재구현하면 트리의 건수 롤업이 실제 목록과 어긋날 수 있어 반드시 공유한다.
+function buildApprovalWhere({ tab, status, q, from, to, userId, role }) {
+  const where = { delYn: '0' };
+  if (status) where.status = status;
+
+  // 키워드 검색: 제목 · 문서번호 · 기안자명
+  if (q && String(q).trim()) {
+    const kw = String(q).trim();
+    where.OR = [
+      { title: { contains: kw, mode: 'insensitive' } },
+      { docNo: { contains: kw, mode: 'insensitive' } },
+      { creator: { displayName: { contains: kw, mode: 'insensitive' } } },
+    ];
+  }
+  // 기안일 기간 필터
+  if (from || to) {
+    where.createdAt = {};
+    if (from) where.createdAt.gte = new Date(from);
+    if (to) { const d = new Date(to); d.setHours(23, 59, 59, 999); where.createdAt.lte = d; }
+  }
+
+  if (tab === 'mine') {
+    where.createdBy = userId;
+  } else if (tab === 'pending') {
+    where.steps = { some: { approverId: userId, status: 'pending', type: { not: 'reference' } } };
+    where.status = 'pending';
+  } else if (tab === 'reference') {
+    where.steps = { some: { approverId: userId, type: 'reference' } };
+    where.status = { not: 'draft' };
+  } else if (tab === 'all' && role === 'admin') {
+    // admin 전체 목록 - 필터 없음
+  } else {
+    where.createdBy = userId;
+  }
+  return where;
+}
+
 // GET /api/approvals  (query: tab=mine|pending|all, status, page, limit)
 const list = async (req, res, next) => {
   try {
     const { tab = 'mine', status, page = 1, limit = 20, q, formTypeId, templateId, from, to } = req.query;
     const userId = req.user.id;
 
-    let where = { delYn: '0' };
-    if (status) where.status = status;
-
-    // 키워드 검색: 제목 · 문서번호 · 기안자명
-    if (q && String(q).trim()) {
-      const kw = String(q).trim();
-      where.OR = [
-        { title: { contains: kw, mode: 'insensitive' } },
-        { docNo: { contains: kw, mode: 'insensitive' } },
-        { creator: { displayName: { contains: kw, mode: 'insensitive' } } },
-      ];
-    }
+    const where = buildApprovalWhere({ tab, status, q, from, to, userId, role: req.user.role });
     // 양식(템플릿) / 양식종류 필터 — 트리 노드 선택 연동
     if (templateId) where.templateId = Number(templateId);
     else if (formTypeId) where.template = { formTypeId: Number(formTypeId) };
-    // 기안일 기간 필터
-    if (from || to) {
-      where.createdAt = {};
-      if (from) where.createdAt.gte = new Date(from);
-      if (to) { const d = new Date(to); d.setHours(23, 59, 59, 999); where.createdAt.lte = d; }
-    }
-
-    if (tab === 'mine') {
-      where.createdBy = userId;
-    } else if (tab === 'pending') {
-      where.steps = { some: { approverId: userId, status: 'pending', type: { not: 'reference' } } };
-      where.status = 'pending';
-    } else if (tab === 'reference') {
-      where.steps = { some: { approverId: userId, type: 'reference' } };
-      where.status = { not: 'draft' };
-    } else if (tab === 'all' && req.user.role === 'admin') {
-      // admin 전체 목록 - 필터 없음
-    } else {
-      where.createdBy = userId;
-    }
 
     const [total, documents] = await Promise.all([
       prisma.approvalDocument.count({ where }),
@@ -130,35 +140,8 @@ const tree = async (req, res, next) => {
     const { tab = 'mine', status, q, from, to } = req.query;
     const userId = req.user.id;
 
-    // 목록과 동일한 가시성/필터 조건 (양식·종류 필터만 제외)
-    let where = { delYn: '0' };
-    if (status) where.status = status;
-    if (q && String(q).trim()) {
-      const kw = String(q).trim();
-      where.OR = [
-        { title: { contains: kw, mode: 'insensitive' } },
-        { docNo: { contains: kw, mode: 'insensitive' } },
-        { creator: { displayName: { contains: kw, mode: 'insensitive' } } },
-      ];
-    }
-    if (from || to) {
-      where.createdAt = {};
-      if (from) where.createdAt.gte = new Date(from);
-      if (to) { const d = new Date(to); d.setHours(23, 59, 59, 999); where.createdAt.lte = d; }
-    }
-    if (tab === 'mine') {
-      where.createdBy = userId;
-    } else if (tab === 'pending') {
-      where.steps = { some: { approverId: userId, status: 'pending', type: { not: 'reference' } } };
-      where.status = 'pending';
-    } else if (tab === 'reference') {
-      where.steps = { some: { approverId: userId, type: 'reference' } };
-      where.status = { not: 'draft' };
-    } else if (tab === 'all' && req.user.role === 'admin') {
-      // 필터 없음
-    } else {
-      where.createdBy = userId;
-    }
+    // 목록(list)과 동일한 가시성/필터 조건을 공유 헬퍼로 계산(양식·종류 필터만 트리 자체 축이라 제외)
+    const where = buildApprovalWhere({ tab, status, q, from, to, userId, role: req.user.role });
 
     const [formTypes, templates, grouped] = await Promise.all([
       prisma.approvalFormType.findMany({
@@ -230,8 +213,7 @@ const get = async (req, res, next) => {
     if (!doc) return res.status(404).json({ error: '결재 문서를 찾을 수 없습니다.' });
 
     // 접근 권한: 작성자 or 결재자 or admin
-    const isApprover = doc.steps.some(s => s.approverId === req.user.id);
-    if (req.user.role !== 'admin' && doc.createdBy !== req.user.id && !isApprover) {
+    if (req.user.role !== 'admin' && !canViewApprovalDoc(doc, req.user.id)) {
       return res.status(403).json({ error: '접근 권한이 없습니다.' });
     }
 
@@ -406,7 +388,7 @@ const approve = async (req, res, next) => {
 
     const doc = await prisma.approvalDocument.findFirst({
       where: { id, delYn: '0' },
-      include: { steps: { orderBy: { stepOrder: 'asc' } }, creator: true },
+      include: { steps: { orderBy: { stepOrder: 'asc' } }, creator: true, template: { select: { code: true } } },
     });
     if (!doc) return res.status(404).json({ error: '결재 문서를 찾을 수 없습니다.' });
     if (doc.status !== 'pending') return res.status(400).json({ error: '결재 진행 중인 문서만 승인할 수 있습니다.' });
@@ -471,6 +453,10 @@ const approve = async (req, res, next) => {
         doc.createdBy, 'approval_approved', id,
         `결재 문서 "${doc.title}"이(가) 최종 승인되었습니다.`, req.user.id,
       );
+      automation.fire('approval.approved', {
+        title: doc.title, docNo: doc.docNo, templateCode: doc.template?.code, authorId: doc.createdBy,
+        link: `/approvals/${id}`, actorId: req.user.id,
+      });
     } else if (outcome === 'advanced') {
       const nextGroupSteps = doc.steps.filter(s => s.stepOrder === nextGroup && s.type !== 'reference');
       await Promise.all(nextGroupSteps.map(s => sendApprovalNotification(
@@ -493,7 +479,7 @@ const reject = async (req, res, next) => {
 
     const doc = await prisma.approvalDocument.findFirst({
       where: { id, delYn: '0' },
-      include: { steps: { orderBy: { stepOrder: 'asc' } }, creator: true },
+      include: { steps: { orderBy: { stepOrder: 'asc' } }, creator: true, template: { select: { code: true } } },
     });
     if (!doc) return res.status(404).json({ error: '결재 문서를 찾을 수 없습니다.' });
     if (doc.status !== 'pending') return res.status(400).json({ error: '결재 진행 중인 문서만 반려할 수 있습니다.' });
@@ -528,6 +514,10 @@ const reject = async (req, res, next) => {
       `결재 문서 "${doc.title}"이(가) 반려되었습니다.`,
       req.user.id
     );
+    automation.fire('approval.rejected', {
+      title: doc.title, docNo: doc.docNo, templateCode: doc.template?.code, authorId: doc.createdBy,
+      link: `/approvals/${id}`, actorId: req.user.id,
+    });
 
     res.json({ message: '반려되었습니다.' });
   } catch (err) {
@@ -587,12 +577,13 @@ const delegate = async (req, res, next) => {
 
     await prisma.approvalStep.update({
       where: { id: myStep.id },
-      data: { approverId: toId, actingType: `위임(${me?.displayName || ''})` },
+      data: { approverId: toId, actingType: '위임' },
     });
 
+    const notifyMsg = `${me?.displayName || ''}님이 "${doc.title}" 결재를 위임했습니다.${comment ? ` — ${comment}` : ''}`;
     await sendApprovalNotification(
       toId, 'approval_requested', id,
-      `${me?.displayName || ''}님이 "${doc.title}" 결재를 위임했습니다.${comment ? ` — ${comment}` : ''}`,
+      notifyMsg.length > 500 ? notifyMsg.slice(0, 497) + '...' : notifyMsg,
       req.user.id,
     );
 
@@ -665,8 +656,7 @@ const downloadAttachment = async (req, res, next) => {
     // 접근 권한: 작성자·결재자·admin만 (get과 동일 규칙)
     const doc = attachment.document;
     if (!doc || doc.delYn !== '0') return res.status(404).json({ error: '결재 문서를 찾을 수 없습니다.' });
-    const isApprover = doc.steps.some(s => s.approverId === req.user.id);
-    if (req.user.role !== 'admin' && doc.createdBy !== req.user.id && !isApprover) {
+    if (req.user.role !== 'admin' && !canViewApprovalDoc(doc, req.user.id)) {
       return res.status(403).json({ error: '접근 권한이 없습니다.' });
     }
 
@@ -864,17 +854,14 @@ const pendingCount = async (req, res, next) => {
       where: {
         delYn: '0',
         status: 'pending',
-        steps: { some: { approverId: req.user.id, status: 'pending', type: { not: 'reference' } } },
+        steps: { some: myPendingStepWhere(req.user.id) },
       },
       select: {
         currentStep: true,
-        steps: {
-          where: { approverId: req.user.id, status: 'pending', type: { not: 'reference' } },
-          select: { stepOrder: true },
-        },
+        steps: { where: myPendingStepWhere(req.user.id), select: { stepOrder: true } },
       },
     });
-    const count = docs.filter(d => d.steps.some(s => s.stepOrder === d.currentStep)).length;
+    const count = docs.filter(d => isMyTurnNow(d, d.steps)).length;
     res.json({ count });
   } catch (err) {
     next(err);

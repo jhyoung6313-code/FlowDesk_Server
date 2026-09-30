@@ -528,9 +528,10 @@ const requestPasswordReset = async (req, res, next) => {
 
     const user = await prisma.user.findUnique({ where: { username } });
     // 계정 열거 방지: 유효 여부와 무관하게 항상 동일한 200 응답을 준다.
-    // 무효 계정에는 매칭되지 않는 userId(0)로 토큰을 발급 → 다음 OTP 단계에서 401로 걸러진다.
+    // 무효 계정은 userId를 null로 발급 — 실제 계정 id와 절대 충돌할 수 없는 전용 "무효" 마커
+    // (이전에는 0을 사용했는데, 이는 "실제 id가 아니길 바라는" 우연에 의존하는 설계였다).
     const valid = user && user.isActive && user.totpEnabled && user.totpSecret;
-    const resetOtpToken = issueTempToken(valid ? user.id : 0, 'reset-otp');
+    const resetOtpToken = issueTempToken(valid ? user.id : null, 'reset-otp');
     res.json({ resetOtpToken });
   } catch (err) {
     next(err);
@@ -546,7 +547,7 @@ const verifyResetOtp = async (req, res, next) => {
     }
 
     const payload = verifyTempToken(resetOtpToken, 'reset-otp');
-    if (!payload) {
+    if (!payload || !payload.userId) {
       return res.status(401).json({ error: '인증 세션이 만료되었습니다. 처음부터 다시 시도해주세요.' });
     }
 

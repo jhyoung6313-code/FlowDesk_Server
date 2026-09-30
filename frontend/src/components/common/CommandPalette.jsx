@@ -87,6 +87,13 @@ export default function CommandPalette() {
     return CATEGORIES.filter((c) => keys.has(c.key));
   }, [groups]);
 
+  // 카테고리 칩/재검색으로 클라이언트 필터링하면 화면에 보이는 항목 수가 바뀌므로
+  // 이전 검색 결과 기준으로 하이라이트하던 activeIdx도 함께 리셋해야 한다
+  // (그렇지 않으면 화살표로 7번째를 고른 뒤 필터링해 2개만 남았을 때 Enter가 무반응이었음).
+  useEffect(() => {
+    setActiveIdx(0);
+  }, [selectedCats, refine]);
+
   // 전역 단축키: Ctrl+F / Cmd+F
   useEffect(() => {
     const handler = (e) => {
@@ -223,7 +230,10 @@ export default function CommandPalette() {
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px 0' }}><Spin /></div>
         ) : q.trim() && flatItems.length === 0 ? (
-          <Empty description="검색 결과가 없습니다." style={{ padding: '32px 0' }} />
+          <Empty
+            description={groups.length > 0 ? '선택한 종류/재검색어에 맞는 결과가 없습니다.' : '검색 결과가 없습니다.'}
+            style={{ padding: '32px 0' }}
+          />
         ) : !q.trim() ? (
           <div style={{ padding: '28px 16px', textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>
             <SearchOutlined style={{ fontSize: 28, display: 'block', marginBottom: 10 }} />

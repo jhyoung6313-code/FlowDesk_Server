@@ -138,7 +138,7 @@ exports.ask = async (req, res, next) => {
     if (!question) return res.status(400).json({ error: '질문을 입력해주세요.' });
     if (question.length > 1000) return res.status(400).json({ error: '질문이 너무 깁니다(최대 1000자).' });
 
-    const contexts = await rag.gatherContexts({ userId: req.user.id, question });
+    const contexts = await rag.gatherContexts({ userId: req.user.id, question, isAdmin: req.user.role === 'admin' });
     if (contexts.length === 0) {
       return res.json({ answer: '관련 정보를 찾지 못했습니다. 다른 키워드로 질문해 보세요.', sources: [] });
     }

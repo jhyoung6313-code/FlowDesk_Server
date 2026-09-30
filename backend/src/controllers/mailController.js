@@ -31,7 +31,7 @@ exports.list = async (req, res, next) => {
     const labelFilter = labelId ? { labelLinks: { some: { labelId } } } : {};
 
     const mailInclude = {
-      from: { select: { id: true, displayName: true } },
+      from: { select: { id: true, displayName: true, avatarColor: true } },
       attachments: { select: { id: true } },
       labelLinks: { include: { label: true } },
     };
@@ -408,7 +408,10 @@ exports.trash = async (req, res, next) => {
     const me = req.user.id;
     const id = parseInt(req.params.id);
     const recip = await prisma.internalMailRecipient.findFirst({ where: { mailId: id, userId: me } });
-    if (!recip) return res.status(404).json({ error: '수신 메일이 아닙니다.' });
+    if (!recip) {
+      // 수신자 레코드가 없는 경우(본인에게 CC하지 않은 발신 메일) — 보낸편지함 삭제로 처리
+      return exports.deleteSent(req, res, next);
+    }
 
     if (recip.folder === 'trash') {
       // 이미 휴지통 → 영구 삭제 (수신자 레코드만 제거)
@@ -624,9 +627,16 @@ exports.bulkAction = async (req, res, next) => {
       case 'unstar':
         await prisma.internalMailRecipient.updateMany({ where: recipWhere, data: { isStarred: false } });
         break;
-      case 'trash':
+      case 'trash': {
         await prisma.internalMailRecipient.updateMany({ where: recipWhere, data: { folder: 'trash' } });
+        // 수신자 레코드가 없는 항목(본인에게 CC하지 않은 발신 메일) — deleteSent()와 동일한 규칙:
+        // 임시저장(draft)은 하드 삭제, 발송된 메일은 보낸편지함에서만 숨김(senderDeleted).
+        // (이전 버전은 isDraft:false만 처리해 draft가 섞여 선택되면 조용히 무시됐다.)
+        const senderOnly = { id: { in: mailIds }, fromUserId: me, recipients: { none: { userId: me } } };
+        await prisma.internalMail.deleteMany({ where: { ...senderOnly, isDraft: true } });
+        await prisma.internalMail.updateMany({ where: { ...senderOnly, isDraft: false }, data: { senderDeleted: true } });
         break;
+      }
       case 'restore':
         await prisma.internalMailRecipient.updateMany({ where: recipWhere, data: { folder: 'inbox' } });
         break;

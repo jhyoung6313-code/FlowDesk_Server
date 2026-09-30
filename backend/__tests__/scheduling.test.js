@@ -87,13 +87,26 @@ describe('POST /schedules/free-slots', () => {
   });
 
   test('참석자 회의가 있는 시간대는 슬롯에서 제외', async () => {
-    // 2026-08-03 10:00~11:00 회의 (로컬)
+    // 2026-08-03 10:00~11:00 회의 (로컬) — attendeeIds[1]이 초대를 수락한 경우
     const s = new Date('2026-08-03T10:00:00'); const e = new Date('2026-08-03T11:00:00');
-    prisma.meeting.findMany.mockResolvedValue([{ startAt: s, endAt: e }]);
+    prisma.meeting.findMany.mockResolvedValue([
+      { startAt: s, endAt: e, organizerId: 99, attendees: [{ userId: 1, rsvp: 'accepted' }] },
+    ]);
     const res = await request(app()).post('/schedules/free-slots')
       .send({ attendeeIds: [1], from: '2026-08-03', durationMin: 60, stepMin: 60 });
     const starts = res.body.days[0].slots.map((x) => x.start);
     expect(starts).not.toContain('10:00');
     expect(starts).toContain('09:00');
+  });
+
+  test('참석자가 초대를 거절(declined)한 회의는 여전히 빈 시간으로 제안', async () => {
+    const s = new Date('2026-08-03T10:00:00'); const e = new Date('2026-08-03T11:00:00');
+    prisma.meeting.findMany.mockResolvedValue([
+      { startAt: s, endAt: e, organizerId: 99, attendees: [{ userId: 1, rsvp: 'declined' }] },
+    ]);
+    const res = await request(app()).post('/schedules/free-slots')
+      .send({ attendeeIds: [1], from: '2026-08-03', durationMin: 60, stepMin: 60 });
+    const starts = res.body.days[0].slots.map((x) => x.start);
+    expect(starts).toContain('10:00');
   });
 });

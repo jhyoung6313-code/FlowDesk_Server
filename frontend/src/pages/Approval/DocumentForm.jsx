@@ -195,15 +195,22 @@ export default function DocumentForm({ embedded = false, initialDocId = null, co
     setPresets(next);
     try { await updateApprovalLinePresets(next); } catch {}
   };
-  // 드래그로 결재자 순서 변경 — 비참조는 순차 차수로 재설정(참조는 0)
+  // 드래그로 결재자 순서 변경 — 비참조는 차수를 1..N으로 압축하되, 같은 차수(=병렬결재 그룹)는
+  // 그대로 보존한다. 예전에는 매번 개별 행마다 ++c로 새 차수를 매겨 setGroup()으로 만든 병렬
+  // 그룹(같은 stepOrder)이 무관한 행의 드래그만으로도 조용히 순차 그룹으로 쪼개지는 문제가 있었다.
   const moveApprover = (from, to) => {
     setApprovalLine(prev => {
       if (from == null || to == null || from === to) return prev;
       const arr = [...prev];
       const [m] = arr.splice(from, 1);
       arr.splice(to, 0, m);
-      let c = 0;
-      return arr.map(s => (s.type === 'reference' ? { ...s, stepOrder: 0 } : { ...s, stepOrder: ++c }));
+      const groupNoByOldOrder = new Map();
+      let nextGroupNo = 0;
+      return arr.map(s => {
+        if (s.type === 'reference') return { ...s, stepOrder: 0 };
+        if (!groupNoByOldOrder.has(s.stepOrder)) groupNoByOldOrder.set(s.stepOrder, ++nextGroupNo);
+        return { ...s, stepOrder: groupNoByOldOrder.get(s.stepOrder) };
+      });
     });
   };
 

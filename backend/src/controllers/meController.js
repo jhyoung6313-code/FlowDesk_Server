@@ -1,6 +1,7 @@
 // 개인 "내 하루" 통합 홈(F-64) — 여러 도메인에 흩어진 내 할 일을 한 화면으로 집계.
 // 순수 조회(additive), 기존 테이블만 사용. M365 To Do / My Day 대응.
 const prisma = require('../lib/prisma');
+const { myPendingStepWhere, isMyTurnNow } = require('../services/approvalAccess');
 
 const STATUS_LABEL = { pending: '대기', in_progress: '진행중', done: '완료', hold: '보류' };
 
@@ -31,19 +32,22 @@ const today = async (req, res, next) => {
         orderBy: [{ dueDate: 'asc' }],
         take: 20,
       }),
-      // 내 결재 대기(현재 결재 순번이 나인 상신 문서)
+      // 내 결재 대기(현재 결재 순번이 나인 상신 문서) — approvalController.pendingCount와 동일 규칙 공유
       prisma.approvalStep.findMany({
-        where: { approverId: uid, status: 'pending', document: { status: 'pending', delYn: '0' } },
+        where: { ...myPendingStepWhere(uid), document: { status: 'pending', delYn: '0' } },
         select: { stepOrder: true, document: { select: { id: true, title: true, docNo: true, currentStep: true } } },
         take: 30,
       }),
-      // 오늘 회의(주최자 또는 참석자)
+      // 오늘 회의(주최자 또는 참석 예정 — 초대를 거절한 회의는 제외)
       prisma.meeting.findMany({
         where: {
           delYn: '0',
           status: { not: 'cancelled' },
           startAt: { gte: dayStart, lt: dayEnd },
-          OR: [{ organizerId: uid }, { attendees: { some: { userId: uid } } }],
+          OR: [
+            { organizerId: uid },
+            { attendees: { some: { userId: uid, rsvp: { not: 'declined' } } } },
+          ],
         },
         select: { id: true, title: true, startAt: true, endAt: true, location: true },
         orderBy: { startAt: 'asc' },
@@ -52,9 +56,9 @@ const today = async (req, res, next) => {
       prisma.internalMailRecipient.count({ where: { userId: uid, isRead: false, folder: 'inbox', deletedAt: null } }),
     ]);
 
-    // 결재: 현재 순번이 나인 것만
+    // 결재: 현재 순번이 나인 것만 (참조 제외는 쿼리의 myPendingStepWhere에서 이미 보장)
     const approvals = approvalStepRows
-      .filter((s) => s.document && s.stepOrder === s.document.currentStep)
+      .filter((s) => s.document && isMyTurnNow(s.document, [s]))
       .map((s) => ({ id: s.document.id, title: s.document.title, docNo: s.document.docNo }));
 
     const isOverdue = (d) => d && new Date(d) < dayStart;

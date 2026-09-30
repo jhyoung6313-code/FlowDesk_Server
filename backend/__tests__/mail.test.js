@@ -7,7 +7,7 @@ const express = require('express');
 
 jest.mock('@prisma/client', () => {
   const m = {
-    internalMail: { findUnique: jest.fn(), findMany: jest.fn(), count: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn() },
+    internalMail: { findUnique: jest.fn(), findMany: jest.fn(), count: jest.fn(), create: jest.fn(), update: jest.fn(), delete: jest.fn(), updateMany: jest.fn(), deleteMany: jest.fn() },
     internalMailRecipient: { findFirst: jest.fn(), findMany: jest.fn(), count: jest.fn(), update: jest.fn(), updateMany: jest.fn(), deleteMany: jest.fn(), delete: jest.fn() },
     internalMailComment: { findMany: jest.fn(), findUnique: jest.fn(), create: jest.fn(), delete: jest.fn() },
     internalMailLabel: { findMany: jest.fn(), findUnique: jest.fn(), count: jest.fn(), create: jest.fn() },
@@ -110,6 +110,19 @@ describe('POST /mail/bulk (일괄 처리)', () => {
     const call = prisma.internalMailRecipient.updateMany.mock.calls[0][0];
     expect(call.where).toEqual({ userId: 10, mailId: { in: [1, 2] } });
     expect(call.data.isRead).toBe(true);
+  });
+
+  test('trash 액션 → 수신자 레코드 없는 발신 메일 중 draft는 하드삭제, 발송본은 senderDeleted', async () => {
+    prisma.internalMailRecipient.updateMany.mockResolvedValue({ count: 1 });
+    prisma.internalMail.deleteMany.mockResolvedValue({ count: 1 });
+    prisma.internalMail.updateMany.mockResolvedValue({ count: 1 });
+    const res = await request(app(10)).post('/mail/bulk').send({ ids: [1, 2, 3], action: 'trash' });
+    expect(res.status).toBe(200);
+    const senderOnlyWhere = { id: { in: [1, 2, 3] }, fromUserId: 10, recipients: { none: { userId: 10 } } };
+    expect(prisma.internalMail.deleteMany).toHaveBeenCalledWith({ where: { ...senderOnlyWhere, isDraft: true } });
+    expect(prisma.internalMail.updateMany).toHaveBeenCalledWith({
+      where: { ...senderOnlyWhere, isDraft: false }, data: { senderDeleted: true },
+    });
   });
 });
 

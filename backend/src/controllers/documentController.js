@@ -1,11 +1,12 @@
 // 통합 문서/첨부 허브(F-68) — M365 SharePoint 라이브러리 경량판.
 // 여러 도메인(업무·보드·게시판·결재·메일)의 기존 첨부를 읽기 전용으로 집계.
 // polymorphic 마이그레이션 없이 기존 테이블만 조회(무의존·additive). 도메인별 접근제어를 존중:
-//  - 메일: 발신자/수신자만  - 결재: 기안자/결재자만(관리자 예외 없음: 메일)  - 게시판: 기밀 라벨(F-67) 게이트
+//  - 메일: 발신자/수신자만  - 결재: 기안자/결재자만(관리자 예외 없음: 메일)  - 게시판: 기밀 라벨(F-67) 게이트  - 보드: 보드 멤버만
 const prisma = require('../lib/prisma');
+const { approvalVisibilityWhere } = require('../services/approvalAccess');
 
 const SEL = { id: true, originalName: true, mimeType: true, size: true, createdAt: true, uploadedBy: true };
-const uploaderSel = { uploader: { select: { id: true, displayName: true } } };
+const uploaderSel = { uploader: { select: { id: true, displayName: true, avatarColor: true } } };
 
 // GET /api/documents?q=&source=&limit=
 const list = async (req, res, next) => {
@@ -29,7 +30,10 @@ const list = async (req, res, next) => {
         orderBy: { createdAt: 'desc' }, take: perSource,
       }) : [],
       want('board') ? prisma.boardCardAttachment.findMany({
-        where: { ...nameFilter },
+        where: {
+          ...nameFilter,
+          ...(isAdmin ? {} : { card: { board: { members: { some: { userId: uid } } } } }),
+        },
         select: { ...SEL, cardId: true, card: { select: { title: true, boardId: true } }, ...uploaderSel },
         orderBy: { createdAt: 'desc' }, take: perSource,
       }) : [],
@@ -41,7 +45,7 @@ const list = async (req, res, next) => {
       want('approval') ? prisma.approvalAttachment.findMany({
         where: {
           ...nameFilter,
-          document: { delYn: '0', ...(isAdmin ? {} : { OR: [{ createdBy: uid }, { steps: { some: { approverId: uid } } }] }) },
+          document: { delYn: '0', ...(isAdmin ? {} : approvalVisibilityWhere(uid)) },
         },
         select: { ...SEL, documentId: true, document: { select: { title: true } }, ...uploaderSel },
         orderBy: { createdAt: 'desc' }, take: perSource,
@@ -61,6 +65,8 @@ const list = async (req, res, next) => {
       key: `${source}-${r.id}`, source,
       fileName: r.originalName, mimeType: r.mimeType, size: r.size,
       uploaderName: r.uploader?.displayName || '',
+      uploaderId: r.uploader?.id || null,
+      uploaderColor: r.uploader?.avatarColor || null,
       createdAt: r.createdAt,
       ...map(r),
     }));

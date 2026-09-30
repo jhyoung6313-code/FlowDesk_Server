@@ -14,30 +14,11 @@ import {
 } from '../../api/approval';
 import { getUsers } from '../../api/users';
 import dayjs from 'dayjs';
+import {
+  ROLE_OPTIONS, SCOPE_OPTIONS, useApprovalLine, parseApprovalLine, serializeApprovalLine, ApprovalLineEditor,
+} from './ApprovalLineEditor';
 
 const { Text } = Typography;
-
-const ROLE_OPTIONS = [
-  { value: 'approval', label: '승인' },
-  { value: 'agreement', label: '합의' },
-  { value: 'delegation', label: '전결' },
-  { value: 'reference', label: '참조' },
-];
-const SCOPE_OPTIONS = [
-  { value: 'team', label: '같은 팀' },
-  { value: 'department', label: '같은 부서' },
-  { value: 'all', label: '전체' },
-];
-const OP_OPTIONS = [
-  { value: 'truthy', label: '값 있음/예' },
-  { value: 'eq', label: '= 같음' },
-  { value: 'ne', label: '≠ 다름' },
-  { value: 'gt', label: '> 초과' },
-  { value: 'gte', label: '≥ 이상' },
-  { value: 'lt', label: '< 미만' },
-  { value: 'lte', label: '≤ 이하' },
-  { value: 'contains', label: '포함' },
-];
 
 // 조건 평가 (미리보기용 — 백엔드 resolvePresetLine 로직 근사)
 function evalCondition(cond, raw) {
@@ -117,46 +98,10 @@ function FormTypeTab() {
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [ftUsers, setFtUsers] = useState([]);
-  const [ftLine, setFtLine] = useState([]);
-  const [ftRulePos, setFtRulePos] = useState('');
-  const [ftRuleScope, setFtRuleScope] = useState('team');
+  const { line: ftLine, setLine: setFtLine, addUser: ftAddUserRaw, addRule: ftAddRule, remove: ftRemove, setRole: ftSetRole, setGroup: ftSetGroup } = useApprovalLine();
+  const ftAddUser = (uid) => ftAddUserRaw(ftUsers, uid);
 
   useEffect(() => { getUsers().then(setFtUsers).catch(() => {}); }, []);
-
-  const ftNextGroup = (line) => { const gs = line.filter(s => s.type !== 'reference').map(s => s.stepOrder); return gs.length ? Math.max(...gs) + 1 : 1; };
-  const ftParse = (lineJson) => {
-    if (!lineJson) return [];
-    let l = []; try { l = JSON.parse(lineJson); } catch { return []; }
-    return l.map((s, i) => {
-      const type = s.type || 'approval';
-      const stepOrder = type === 'reference' ? 0 : (s.stepOrder || i + 1);
-      if (s.rule?.by === 'position') return { key: `r${i}`, kind: 'rule', position: s.rule.value || '', scope: s.rule.scope || 'all', type, stepOrder };
-      const u = ftUsers.find(x => x.id === s.approverId);
-      return { key: `u${s.approverId}`, kind: 'user', approverId: s.approverId, approverName: u?.displayName || `사용자 ${s.approverId}`, type, stepOrder };
-    });
-  };
-  const ftAddUser = (uid) => {
-    if (!uid || ftLine.some(s => s.kind === 'user' && s.approverId === uid)) return;
-    const u = ftUsers.find(x => x.id === uid);
-    setFtLine(p => [...p, { key: `u${uid}`, kind: 'user', approverId: uid, approverName: u?.displayName || '', type: 'approval', stepOrder: ftNextGroup(p) }]);
-  };
-  const ftAddRule = () => {
-    const pos = ftRulePos.trim();
-    if (!pos) { message.warning('직급/직책을 입력하세요.'); return; }
-    setFtLine(p => [...p, { key: `r${Date.now()}`, kind: 'rule', position: pos, scope: ftRuleScope, type: 'approval', stepOrder: ftNextGroup(p) }]);
-    setFtRulePos('');
-  };
-  const ftRemove = (i) => setFtLine(p => p.filter((_, idx) => idx !== i));
-  const ftSetRole = (i, type) => setFtLine(p => p.map((s, idx) => idx !== i ? s : { ...s, type, stepOrder: type === 'reference' ? 0 : (s.stepOrder || ftNextGroup(p)) }));
-  const ftSetGroup = (i, v) => setFtLine(p => p.map((s, idx) => idx === i ? { ...s, stepOrder: Math.max(1, Number(v) || 1) } : s));
-  const ftLineToJson = () => ftLine.length > 0
-    ? JSON.stringify(ftLine.map(s => {
-        const stepOrder = s.type === 'reference' ? 0 : s.stepOrder;
-        return s.kind === 'rule'
-          ? { stepOrder, type: s.type, rule: { by: 'position', value: s.position, scope: s.scope } }
-          : { stepOrder, type: s.type, approverId: s.approverId };
-      }))
-    : null;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -171,7 +116,7 @@ function FormTypeTab() {
   const openEdit = (rec) => {
     setEditing(rec);
     form.setFieldsValue({ name: rec.name, description: rec.description, parentId: rec.parentId || undefined, icon: rec.icon || undefined, isActive: rec.isActive });
-    setFtLine(ftParse(rec.lineJson));
+    setFtLine(parseApprovalLine(rec.lineJson, ftUsers));
     setModalOpen(true);
   };
 
@@ -179,7 +124,7 @@ function FormTypeTab() {
     try {
       const values = await form.validateFields();
       setSaving(true);
-      const payload = { ...values, lineJson: ftLineToJson() };
+      const payload = { ...values, lineJson: serializeApprovalLine(ftLine) };
       if (editing) {
         await updateApprovalFormType(editing.id, payload);
         message.success('수정되었습니다.');
@@ -266,39 +211,11 @@ function FormTypeTab() {
         <Text type="secondary" style={{ fontSize: 13, display: 'block', marginBottom: 8 }}>
           이 종류의 <b>공통 기본 결재선</b>입니다. 하위 양식(템플릿)에 자체 결재선이 없으면 이 결재선이 상속됩니다.
         </Text>
-        <Space size={6} wrap style={{ marginBottom: 8 }}>
-          <Select
-            placeholder="지정 사용자 추가" style={{ width: 190 }} size="small"
-            showSearch optionFilterProp="children" onChange={ftAddUser} value={null}
-          >
-            {ftUsers.map(u => <Select.Option key={u.id} value={u.id}>{u.displayName} ({u.username})</Select.Option>)}
-          </Select>
-          <Input.Group compact>
-            <Input size="small" placeholder="직급/직책 (예: 팀장)" style={{ width: 130 }}
-              value={ftRulePos} onChange={e => setFtRulePos(e.target.value)} onPressEnter={ftAddRule} />
-            <Select size="small" value={ftRuleScope} onChange={setFtRuleScope} options={SCOPE_OPTIONS} style={{ width: 90 }} />
-            <Button size="small" icon={<PlusCircleOutlined />} onClick={ftAddRule}>규칙 추가</Button>
-          </Input.Group>
-        </Space>
-        {ftLine.length === 0 ? (
-          <Text type="secondary" style={{ fontSize: 13 }}>지정된 기본 결재선이 없습니다.</Text>
-        ) : ftLine.map((step, i) => (
-          <div key={step.key || i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: '1px dashed #f0f0f0' }}>
-            {step.kind === 'rule'
-              ? <Tag color="geekblue" style={{ margin: 0 }}>규칙: {step.position} · {SCOPE_OPTIONS.find(o => o.value === step.scope)?.label}</Tag>
-              : <Text style={{ fontSize: 13, minWidth: 90 }}>{step.approverName}</Text>}
-            <Select size="small" value={step.type} style={{ width: 78 }} onChange={v => ftSetRole(i, v)} options={ROLE_OPTIONS} />
-            {step.type === 'reference'
-              ? <Text type="secondary" style={{ fontSize: 13, width: 56 }}>열람</Text>
-              : (
-                <Space size={2} style={{ width: 56 }}>
-                  <InputNumber size="small" min={1} value={step.stepOrder} controls={false} onChange={v => ftSetGroup(i, v)} style={{ width: 42 }} />
-                  <Text type="secondary" style={{ fontSize: 13 }}>차</Text>
-                </Space>
-              )}
-            <Button size="small" danger icon={<MinusCircleOutlined />} onClick={() => ftRemove(i)} />
-          </div>
-        ))}
+        <ApprovalLineEditor
+          users={ftUsers} line={ftLine}
+          onAddUser={ftAddUser} onAddRule={ftAddRule} onRemove={ftRemove}
+          onSetRole={ftSetRole} onSetGroup={ftSetGroup}
+        />
       </Modal>
     </>
   );
@@ -315,7 +232,11 @@ function TemplateTab() {
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [fields, setFields] = useState([]);
-  const [defaultLine, setDefaultLine] = useState([]);
+  const {
+    line: defaultLine, setLine: setDefaultLine, addUser: addApproverRaw, addRule: addRuleRaw,
+    remove: removeApprover, setRole: setLineRole, setGroup: setLineGroup, toggleCondition, setCondition,
+  } = useApprovalLine();
+  const addApprover = (userId) => addApproverRaw(users, userId);
   const [previewTpl, setPreviewTpl] = useState(null);
   const [sampleValues, setSampleValues] = useState({});
 
@@ -355,26 +276,9 @@ function TemplateTab() {
     try {
       const full = await getApprovalTemplate(rec.id);
       setFields(full.fieldsJson ? JSON.parse(full.fieldsJson) : []);
-      setDefaultLine(parseLineToState(full.lineJson));
+      setDefaultLine(parseApprovalLine(full.lineJson, users));
     } catch {}
     setModalOpen(true);
-  };
-
-  // 프리셋 결재선(JSON)을 편집기 상태로 변환
-  const parseLineToState = (lineJson) => {
-    if (!lineJson) return [];
-    let line = [];
-    try { line = JSON.parse(lineJson); } catch { return []; }
-    return line.map((s, i) => {
-      const type = s.type || 'approval';
-      const stepOrder = type === 'reference' ? 0 : (s.stepOrder || i + 1);
-      const condition = s.condition?.field ? { ...s.condition } : null;
-      if (s.rule?.by === 'position') {
-        return { key: `r${i}-${Date.now()}`, kind: 'rule', position: s.rule.value || '', scope: s.rule.scope || 'all', type, stepOrder, condition };
-      }
-      const found = users.find(u => u.id === s.approverId);
-      return { key: `u${s.approverId}`, kind: 'user', approverId: s.approverId, approverName: found?.displayName || `사용자 ${s.approverId}`, type, stepOrder, condition };
-    });
   };
 
   const openDuplicate = async (rec) => {
@@ -383,7 +287,7 @@ function TemplateTab() {
       const full = await getApprovalTemplate(rec.id);
       form.setFieldsValue({ formTypeId: full.formType?.id, name: `${full.name} (복사)`, description: full.description, code: full.code });
       setFields(full.fieldsJson ? JSON.parse(full.fieldsJson) : []);
-      setDefaultLine(parseLineToState(full.lineJson));
+      setDefaultLine(parseApprovalLine(full.lineJson, users));
     } catch { message.error('복제할 템플릿을 불러오지 못했습니다.'); return; }
     setModalOpen(true);
   };
@@ -400,18 +304,7 @@ function TemplateTab() {
         description: values.description || null,
         code: (values.code || 'DOC').toUpperCase(),
         fieldsJson: JSON.stringify(fields),
-        lineJson: defaultLine.length > 0
-          ? JSON.stringify(defaultLine.map(s => {
-              const stepOrder = s.type === 'reference' ? 0 : s.stepOrder;
-              const base = s.kind === 'rule'
-                ? { stepOrder, type: s.type, rule: { by: 'position', value: s.position, scope: s.scope } }
-                : { stepOrder, type: s.type, approverId: s.approverId };
-              if (s.condition?.field) {
-                base.condition = { field: s.condition.field, op: s.condition.op || 'truthy', value: s.condition.value ?? '' };
-              }
-              return base;
-            }))
-          : null,
+        lineJson: serializeApprovalLine(defaultLine),
       };
 
       if (editing) {
@@ -450,43 +343,6 @@ function TemplateTab() {
     if (from == null || to == null || from === to) return;
     setFields(prev => { const a = [...prev]; const [m] = a.splice(from, 1); a.splice(to, 0, m); return a; });
   };
-
-  // 기본 결재라인 (프리셋)
-  const nextGroupNo = (line) => {
-    const gs = line.filter(s => s.type !== 'reference').map(s => s.stepOrder);
-    return gs.length ? Math.max(...gs) + 1 : 1;
-  };
-  const [rulePosition, setRulePosition] = useState('');
-  const [ruleScope, setRuleScope] = useState('team');
-
-  const addApprover = (userId) => {
-    if (!userId || defaultLine.some(s => s.kind === 'user' && s.approverId === userId)) return;
-    const found = users.find(u => u.id === userId);
-    setDefaultLine(prev => [...prev, {
-      key: `u${userId}`, kind: 'user', approverId: userId, approverName: found?.displayName || '',
-      type: 'approval', stepOrder: nextGroupNo(prev),
-    }]);
-  };
-  const addRule = () => {
-    const pos = rulePosition.trim();
-    if (!pos) { message.warning('직급/직책을 입력하세요.'); return; }
-    setDefaultLine(prev => [...prev, {
-      key: `r${Date.now()}`, kind: 'rule', position: pos, scope: ruleScope,
-      type: 'approval', stepOrder: nextGroupNo(prev),
-    }]);
-    setRulePosition('');
-  };
-  const removeApprover = (idx) => setDefaultLine(prev => prev.filter((_, i) => i !== idx));
-  const setLineRole = (idx, type) => setDefaultLine(prev => prev.map((s, i) => {
-    if (i !== idx) return s;
-    return { ...s, type, stepOrder: type === 'reference' ? 0 : (s.stepOrder || nextGroupNo(prev)) };
-  }));
-  const setLineGroup = (idx, stepOrder) => setDefaultLine(prev => prev.map((s, i) => (i === idx ? { ...s, stepOrder: Math.max(1, Number(stepOrder) || 1) } : s)));
-  const toggleCondition = (idx) => setDefaultLine(prev => prev.map((s, i) => {
-    if (i !== idx) return s;
-    return s.condition ? { ...s, condition: null } : { ...s, condition: { field: '', op: 'truthy', value: '' } };
-  }));
-  const setCondition = (idx, patch) => setDefaultLine(prev => prev.map((s, i) => (i === idx ? { ...s, condition: { ...s.condition, ...patch } } : s)));
 
   // 조건에 쓸 수 있는 필드(구분선 제외)
   const conditionFieldOptions = fields.filter(f => f.type !== 'divider').map(f => ({ label: f.label || f.id, value: f.id }));
@@ -618,63 +474,13 @@ function TemplateTab() {
           지정 사용자 또는 직급/직책 규칙으로 프리셋을 만들면, 기안 시 기안자의 조직 기준으로 자동 지정됩니다.
           같은 <b>차수</b>는 병렬 결재입니다.
         </Text>
-        <Space size={6} wrap style={{ marginBottom: 8 }}>
-          <Select
-            placeholder="지정 사용자 추가" style={{ width: 190 }} size="small"
-            showSearch optionFilterProp="children" onChange={addApprover} value={null}
-          >
-            {users.map(u => (
-              <Select.Option key={u.id} value={u.id}>{u.displayName} ({u.username})</Select.Option>
-            ))}
-          </Select>
-          <Input.Group compact>
-            <Input
-              size="small" placeholder="직급/직책 (예: 팀장)" style={{ width: 130 }}
-              value={rulePosition} onChange={e => setRulePosition(e.target.value)} onPressEnter={addRule}
-            />
-            <Select size="small" value={ruleScope} onChange={setRuleScope} options={SCOPE_OPTIONS} style={{ width: 90 }} />
-            <Button size="small" icon={<PlusCircleOutlined />} onClick={addRule}>규칙 추가</Button>
-          </Input.Group>
-        </Space>
-        {defaultLine.map((step, i) => (
-          <div key={step.key || i} style={{ padding: '4px 0', borderBottom: '1px dashed #f0f0f0' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              {step.kind === 'rule'
-                ? <Tag color="geekblue" style={{ margin: 0 }}>규칙: {step.position} · {SCOPE_OPTIONS.find(o => o.value === step.scope)?.label}</Tag>
-                : <Text style={{ fontSize: 13, minWidth: 90 }}>{step.approverName}</Text>}
-              <Select size="small" value={step.type} style={{ width: 78 }} onChange={v => setLineRole(i, v)} options={ROLE_OPTIONS} />
-              {step.type === 'reference'
-                ? <Text type="secondary" style={{ fontSize: 13, width: 56 }}>열람</Text>
-                : (
-                  <Space size={2} style={{ width: 56 }}>
-                    <InputNumber size="small" min={1} value={step.stepOrder} controls={false} onChange={v => setLineGroup(i, v)} style={{ width: 42 }} />
-                    <Text type="secondary" style={{ fontSize: 13 }}>차</Text>
-                  </Space>
-                )}
-              <Button
-                size="small" type={step.condition ? 'primary' : 'default'} ghost={!!step.condition}
-                onClick={() => toggleCondition(i)}
-              >조건</Button>
-              <Button size="small" danger icon={<MinusCircleOutlined />} onClick={() => removeApprover(i)} />
-            </div>
-            {step.condition && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, paddingLeft: 12 }}>
-                <Text type="secondary" style={{ fontSize: 13 }}>조건:</Text>
-                <Select
-                  size="small" placeholder="필드" style={{ width: 120 }}
-                  value={step.condition.field || undefined}
-                  onChange={v => setCondition(i, { field: v })}
-                  options={conditionFieldOptions}
-                />
-                <Select size="small" style={{ width: 110 }} value={step.condition.op} onChange={v => setCondition(i, { op: v })} options={OP_OPTIONS} />
-                {!['truthy'].includes(step.condition.op) && (
-                  <Input size="small" placeholder="값" style={{ width: 90 }} value={step.condition.value} onChange={e => setCondition(i, { value: e.target.value })} />
-                )}
-                <Text type="secondary" style={{ fontSize: 13 }}>일 때만 결재</Text>
-              </div>
-            )}
-          </div>
-        ))}
+        <ApprovalLineEditor
+          users={users} line={defaultLine}
+          onAddUser={addApprover} onAddRule={addRuleRaw} onRemove={removeApprover}
+          onSetRole={setLineRole} onSetGroup={setLineGroup}
+          withCondition onToggleCondition={toggleCondition} onSetCondition={setCondition}
+          conditionFieldOptions={conditionFieldOptions}
+        />
 
         {/* 조건 결재선 미리보기 — 샘플 값에 따라 최종 결재선 시뮬레이션 */}
         {(() => {

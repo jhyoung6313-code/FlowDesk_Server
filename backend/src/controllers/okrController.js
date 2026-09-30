@@ -6,6 +6,7 @@
 // ─────────────────────────────────────────────────────────────
 
 const prisma = require('../lib/prisma');
+const automation = require('../services/automationService');
 
 const USER_SEL = { id: true, displayName: true, avatarColor: true };
 function isAdmin(req) { return req.user.role === 'admin'; }
@@ -141,6 +142,12 @@ exports.updateObjective = async (req, res, next) => {
       },
       include: { owner: { select: USER_SEL } },
     });
+    if (status === 'at_risk' && obj.status !== 'at_risk') {
+      automation.fire('okr.at_risk', {
+        title: updated.title, objectiveId: updated.id, ownerId: updated.ownerId,
+        link: `/okr?objectiveId=${updated.id}`, actorId: req.user.id,
+      });
+    }
     res.json(updated);
   } catch (err) { next(err); }
 };

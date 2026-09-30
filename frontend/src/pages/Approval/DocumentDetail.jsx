@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Breadcrumb, Button, Space, Typography, Tag, Divider,
   Avatar, Modal, Input, message, Spin, Popconfirm, Card, Descriptions, Select,
-  theme as antTheme,
+  Tooltip, theme as antTheme,
 } from 'antd';
 import {
   ArrowLeftOutlined, EditOutlined, CheckCircleOutlined, CloseCircleOutlined,
@@ -680,7 +680,7 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
             </Select.Option>
           ))}
         </Select>
-        <TextArea value={delegateComment} onChange={e => setDelegateComment(e.target.value)} rows={2} placeholder="위임 사유 (선택)" />
+        <TextArea value={delegateComment} onChange={e => setDelegateComment(e.target.value)} rows={2} maxLength={150} showCount placeholder="위임 사유 (선택)" />
       </Modal>
     </div>
   );

@@ -94,14 +94,14 @@ describe('verifyLoginTotp (2단계 OTP)', () => {
 });
 
 describe('비밀번호 재설정 흐름', () => {
-  test('요청: 계정 열거 방지 — 미존재 계정도 200+토큰(무효 userId=0)', async () => {
+  test('요청: 계정 열거 방지 — 미존재 계정도 200+토큰(무효 userId=null)', async () => {
     prisma.user.findUnique.mockResolvedValue(null);
     const res = await request(app()).post('/reset/request').send({ username: 'nobody' });
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('resetOtpToken');
-    // 발급된 토큰은 userId=0 → 이후 OTP 검증에서 사용자 없음으로 401 처리됨
+    // 발급된 토큰은 userId=null → 이후 OTP 검증에서 사용자 없음으로 401 처리됨
     const decoded = jwt.verify(res.body.resetOtpToken, process.env.JWT_SECRET);
-    expect(decoded.userId).toBe(0);
+    expect(decoded.userId).toBeNull();
   });
 
   test('요청: OTP 설정된 활성 계정 → 실제 userId 토큰 발급', async () => {
@@ -112,10 +112,10 @@ describe('비밀번호 재설정 흐름', () => {
     expect(decoded.userId).toBe(1);
   });
 
-  test('요청: 무효 계정 토큰(userId=0)은 OTP 검증에서 401', async () => {
-    prisma.user.findUnique.mockResolvedValue(null); // userId=0 조회 → 없음
-    const res = await request(app()).post('/reset/verify').send({ resetOtpToken: tok(0, 'reset-otp'), otpCode: '123456' });
+  test('요청: 무효 계정 토큰(userId=null)은 OTP 검증에서 401', async () => {
+    const res = await request(app()).post('/reset/verify').send({ resetOtpToken: tok(null, 'reset-otp'), otpCode: '123456' });
     expect(res.status).toBe(401);
+    expect(prisma.user.findUnique).not.toHaveBeenCalled(); // DB 조회 없이 즉시 거부
   });
 
   test('확인: 재사용 금지 정책 위반 → 400', async () => {

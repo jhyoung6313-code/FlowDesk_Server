@@ -117,4 +117,4 @@ async function testSmtpConnection(config) {
   await transporter.verify();
 }
 
-module.exports = { sendDeadlineEmail, testSmtpConnection };
+module.exports = { sendDeadlineEmail, testSmtpConnection, sendGenericEmail };

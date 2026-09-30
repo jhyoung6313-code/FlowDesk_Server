@@ -16,9 +16,10 @@ import { getApprovals } from '../../api/approval';
 import useTaskStore from '../../store/taskStore';
 import useAuthStore from '../../store/authStore';
 import useThemeStore from '../../store/themeStore';
+import { SKINS, DEFAULT_SKIN } from '../../utils/skins';
 import useMemoStore from '../../store/memoStore';
 import { isOverdue } from '../../utils/dday';
-import { AVATAR_COLOR_PRESETS } from '../../utils/colors';
+import { AVATAR_COLOR_PRESETS, getAvatarColor } from '../../utils/colors';
 import MemoCard from '../../components/Memo/MemoCard';
 import TaskForm from '../../components/Task/TaskForm';
 import ScheduleWidget from '../../components/Schedule/ScheduleWidget';
@@ -115,6 +116,15 @@ export default function DashboardPage() {
   const [formStatus, setFormStatus] = useState('pending');
   const [selectedTask, setSelectedTask] = useState(null);
 
+  // "오늘" 날짜 — todayPriorities/atRisk useMemo가 [active]에만 의존하므로, 자정을 넘겨도
+  // active가 안 바뀌면 예전 날짜 기준으로 지연/오늘마감 판정이 굳어 있었다. 몇 분마다 날짜
+  // 문자열을 갱신해 useMemo에 넣어두면 자정이 지나는 순간 자동으로 재계산된다.
+  const [dayKey, setDayKey] = useState(() => dayjs().format('YYYY-MM-DD'));
+  useEffect(() => {
+    const t = setInterval(() => setDayKey(dayjs().format('YYYY-MM-DD')), 5 * 60 * 1000);
+    return () => clearInterval(t);
+  }, []);
+
   const memos        = useMemoStore((s) => s.memos);
   const fetchMemos   = useMemoStore((s) => s.fetch);
   const updateMemo   = useMemoStore((s) => s.update);
@@ -139,6 +149,12 @@ export default function DashboardPage() {
   const [dashEnabled, setDashEnabled] = useState(DASH_DEFAULT_ENABLED);
   const [dashEditing, setDashEditing] = useState(false);
   const dashSaveTimer = useRef(null);
+  // 최신 layout/enabled를 항상 미러링 — persistDash가 두 state를 모두 필요로 할 때
+  // setState updater를 중첩 호출("최신값을 읽으려고 setState를 쓰는" 안티패턴) 하지 않기 위함.
+  const dashLayoutRef = useRef(dashLayout);
+  const dashEnabledRef = useRef(dashEnabled);
+  useEffect(() => { dashLayoutRef.current = dashLayout; }, [dashLayout]);
+  useEffect(() => { dashEnabledRef.current = dashEnabled; }, [dashEnabled]);
 
   // 서버에서 저장된 레이아웃 로드
   useEffect(() => {
@@ -175,7 +191,7 @@ export default function DashboardPage() {
   const toggleDashBlock = useCallback((id) => {
     setDashEnabled((prev) => {
       const next = { ...prev, [id]: !prev[id] };
-      setDashLayout((lay) => { persistDash(lay, next); return lay; });
+      persistDash(dashLayoutRef.current, next);
       return next;
     });
   }, [persistDash]);
@@ -188,7 +204,7 @@ export default function DashboardPage() {
 
   const finishDashEdit = useCallback(() => {
     setDashEditing(false);
-    setDashLayout((lay) => { setDashEnabled((en) => { persistDash(lay, en); return en; }); return lay; });
+    persistDash(dashLayoutRef.current, dashEnabledRef.current);
   }, [persistDash]);
 
   // 개인 게시판 설정 Popover
@@ -273,6 +289,28 @@ export default function DashboardPage() {
     done:        active.filter((t) => t.status === 'done'),
     overdue,
   }), [active, overdue]);
+
+  /* ── 히어로: 오늘의 포커스 파생 데이터 ──
+     드래그/리사이즈(react-grid-layout onLayoutChange)로 매 프레임 리렌더가 발생하는데,
+     이 필터/정렬이 useMemo 없이 렌더마다 재계산되고 있었다 — active가 그대로면 재사용한다.
+     (Hooks 규칙상 아래 "if (loading) return" 조건부 반환보다 반드시 앞에 있어야 한다.) */
+  const { todayPriorities, dueTodayCount, atRisk } = useMemo(() => {
+    const today = dayjs().startOf('day');
+    const isToday = (d) => d && dayjs(d).startOf('day').isSame(today);
+    const rankPrio = (t) => (isOverdue(t.dueDate, t.status) ? 0 : isToday(t.dueDate) ? 1 : 2);
+    return {
+      todayPriorities: active
+        .filter((t) => t.status !== 'done')
+        .filter((t) => isOverdue(t.dueDate, t.status) || isToday(t.dueDate) || t.priority === 'high')
+        .sort((a, b) => rankPrio(a) - rankPrio(b))
+        .slice(0, 6),
+      dueTodayCount: active.filter((t) => t.status !== 'done' && isToday(t.dueDate)).length,
+      atRisk: active
+        .filter((t) => t.status !== 'done' && (isOverdue(t.dueDate, t.status) || isToday(t.dueDate)))
+        .sort((a, b) => rankPrio(a) - rankPrio(b))
+        .slice(0, 4),
+    };
+  }, [active, dayKey]);
 
   /* ── 색상 (라이트/다크) ──
      표면/테두리/배경은 스킨 CSS 변수를 참조해 스킨(형태 테마)에 자동 반응한다.
@@ -395,29 +433,16 @@ export default function DashboardPage() {
 
   const unreadCount = mails.filter((m) => !m.isRead).length;
 
-  /* ── 히어로: 오늘의 포커스 파생 데이터 ── */
-  const today = dayjs().startOf('day');
-  const isToday = (d) => d && dayjs(d).startOf('day').isSame(today);
-  const rankPrio = (t) => (isOverdue(t.dueDate, t.status) ? 0 : isToday(t.dueDate) ? 1 : 2);
-  const todayPriorities = active
-    .filter((t) => t.status !== 'done')
-    .filter((t) => isOverdue(t.dueDate, t.status) || isToday(t.dueDate) || t.priority === 'high')
-    .sort((a, b) => rankPrio(a) - rankPrio(b))
-    .slice(0, 6);
-  const dueTodayCount = active.filter((t) => t.status !== 'done' && isToday(t.dueDate)).length;
-  const atRisk = active
-    .filter((t) => t.status !== 'done' && (isOverdue(t.dueDate, t.status) || isToday(t.dueDate)))
-    .sort((a, b) => rankPrio(a) - rankPrio(b))
-    .slice(0, 4);
-
   /* 히어로 전용 스타일 */
   const heroCard = { background: D.cardBg, border: `var(--fd-sk-border-w, 1px) solid ${D.cardBor}`, borderRadius: 'var(--fd-sk-radius-lg, 12px)', boxShadow: 'var(--fd-sk-shadow, 0 1px 2px rgba(55,53,47,.05), 0 1px 3px rgba(55,53,47,.04))', padding: 16, display: 'flex', flexDirection: 'column', minHeight: 0 };
   const heroHd   = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 };
   const heroHdT  = { fontSize: 13, fontWeight: 700, color: D.text1, display: 'flex', alignItems: 'center', gap: 7 };
   const secTitle = { display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 'var(--fd-sk-font-weight-hd, 700)', color: D.text1, marginBottom: 10,
     ...(skin === 'mono' ? { textTransform: 'uppercase', letterSpacing: '0.12em' } : {}) };
-  /* ── KPI 타일: 스킨별 표현 (flat=브루탈·grad=클레이·line=모노·tint=기본) ── */
-  const KPI_MODE = { default: 'tint', brutal: 'flat', clay: 'grad', mono: 'line', glass: 'grad', pop: 'flat', slick: 'tint', paper: 'tint' }[skin] || 'tint';
+  /* ── KPI 타일: 스킨별 표현 (flat=브루탈·grad=클레이·line=모노·tint=기본) ──
+     skins.js의 'kpi-mode' 토큰을 그대로 읽는다 — 여기서 별도 테이블을 다시 만들면
+     새 스킨 추가 시 이 파일만 빠뜨려도 조용히 'tint'로 폴백되는 문제가 있었다. */
+  const KPI_MODE = (SKINS[skin] || SKINS[DEFAULT_SKIN])[isDark ? 'dark' : 'light']['kpi-mode'] || 'tint';
   const kpiBgVar = (variant) => (variant === 'accent' ? 'var(--fd-sk-kpi-a)' : variant === 'risk' ? 'var(--fd-sk-kpi-b)' : variant === 'info' ? 'var(--fd-sk-kpi-c)' : null);
   const kpiColored = (v) => v === 'accent' || v === 'risk' || v === 'info';
   const kpiTile  = (variant) => {
@@ -657,8 +682,9 @@ export default function DashboardPage() {
                 const late    = isOverdue(task.dueDate, task.status);
                 const prio    = task.priority ? PRIO[task.priority] : null;
                 const assigns = [
-                  ...(task.assignees?.map((a) => a.user?.displayName).filter(Boolean) || []),
-                  ...(task.extraAssignees?.map((e) => e.name).filter(Boolean) || []),
+                  ...(task.assignees?.map((a) => ({ name: a.user?.displayName, id: a.user?.id, avatarColor: a.user?.avatarColor })).filter((a) => a.name) || []),
+                  // 외부(비회원) 담당자는 계정이 없어 커스텀 아바타색 개념 자체가 없음 — 이름 해시로만 색 배정
+                  ...(task.extraAssignees?.map((e) => ({ name: e.name })).filter((a) => a.name) || []),
                 ];
                 const dy = late && task.dueDate ? daysLate(task.dueDate) : null;
 
@@ -734,14 +760,14 @@ export default function DashboardPage() {
                     {/* 하단: 담당자 아바타 + 마감일 */}
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                       <div style={{ display: 'flex' }}>
-                        {assigns.slice(0, 3).map((name, i) => (
+                        {assigns.slice(0, 3).map((a, i) => (
                           <div key={i} style={{ marginLeft: i > 0 ? -5 : 0, zIndex: 3 - i }}>
                             <span style={{
                               width: 20, height: 20, borderRadius: '50%',
-                              background: nameColor(name), color: '#fff',
+                              background: a.id ? getAvatarColor(a.id, a.avatarColor) : nameColor(a.name), color: '#fff',
                               display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
                               fontSize: 13, fontWeight: 700, border: `1.5px solid ${D.cardBg}`,
-                            }}>{name.charAt(0)}</span>
+                            }}>{a.name.charAt(0)}</span>
                           </div>
                         ))}
                       </div>
@@ -836,7 +862,7 @@ export default function DashboardPage() {
                   <span style={{
                     width: 30, height: 30, borderRadius: '50%', flexShrink: 0, color: '#fff',
                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700,
-                    background: nameColor(m.from?.displayName),
+                    background: m.from?.id ? getAvatarColor(m.from.id, m.from.avatarColor) : nameColor(m.from?.displayName),
                   }}>{m.from?.displayName?.charAt(0) || '?'}</span>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

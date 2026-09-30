@@ -938,6 +938,7 @@ model BoardMember {
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([boardId, userId])
+  @@index([userId])
   @@map("board_members")
 }
 
@@ -1988,6 +1989,7 @@ model AutomationRule {
   createdBy   Int              @map("created_by")
   createdAt   DateTime         @default(now()) @map("created_at")
   updatedAt   DateTime         @updatedAt @map("updated_at")
+  delYn       String           @default("0") @map("del_yn") @db.Char(1)
   logs        AutomationLog[]
 
   @@index([event, isActive])

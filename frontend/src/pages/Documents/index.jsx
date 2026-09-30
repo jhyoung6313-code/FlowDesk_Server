@@ -7,7 +7,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getDocuments } from '../../api/documents';
-import { avatarColor, initial } from '../../utils/listkit';
+import { getAvatarColor } from '../../utils/colors';
 
 const SOURCE = {
   task: { label: '업무', color: 'blue' }, board: { label: '보드', color: 'cyan' },
@@ -65,8 +65,8 @@ export default function DocumentsPage() {
     },
     {
       title: '올린이', dataIndex: 'uploaderName', key: 'uploaderName', width: 120,
-      render: (v) => v
-        ? <Space size={7}><Avatar size={22} style={{ background: avatarColor(v), fontSize: 13 }}>{initial(v)}</Avatar>{v}</Space>
+      render: (v, r) => v
+        ? <Space size={7}><Avatar size={22} style={{ background: getAvatarColor(r.uploaderId, r.uploaderColor), fontSize: 13 }}>{v[0]}</Avatar>{v}</Space>
         : <Typography.Text type="secondary">-</Typography.Text>,
     },
     { title: '크기', dataIndex: 'size', key: 'size', width: 90, render: fmtSize },
