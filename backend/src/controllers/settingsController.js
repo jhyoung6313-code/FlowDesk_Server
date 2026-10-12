@@ -1,4 +1,5 @@
 const { testSmtpConnection } = require('../services/emailService');
+const { isEmailOptedOut, setEmailOptOut } = require('../services/emailPreference');
 
 const prisma = require('../lib/prisma');
 
@@ -196,4 +197,113 @@ const updateApprovalLinePresets = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { getEmailSettings, updateEmailSettings, testEmail, getWidgetSettings, updateWidgetSettings, getThemePrefs, updateThemePrefs, getDashboardLayout, updateDashboardLayout, getApprovalLinePresets, updateApprovalLinePresets };
+const SHARED_APPROVAL_LINES_KEY = 'approval_lines_shared';
+
+/** GET /api/settings/approval-lines/shared — 팀 공유 결재선 프리셋 조회 (전원 열람) */
+const getSharedApprovalLinePresets = async (req, res, next) => {
+  try {
+    const row = await prisma.appSetting.findUnique({ where: { key: SHARED_APPROVAL_LINES_KEY } });
+    if (!row) return res.json([]);
+    try {
+      const v = JSON.parse(row.value);
+      res.json(Array.isArray(v) ? v : []);
+    } catch { res.json([]); }
+  } catch (err) { next(err); }
+};
+
+// 팀 공유 프리셋 1건 추가/삭제는 "현재 최신 배열을 서버가 다시 읽어 수정"하는 방식으로
+// 처리한다. 과거에는 PUT으로 클라이언트가 들고 있던 전체 배열을 통째로 덮어썼는데, 두
+// 사용자가 거의 동시에 서로 다른 프리셋을 추가/삭제하면 나중에 저장한 쪽이 먼저 저장한
+// 쪽의 변경을 그대로 지워버리는 lost-update가 발생했다(각자 로드 시점의 스냅샷을 기준으로
+// "배열+1건"을 통째로 PUT 했기 때문). advisory lock으로 동시 요청을 직렬화해 이 키에 대한
+// read-modify-write 자체를 원자적으로 만든다.
+const SHARED_PRESET_LOCK_ID = 911001;
+
+async function readSharedPresetList(tx) {
+  const row = await tx.appSetting.findUnique({ where: { key: SHARED_APPROVAL_LINES_KEY } });
+  if (!row) return [];
+  try {
+    const v = JSON.parse(row.value);
+    return Array.isArray(v) ? v : [];
+  } catch { return []; }
+}
+
+/** POST /api/settings/approval-lines/shared — 팀 공유 결재선 프리셋 1건 추가(원자적) */
+const addSharedApprovalLinePreset = async (req, res, next) => {
+  try {
+    const entry = req.body;
+    if (!entry || !entry.name || !Array.isArray(entry.steps)) {
+      return res.status(400).json({ error: '프리셋 이름과 결재선(steps)이 필요합니다.' });
+    }
+    const list = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SHARED_PRESET_LOCK_ID})`;
+      const current = await readSharedPresetList(tx);
+      const next = [...current, entry].slice(-50); // 최대 50개(기존 cap 유지) — 오래된 것부터 제거
+      await tx.appSetting.upsert({
+        where: { key: SHARED_APPROVAL_LINES_KEY },
+        create: { key: SHARED_APPROVAL_LINES_KEY, value: JSON.stringify(next) },
+        update: { value: JSON.stringify(next) },
+      });
+      return next;
+    });
+    res.json(list);
+  } catch (err) { next(err); }
+};
+
+/** DELETE /api/settings/approval-lines/shared/:id — 팀 공유 결재선 프리셋 1건 삭제(원자적) */
+const deleteSharedApprovalLinePreset = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const list = await prisma.$transaction(async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(${SHARED_PRESET_LOCK_ID})`;
+      const current = await readSharedPresetList(tx);
+      const next = current.filter((p) => String(p.id) !== String(id));
+      await tx.appSetting.upsert({
+        where: { key: SHARED_APPROVAL_LINES_KEY },
+        create: { key: SHARED_APPROVAL_LINES_KEY, value: JSON.stringify(next) },
+        update: { value: JSON.stringify(next) },
+      });
+      return next;
+    });
+    res.json(list);
+  } catch (err) { next(err); }
+};
+
+/** GET /api/settings/approval-auto-delegate — 내가 휴가 중일 때 결재를 자동 위임할 대상 조회 */
+const getApprovalAutoDelegate = async (req, res, next) => {
+  try {
+    const row = await prisma.appSetting.findUnique({ where: { key: `approval_auto_delegate_${req.user.id}` } });
+    if (!row) return res.json({ toUserId: null });
+    try { res.json(JSON.parse(row.value)); } catch { res.json({ toUserId: null }); }
+  } catch (err) { next(err); }
+};
+
+/** PUT /api/settings/approval-auto-delegate — 자동 위임 대상 설정/해제(toUserId: null이면 해제)
+ *  일정(F-55)에 본인이 '휴가'로 등록된 기간 동안, 새로 결재 차례가 된 문서를 이 대상에게
+ *  자동으로 위임한다(approvalController.applyAutoDelegation 참조). */
+const updateApprovalAutoDelegate = async (req, res, next) => {
+  try {
+    const toUserId = req.body?.toUserId ? Number(req.body.toUserId) : null;
+    if (toUserId === req.user.id) return res.status(400).json({ error: '본인을 위임 대상으로 지정할 수 없습니다.' });
+    const key = `approval_auto_delegate_${req.user.id}`;
+    const value = JSON.stringify({ toUserId });
+    await prisma.appSetting.upsert({ where: { key }, create: { key, value }, update: { value } });
+    res.json({ message: toUserId ? '자동 위임 대상이 설정되었습니다.' : '자동 위임이 해제되었습니다.' });
+  } catch (err) { next(err); }
+};
+
+/** GET /api/settings/email-opt-out — 본인의 "알림 이메일 받지 않기" 여부 조회 */
+const getEmailOptOut = async (req, res, next) => {
+  try { res.json({ optOut: await isEmailOptedOut(req.user.id) }); }
+  catch (err) { next(err); }
+};
+
+/** PUT /api/settings/email-opt-out — 알림 이메일 수신 여부 설정(인앱 알림은 영향 없음) */
+const updateEmailOptOut = async (req, res, next) => {
+  try {
+    await setEmailOptOut(req.user.id, !!req.body?.optOut);
+    res.json({ message: req.body?.optOut ? '알림 이메일을 받지 않습니다.' : '알림 이메일을 받습니다.' });
+  } catch (err) { next(err); }
+};
+
+module.exports = { getEmailSettings, updateEmailSettings, testEmail, getWidgetSettings, updateWidgetSettings, getThemePrefs, updateThemePrefs, getDashboardLayout, updateDashboardLayout, getApprovalLinePresets, updateApprovalLinePresets, getSharedApprovalLinePresets, addSharedApprovalLinePreset, deleteSharedApprovalLinePreset, getApprovalAutoDelegate, updateApprovalAutoDelegate, getEmailOptOut, updateEmailOptOut };

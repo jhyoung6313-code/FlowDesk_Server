@@ -1,6 +1,6 @@
 # FlowDesk 기능정의서 v2.1
 
-> 소규모 팀(2~10명)을 위한 로컬 전용 풀스택 업무관리 시스템
+> 폐쇄망(사내망) 환경에서 200명 이상 동시접속을 지원하는 로컬 전용 풀스택 업무관리 시스템
 
 ---
 
@@ -152,13 +152,16 @@
 - **설명**:
   - 다중 프로젝트 관리 (프로젝트 생성·수정·삭제)
   - 계층형 작업 트리 (레벨 0~4, 드래그앤드롭 순서·계층 변경)
-  - 컬럼: 작업명, 산출물명, 시작일, 종료일, 계획진척률(%), 실적진척률(%), 메모
+  - 컬럼: 작업명, 선행작업, 산출물명, 시작일, 종료일, 계획진척률(%), 실적진척률(%), 메모
   - 산출물 파일 첨부 (업로드/다운로드/삭제)
+  - **[v2.15] 작업 선후행 의존성 + 크리티컬패스**: 작업별 선행작업 다중 선택(시트 컬럼 드롭다운), 간트 차트에 의존성 화살표 표시. 서버가 CPM(순방향 ES/EF·역방향 LS/LF, float=0)으로 크리티컬패스를 계산해 해당 작업을 시트(빨간 "CP" 뱃지)·간트(빨간 막대)에 표시. 순환 의존성은 저장 시 자동 차단(역탐색으로 사이클 감지). `wbs_task_dependencies` 테이블, `backend/src/services/wbsCriticalPath.js`.
+  - **[v2.15] 상위 작업 진척률 자동 집계**: 하위 작업이 있는 상위 항목의 계획/실적 진척률은 더 이상 직접 입력하지 않고, 하위 작업들의 **기간(일수) 가중평균**으로 조회 시점에 자동 계산(저장 없는 read-time rollup, 하위 변경과 즉시 정합). 시트에는 "N% (자동)" 표시 + 비활성 처리, 리프(최하위) 작업만 직접 입력 가능. `backend/src/services/wbsRollup.js`.
   - Excel 내보내기 / Excel 가져오기 (표준 포맷 + 실무 WBS 포맷 자동 감지)
   - 업로드용 샘플 양식 다운로드 (표준 포맷 헤더 + 예시 행 + 작성안내 시트)
   - 간트 차트 뷰 연동
 - **API**: `GET/POST /api/wbs/projects`, `PUT/DELETE /api/wbs/projects/:id`
 - **API**: `GET/POST /api/wbs/projects/:id/tasks`, `PUT/DELETE /api/wbs/tasks/:taskId`
+- **API**: `PUT /api/wbs/tasks/:taskId` body에 `predecessorIds: number[]` 포함 가능 — `GET .../tasks` 응답의 각 노드에 `predecessorIds`·`isCritical` 포함
 - **API**: `GET /api/wbs/tasks/template` (업로드용 샘플 양식)
 
 ### F-14. WBS 이슈사항
@@ -249,8 +252,9 @@
 
 ### F-44. 백업/복원
 - **화면**: S-17 관리자 > 백업
-- **설명**: 전체 데이터 JSON 백업 다운로드, JSON 파일로 복원
-- **API**: `GET /api/admin/backup/export`, `POST /api/admin/backup/import`
+- **설명**: 전체 데이터 암호화(AES-256-GCM) 백업 다운로드, 백업 파일(.enc)로 복원(기존 데이터 유지 + 누락분 추가하는 additive upsert)
+- **[v2.15] 자동 백업 스케줄링**: cron 주기(`BACKUP_AUTO_CRON`, 기본 매일 03:30)로 서버 로컬 디스크(`backend/backups/`)에 자동 백업, 보관 개수(`BACKUP_RETENTION_COUNT`, 기본 14개) 초과분은 오래된 순으로 자동 삭제. 외부 전송 없음(폐쇄망 전제). `BACKUP_AUTO_ENABLED=false`로 비활성화 가능. 관리자 화면에서 보관 목록 확인·개별 다운로드 가능. `backend/src/services/backupScheduler.js`.
+- **API**: `GET /api/admin/backup`(다운로드), `POST /api/admin/restore`(복원), `GET /api/admin/backup/auto`(자동 백업 설정·목록), `GET /api/admin/backup/auto/:filename/download`
 
 ---
 
@@ -376,7 +380,9 @@
 ### F-41. 업무 템플릿
 - **화면**: S-17 관리자 > 템플릿
 - **설명**: 반복적으로 사용하는 업무 형식 저장. 기간(일수), 담당자 미리 지정. 템플릿으로 업무 즉시 생성
-- **API**: `GET/POST /api/templates`, `PUT/DELETE /api/templates/:id`
+- **[v2.15] 템플릿 세트(프로젝트 킥오프 일괄 생성)**: 여러 업무 템플릿을 "세트"로 묶고, 각 템플릿에 세트 기준일 대비 마감 오프셋(D+n)을 지정. 세트에 기준일(킥오프일) 하나만 입력하면 소속 템플릿 전체가 담당자·기한이 채워진 실제 업무로 한 번에 생성됨("새 프로젝트 시작" 같은 반복 플로우용). 세트 삭제 시 소속 템플릿은 유지되고 세트 소속만 해제(비파괴적). `task_template_sets` 테이블, `backend/src/controllers/templateSetController.js`.
+- **API**: `GET/POST /api/templates`, `PUT/DELETE /api/templates/:id` (body에 `setId`·`dayOffset` 포함 가능)
+- **API**: `GET/POST /api/template-sets`, `PUT/DELETE /api/template-sets/:id`, `POST /api/template-sets/:id/apply { kickoffDate }`
 
 ### F-42. 활동 로그
 - **화면**: 관리자 > 활동 로그
@@ -570,13 +576,16 @@
 - **워크플로 API**: `submit`(상신)·`approve`(승인)·`reject`(반려)·`cancel`(취소)·`resubmit`(재상신)·`resume`(반려 후 재개)
 - **결재선 자동 해석**: `services/approvalLine.js` — 양식의 lineJson을 실제 결재자로 치환(`resolve-line`)
 - **[v2.14.1] 결재종류 트리 네비게이션**: 문서함 좌측 2-pane 트리로 결재종류(자기중첩) → 양식 계층 탐색. 각 노드에 현재 탭·검색 가시성 기준 문서 **건수 롤업** 표시, 노드 선택 시 목록을 `formTypeId`/`templateId`로 필터(탭=역할 축과 직교). `GET /api/approvals/tree`, 목록 API에 `templateId` 필터 추가. 탭은 상단 전체 폭, 트리·결재내역 그리드는 같은 높이로 정렬.
+- **[v2.15] 사용자 자유도 확대 14종**: 결재선 그룹 편집 UI(드래그 병합/분리/순서이동), 자유 양식(제목+본문만, 관리자 사전설정 불필요), 팀 공유 결재선 프리셋, 병렬결재 완료조건(전원/임의1인/과반수), 상신 후 결재자·참조자 추가/제거, 결재 양식 간 결재선 복사, 양식 필드 상신시점 스냅샷(`fieldsJsonSnap`, 소급 변경 방지), 결재 요청·지연 이메일 알림, 휴가 중 자동위임(F-55 연동), 재사용 가능한 결재자 그룹(`ApprovalApproverGroup`), 결재 현황 대시보드(양식별/결재자별/반려사유별 통계), 결재 일일 다이제스트(매일 08:50), 반려 사유 분류, 의견(댓글) 첨부파일·@멘션. 상세: `/tm-approval`.
 - **API**:
   - 양식종류: `GET/POST /api/approval-types`, `PUT /api/approval-types/reorder`, `PUT/DELETE /api/approval-types/:id`
-  - 양식: `GET /api/approval-templates(/:id)`, `POST/PUT/DELETE /api/approval-templates(/:id)`, `GET/POST /api/approval-templates/:id/resolve-line`
-  - 문서: `GET /api/approvals/pending-count`, `GET /api/approvals/tree`, `GET/POST /api/approvals`, `GET/PUT/DELETE /api/approvals/:id`, `POST /api/approvals/:id/{submit,approve,reject,cancel,resubmit,resume}`
-  - 첨부: `POST /api/approvals/:id/attachments`, `GET /api/approvals/:id/attachments/:aid/download`, `DELETE /api/approvals/:id/attachments/:aid`
+  - 양식: `GET /api/approval-templates(/:id)`, `POST/PUT/DELETE /api/approval-templates(/:id)`, `GET/POST /api/approval-templates/:id/resolve-line`, `GET /api/approval-templates/freeform`
+  - 결재자 그룹: `GET /api/approval-approver-groups`, `POST/PUT/DELETE /api/approval-approver-groups(/:id)`
+  - 문서: `GET /api/approvals/{pending-count,tree,stats,reject-categories}`, `GET/POST /api/approvals`, `GET/PUT/DELETE /api/approvals/:id`, `POST /api/approvals/:id/{submit,approve,reject,cancel,resubmit,resume}`, `POST /api/approvals/:id/steps`, `DELETE /api/approvals/:id/steps/:stepId`
+  - 첨부: `POST /api/approvals/:id/attachments`(`commentId` 선택), `GET /api/approvals/:id/attachments/:aid/download`, `DELETE /api/approvals/:id/attachments/:aid`
   - 댓글: `GET/POST /api/approvals/:id/comments`, `PUT/DELETE /api/approvals/:id/comments/:cid`
-- **파일**: `controllers/approvalController.js`·`approvalTemplateController.js`·`approvalFormTypeController.js`, `services/approvalLine.js`, `routes/approvals.js`, `pages/Approval/*`, `pages/Admin/ApprovalAdmin.jsx`
+  - 설정: `GET/PUT /api/settings/approval-lines(/shared)`, `GET/PUT /api/settings/approval-auto-delegate`
+- **파일**: `controllers/approvalController.js`·`approvalTemplateController.js`·`approvalFormTypeController.js`·`approvalApproverGroupController.js`, `services/approvalLine.js`, `routes/approvals.js`, `pages/Approval/*`, `pages/Admin/{ApprovalAdmin,ApprovalLineEditor}.jsx`, `utils/approvalLine.js`, `pages/Profile/sections.jsx`
 
 ---
 
@@ -858,18 +867,21 @@
 ## 33. 통합 문서/첨부 허브
 
 ### F-68. 문서함 (전 도메인 첨부 통합 검색)
-- **개요**: 여러 도메인(업무·보드·게시판·결재·메일)에 흩어진 **기존 첨부 파일을 한 곳에서 검색**. M365 SharePoint 라이브러리 경량판. **polymorphic 마이그레이션 없이** 기존 첨부 테이블만 읽기 전용 집계(무의존·무마이그레이션·additive).
-- **집계 대상**: `task_attachments`·`board_card_attachments`·`bbs_attachments`·`approval_attachments`·`internal_mail_attachments`(공통 필드 originalName·mimeType·size·uploadedBy·createdAt + 부모 FK)를 정규화 병합.
+- **개요**: 여러 도메인(업무·보드·게시판·결재·메일·WBS 산출물)에 흩어진 **기존 첨부 파일을 한 곳에서 검색**. M365 SharePoint 라이브러리 경량판. **polymorphic 마이그레이션 없이** 기존 첨부 테이블만 읽기 전용 집계(무의존·additive, 즐겨찾기만 신규 테이블).
+- **집계 대상**: `task_attachments`·`board_card_attachments`·`bbs_attachments`·`approval_attachments`·`internal_mail_attachments`·`wbs_tasks.deliverable_*`(공통 필드 originalName·mimeType·size·uploadedBy·createdAt + 부모 FK)를 정규화 병합.
 - **접근제어(도메인별 존중)**:
   - 메일: **개인정보라 관리자도 예외 없이** 발신자/수신자만.
   - 결재: 기안자/결재자만(관리자는 전체).
   - 게시판: 민감도 라벨(F-67) 기밀 게이트 적용(비관리자는 기밀 제외).
   - 업무/보드: 팀 공개(기존 전역검색 신뢰모델과 동일).
-- **기능**: 파일명 검색(디바운스), 출처별 필터(세그먼트+카운트), 원본 위치로 이동 링크, 파일유형 아이콘·크기·올린이·등록일.
+  - WBS 산출물: 전역 공개(업무/보드와 동일 신뢰모델, 별도 멤버십 게이트 없음).
+- **기능**:
+  - 파일명 검색(디바운스) + **본문 전문검색(라이트)**: `text/plain`·`text/csv`·`text/markdown` 첨부는 디스크에서 직접 읽어 내용까지 매칭(외부 파서 의존 없이 300KB 이하 파일 대상, 그 외 포맷은 파일명만).
+  - 출처별 필터(세그먼트+카운트), **즐겨찾기**(별표 토글 + "즐겨찾기만" 필터, `DocumentFavorite` 테이블),  **직접 다운로드**(원본 도메인의 기존 다운로드 API로 바로 연결 — 각 도메인의 접근권한 재검증 포함), 원본 위치로 이동 링크, 파일유형 아이콘·크기·올린이·등록일.
 - **화면**: `/documents` — 사이드바 '협업' 그룹 '문서함'.
-- **API** (인증 필요): `GET /api/documents?q=&source=&limit=` → { total, counts, items: [{ source, fileName, mimeType, size, uploaderName, createdAt, contextTitle, contextPath }] }
-- **파일**: `backend/src/controllers/documentController.js`·`routes/documents.js`; `frontend/src/api/documents.js`, `pages/Documents/index.jsx`
-- **미구현(후속 확장 후보)**: 직접 다운로드(현재 원본 위치 이동), 전문검색(파일 본문 tsvector/pg_bigm), 위키 첨부·WBS 산출물 포함, 태그·즐겨찾기
+- **API** (인증 필요): `GET /api/documents?q=&source=&limit=&favorite=1` → { total, counts, items: [{ source, refId, fileName, mimeType, size, uploaderName, createdAt, contextTitle, contextPath, downloadUrl, isFavorite }] }, `POST /api/documents/favorite { source, refId }` → { favorite }
+- **파일**: `backend/src/controllers/documentController.js`·`routes/documents.js`, `controllers/wbsController.js`(산출물 업로더/크기/시각 메타 추가); `frontend/src/api/documents.js`, `pages/Documents/index.jsx`
+- **미구현(후속 확장 후보)**: 위키 첨부 포함(위키는 별도 첨부 테이블 없음), PDF/워드 등 바이너리 본문 전문검색(OCR/파서 신규 의존성 필요), 태그
 
 ---
 

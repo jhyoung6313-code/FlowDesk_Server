@@ -5,6 +5,7 @@ const { authenticator } = require('otplib');
 const QRCode = require('qrcode');
 
 const prisma = require('../lib/prisma');
+const userCache = require('../lib/userCache');
 const { kickUserSockets } = require('../socket');
 const audit = require('../services/auditService');
 const pwPolicy = require('../utils/passwordPolicy');
@@ -128,6 +129,7 @@ async function finalizeLogin(user, req) {
     },
   });
   await audit.record({ action: AUDIT_ACTION.LOGIN_SUCCESS, req, userId: user.id, username: user.username, resource: 'auth/login' });
+  userCache.invalidate(user.id);
   return updated;
 }
 
@@ -310,6 +312,7 @@ const verifyRegisterTotp = async (req, res, next) => {
       where: { id: user.id },
       data: { isActive: true, totpEnabled: true, sessionNonce: crypto.randomUUID() },
     });
+    userCache.invalidate(activated.id);
 
     const token = issueToken(activated);
     res.json({
@@ -330,10 +333,14 @@ const verifyRegisterTotp = async (req, res, next) => {
 // ── 로그아웃 ──────────────────────────────────────────────
 const logout = async (req, res, next) => {
   try {
+    // null이 아니라 새 난수를 발급 — auth.js의 `user.sessionNonce && decoded.sn !== user.sessionNonce`
+    // 체크는 DB값이 null이면 `&&`에서 단락되어 통째로 스킵되므로, null을 쓰면 로그아웃이
+    // 토큰을 실제로 무효화하지 못하고 만료 전까지 계속 유효해지는 버그가 있었다.
     await prisma.user.update({
       where: { id: req.user.id },
-      data: { sessionNonce: null },
+      data: { sessionNonce: crypto.randomUUID() },
     });
+    userCache.invalidate(req.user.id);
     await audit.record({ action: AUDIT_ACTION.LOGOUT, req, userId: req.user.id, username: req.user.username, resource: 'auth/logout' });
     res.json({ message: '로그아웃 되었습니다.' });
   } catch (err) {
@@ -461,6 +468,7 @@ const changePassword = async (req, res, next) => {
       where: { id: req.user.id },
       data: { passwordHash: newHash, passwordChangedAt: new Date(), mustChangePassword: false },
     });
+    userCache.invalidate(user.id);
     await pwPolicy.pushHistory(prisma, user.id, newHash);
     await audit.record({ action: AUDIT_ACTION.PASSWORD_CHANGE, req, userId: user.id, username: user.username, resource: 'auth/change-password' });
 
@@ -601,6 +609,7 @@ const confirmPasswordReset = async (req, res, next) => {
       where: { id: user.id },
       data: { passwordHash: newHash, passwordChangedAt: new Date(), mustChangePassword: false, failedLoginCount: 0, lockedUntil: null },
     });
+    userCache.invalidate(user.id);
     await pwPolicy.pushHistory(prisma, user.id, newHash);
     await audit.record({ action: AUDIT_ACTION.PASSWORD_RESET, req, userId: user.id, username: user.username, resource: 'auth/reset-password' });
 

@@ -19,8 +19,6 @@ import {
   MailOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { getApprovalPendingCount } from '../../api/approval';
-import { getUnreadCount as getMailUnreadCount } from '../../api/mail';
 import useAuthStore from '../../store/authStore';
 import dayjs from 'dayjs';
 import useNotificationStore from '../../store/notificationStore';
@@ -302,20 +300,11 @@ export default function AppHeader({ collapsed, onCollapse }) {
   const setSkin = useThemeStore((s) => s.setSkin);
   const [themeOpen, setThemeOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [approvalPending, setApprovalPending] = useState(0);
-  const [mailUnread, setMailUnread] = useState(0);
+  // MainLayout이 한 번만 폴링해 공유 스토어에 반영한 값을 읽기만 한다 (중복 API 호출 방지).
+  const approvalPending = useUnreadStore((s) => s.approvalPending);
+  const mailUnread = useUnreadStore((s) => s.mailUnread);
   const user = useAuthStore((s) => s.user);
   const isAdmin = user?.role === 'admin';
-
-  useEffect(() => {
-    if (!user) return;
-    const fetchApproval = () => getApprovalPendingCount().then(r => setApprovalPending(r.count || 0)).catch(() => {});
-    const fetchMail = () => getMailUnreadCount().then(r => setMailUnread(r.count || 0)).catch(() => {});
-    fetchApproval();
-    fetchMail();
-    const timer = setInterval(() => { fetchApproval(); fetchMail(); }, 60000);
-    return () => clearInterval(timer);
-  }, [user]);
 
   const navigate = useNavigate();
   const { pathname } = useLocation();

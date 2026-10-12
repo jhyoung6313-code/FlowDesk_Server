@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import { Select, Input, Button, Space, Tag, Typography, InputNumber, message } from 'antd';
 import { PlusCircleOutlined, MinusCircleOutlined } from '@ant-design/icons';
+import { nextGroupNo } from '../../utils/approvalLine';
 
 const { Text } = Typography;
 
@@ -30,22 +31,34 @@ export const OP_OPTIONS = [
   { value: 'contains', label: '포함' },
 ];
 
-export function nextGroupNo(line) {
-  const gs = line.filter((s) => s.type !== 'reference').map((s) => s.stepOrder);
-  return gs.length ? Math.max(...gs) + 1 : 1;
-}
-
 // 결재선 상태 + 변형 함수. FormTypeTab(조건 없음)·TemplateTab(조건 있음) 둘 다 이 훅 하나를 쓴다.
 export function useApprovalLine(initial = []) {
   const [line, setLine] = useState(initial);
 
+  // 중복 체크를 setLine 업데이터 내부에서 수행 — 바깥 스코프의 line 상태로 체크하면
+  // 연속 클릭(이전 렌더의 setLine이 아직 반영 안 된 시점)에서 둘 다 같은 스냅샷을 보고 중복
+  // 통과시켜 같은 대상이 두 번 추가될 수 있다.
   const addUser = (users, userId) => {
-    if (!userId || line.some((s) => s.kind === 'user' && s.approverId === userId)) return;
+    if (!userId) return;
     const u = users.find((x) => x.id === userId);
-    setLine((prev) => [...prev, {
-      key: `u${userId}`, kind: 'user', approverId: userId, approverName: u?.displayName || '',
-      type: 'approval', stepOrder: nextGroupNo(prev),
-    }]);
+    setLine((prev) => {
+      if (prev.some((s) => s.kind === 'user' && s.approverId === userId)) return prev;
+      return [...prev, {
+        key: `u${userId}`, kind: 'user', approverId: userId, approverName: u?.displayName || '',
+        type: 'approval', stepOrder: nextGroupNo(prev),
+      }];
+    });
+  };
+  const addGroup = (groups, groupId) => {
+    if (!groupId) return;
+    const g = groups.find((x) => x.id === groupId);
+    setLine((prev) => {
+      if (prev.some((s) => s.kind === 'group' && s.groupId === groupId)) return prev;
+      return [...prev, {
+        key: `g${groupId}`, kind: 'group', groupId, groupName: g?.name || '',
+        type: 'approval', stepOrder: nextGroupNo(prev),
+      }];
+    });
   };
   // 반환값(true/false)으로 호출부가 입력창을 비울지 판단한다.
   const addRule = (position, scope) => {
@@ -71,11 +84,11 @@ export function useApprovalLine(initial = []) {
     i === idx ? { ...s, condition: { ...s.condition, ...patch } } : s
   )));
 
-  return { line, setLine, addUser, addRule, remove, setRole, setGroup, toggleCondition, setCondition };
+  return { line, setLine, addUser, addRule, addGroup, remove, setRole, setGroup, toggleCondition, setCondition };
 }
 
-// 서버에 저장된 lineJson(rule/user + stepOrder + 선택적 condition) → 편집기 상태 배열
-export function parseApprovalLine(lineJson, users) {
+// 서버에 저장된 lineJson(rule/user/group + stepOrder + 선택적 condition) → 편집기 상태 배열
+export function parseApprovalLine(lineJson, users, groups = []) {
   if (!lineJson) return [];
   let l = [];
   try { l = JSON.parse(lineJson); } catch { return []; }
@@ -85,6 +98,10 @@ export function parseApprovalLine(lineJson, users) {
     const condition = s.condition?.field ? { ...s.condition } : null;
     if (s.rule?.by === 'position') {
       return { key: `r${i}-${Date.now()}`, kind: 'rule', position: s.rule.value || '', scope: s.rule.scope || 'all', type, stepOrder, condition };
+    }
+    if (s.group) {
+      const g = groups.find((x) => x.id === s.group);
+      return { key: `g${s.group}`, kind: 'group', groupId: s.group, groupName: g?.name || `그룹 ${s.group}`, type, stepOrder, condition };
     }
     const u = users.find((x) => x.id === s.approverId);
     return { key: `u${s.approverId}`, kind: 'user', approverId: s.approverId, approverName: u?.displayName || `사용자 ${s.approverId}`, type, stepOrder, condition };
@@ -96,9 +113,10 @@ export function serializeApprovalLine(line) {
   if (!line.length) return null;
   return JSON.stringify(line.map((s) => {
     const stepOrder = s.type === 'reference' ? 0 : s.stepOrder;
-    const base = s.kind === 'rule'
-      ? { stepOrder, type: s.type, rule: { by: 'position', value: s.position, scope: s.scope } }
-      : { stepOrder, type: s.type, approverId: s.approverId };
+    let base;
+    if (s.kind === 'rule') base = { stepOrder, type: s.type, rule: { by: 'position', value: s.position, scope: s.scope } };
+    else if (s.kind === 'group') base = { stepOrder, type: s.type, group: s.groupId };
+    else base = { stepOrder, type: s.type, approverId: s.approverId };
     if (s.condition?.field) base.condition = { field: s.condition.field, op: s.condition.op || 'truthy', value: s.condition.value ?? '' };
     return base;
   }));
@@ -108,7 +126,8 @@ export function serializeApprovalLine(line) {
 // — "종류(FormType)"의 공통 기본 결재선은 조건 개념이 없고(양식 필드가 없으므로 조건을 걸 대상이
 // 없음), "템플릿"의 기본 결재선만 조건부 결재자를 지원한다.
 export function ApprovalLineEditor({
-  users, line, onAddUser, onAddRule, onRemove, onSetRole, onSetGroup,
+  users, line, onAddUser, onAddRule, onAddGroup, onRemove, onSetRole, onSetGroup,
+  approverGroups = [],
   withCondition = false, onToggleCondition, onSetCondition, conditionFieldOptions = [],
 }) {
   const [rulePosition, setRulePosition] = useState('');
@@ -127,6 +146,14 @@ export function ApprovalLineEditor({
         >
           {users.map((u) => <Select.Option key={u.id} value={u.id}>{u.displayName} ({u.username})</Select.Option>)}
         </Select>
+        {approverGroups.length > 0 && (
+          <Select
+            placeholder="결재자 그룹 추가" style={{ width: 160 }} size="small"
+            onChange={(v) => onAddGroup?.(v)} value={null}
+          >
+            {approverGroups.map((g) => <Select.Option key={g.id} value={g.id}>{g.name} ({g.memberIds?.length || 0}명)</Select.Option>)}
+          </Select>
+        )}
         <Input.Group compact>
           <Input
             size="small" placeholder="직급/직책 (예: 팀장)" style={{ width: 130 }}
@@ -141,9 +168,13 @@ export function ApprovalLineEditor({
       ) : line.map((step, i) => (
         <div key={step.key || i} style={{ padding: '4px 0', borderBottom: '1px dashed #f0f0f0' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {step.kind === 'rule'
-              ? <Tag color="geekblue" style={{ margin: 0 }}>규칙: {step.position} · {SCOPE_OPTIONS.find((o) => o.value === step.scope)?.label}</Tag>
-              : <Text style={{ fontSize: 13, minWidth: 90 }}>{step.approverName}</Text>}
+            {step.kind === 'rule' && (
+              <Tag color="geekblue" style={{ margin: 0 }}>규칙: {step.position} · {SCOPE_OPTIONS.find((o) => o.value === step.scope)?.label}</Tag>
+            )}
+            {step.kind === 'group' && (
+              <Tag color="purple" style={{ margin: 0 }}>그룹: {step.groupName}</Tag>
+            )}
+            {step.kind === 'user' && <Text style={{ fontSize: 13, minWidth: 90 }}>{step.approverName}</Text>}
             <Select size="small" value={step.type} style={{ width: 78 }} onChange={(v) => onSetRole(i, v)} options={ROLE_OPTIONS} />
             {step.type === 'reference'
               ? <Text type="secondary" style={{ fontSize: 13, width: 56 }}>열람</Text>

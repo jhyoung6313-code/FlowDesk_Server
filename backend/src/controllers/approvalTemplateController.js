@@ -1,6 +1,49 @@
 const prisma = require('../lib/prisma');
 const { resolvePresetLine } = require('../services/approvalLine');
 
+const FREEFORM_CODE = 'FREE';
+const FREEFORM_TYPE_NAME = '빠른 결재(자유양식)';
+const FREEFORM_TEMPLATE_NAME = '자유 양식';
+
+// GET /api/approval-templates/freeform — 관리자가 미리 양식을 만들어두지 않아도 누구나 바로 쓸 수
+// 있는 시스템 기본 "자유 양식"(제목+본문만)을 가져온다. 없으면 최초 요청 시 1회 자동 생성한다.
+const getFreeform = async (req, res, next) => {
+  try {
+    // orderBy id asc — 동시 요청으로 중복 생성되는 극히 드문 레이스가 있어도(소규모 팀 동시
+    // 최초 사용) 항상 가장 먼저 만들어진 행으로 수렴시켜 어떤 요청이든 같은 템플릿을 반환한다.
+    let template = await prisma.approvalTemplate.findFirst({
+      where: { code: FREEFORM_CODE, isActive: true },
+      orderBy: { id: 'asc' },
+      include: { formType: { select: { id: true, name: true } } },
+    });
+    if (!template) {
+      let formType = await prisma.approvalFormType.findFirst({ where: { name: FREEFORM_TYPE_NAME }, orderBy: { id: 'asc' } });
+      if (!formType) {
+        formType = await prisma.approvalFormType.create({
+          data: { name: FREEFORM_TYPE_NAME, icon: '⚡', order: -1, createdBy: req.user.id },
+        });
+      }
+      template = await prisma.approvalTemplate.create({
+        data: {
+          formTypeId: formType.id,
+          name: FREEFORM_TEMPLATE_NAME,
+          description: '별도 양식 없이 제목과 본문만으로 바로 결재를 올립니다.',
+          fieldsJson: JSON.stringify([
+            { id: 'content', type: 'textarea', label: '내용', required: true, width: 'full' },
+          ]),
+          lineJson: null,
+          code: FREEFORM_CODE,
+          createdBy: req.user.id,
+        },
+        include: { formType: { select: { id: true, name: true } } },
+      });
+    }
+    res.json(template);
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /api/approval-templates  (query: formTypeId)
 const list = async (req, res, next) => {
   try {
@@ -160,4 +203,4 @@ const remove = async (req, res, next) => {
   }
 };
 
-module.exports = { list, get, create, update, remove, resolveLine };
+module.exports = { list, get, create, update, remove, resolveLine, getFreeform };

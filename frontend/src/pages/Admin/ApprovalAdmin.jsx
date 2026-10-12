@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Tabs, Table, Button, Space, Typography, Popconfirm, message, Modal,
-  Form, Input, Select, Switch, Card, Divider, Tag, InputNumber, Radio, Checkbox, Row, Col,
+  Form, Input, Select, Switch, Card, Divider, Tag, InputNumber, Radio, Checkbox, Row, Col, Statistic, DatePicker,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, PlusCircleOutlined, MinusCircleOutlined,
@@ -11,8 +11,11 @@ import {
   getApprovalFormTypes, createApprovalFormType, updateApprovalFormType, deleteApprovalFormType,
   getApprovalTemplates, createApprovalTemplate, updateApprovalTemplate, deleteApprovalTemplate,
   getApprovalTemplate,
+  getApprovalApproverGroups, createApprovalApproverGroup, updateApprovalApproverGroup, deleteApprovalApproverGroup,
+  getApprovalStats,
 } from '../../api/approval';
 import { getUsers } from '../../api/users';
+import { buildUserOptions, filterUserOption, getMyDepartment } from '../../utils/userOptions';
 import dayjs from 'dayjs';
 import {
   ROLE_OPTIONS, SCOPE_OPTIONS, useApprovalLine, parseApprovalLine, serializeApprovalLine, ApprovalLineEditor,
@@ -98,10 +101,18 @@ function FormTypeTab() {
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [ftUsers, setFtUsers] = useState([]);
-  const { line: ftLine, setLine: setFtLine, addUser: ftAddUserRaw, addRule: ftAddRule, remove: ftRemove, setRole: ftSetRole, setGroup: ftSetGroup } = useApprovalLine();
+  const [ftApproverGroups, setFtApproverGroups] = useState([]);
+  const {
+    line: ftLine, setLine: setFtLine, addUser: ftAddUserRaw, addRule: ftAddRule, addGroup: ftAddGroupRaw,
+    remove: ftRemove, setRole: ftSetRole, setGroup: ftSetGroup,
+  } = useApprovalLine();
   const ftAddUser = (uid) => ftAddUserRaw(ftUsers, uid);
+  const ftAddGroup = (gid) => ftAddGroupRaw(ftApproverGroups, gid);
 
-  useEffect(() => { getUsers().then(setFtUsers).catch(() => {}); }, []);
+  useEffect(() => {
+    getUsers().then(setFtUsers).catch(() => {});
+    getApprovalApproverGroups().then(setFtApproverGroups).catch(() => {});
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -116,7 +127,7 @@ function FormTypeTab() {
   const openEdit = (rec) => {
     setEditing(rec);
     form.setFieldsValue({ name: rec.name, description: rec.description, parentId: rec.parentId || undefined, icon: rec.icon || undefined, isActive: rec.isActive });
-    setFtLine(parseApprovalLine(rec.lineJson, ftUsers));
+    setFtLine(parseApprovalLine(rec.lineJson, ftUsers, ftApproverGroups));
     setModalOpen(true);
   };
 
@@ -212,8 +223,8 @@ function FormTypeTab() {
           이 종류의 <b>공통 기본 결재선</b>입니다. 하위 양식(템플릿)에 자체 결재선이 없으면 이 결재선이 상속됩니다.
         </Text>
         <ApprovalLineEditor
-          users={ftUsers} line={ftLine}
-          onAddUser={ftAddUser} onAddRule={ftAddRule} onRemove={ftRemove}
+          users={ftUsers} line={ftLine} approverGroups={ftApproverGroups}
+          onAddUser={ftAddUser} onAddRule={ftAddRule} onAddGroup={ftAddGroup} onRemove={ftRemove}
           onSetRole={ftSetRole} onSetGroup={ftSetGroup}
         />
       </Modal>
@@ -232,11 +243,13 @@ function TemplateTab() {
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [fields, setFields] = useState([]);
+  const [approverGroups, setApproverGroups] = useState([]);
   const {
-    line: defaultLine, setLine: setDefaultLine, addUser: addApproverRaw, addRule: addRuleRaw,
+    line: defaultLine, setLine: setDefaultLine, addUser: addApproverRaw, addRule: addRuleRaw, addGroup: addGroupRaw,
     remove: removeApprover, setRole: setLineRole, setGroup: setLineGroup, toggleCondition, setCondition,
   } = useApprovalLine();
   const addApprover = (userId) => addApproverRaw(users, userId);
+  const addGroup = (gid) => addGroupRaw(approverGroups, gid);
   const [previewTpl, setPreviewTpl] = useState(null);
   const [sampleValues, setSampleValues] = useState({});
 
@@ -250,12 +263,13 @@ function TemplateTab() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [typeList, tplList, userList] = await Promise.all([
-        getApprovalFormTypes(), getApprovalTemplates(), getUsers(),
+      const [typeList, tplList, userList, groupList] = await Promise.all([
+        getApprovalFormTypes(), getApprovalTemplates(), getUsers(), getApprovalApproverGroups(),
       ]);
       setTypes(typeList);
       setTemplates(tplList);
       setUsers(userList);
+      setApproverGroups(groupList);
     } catch { message.error('목록을 불러오지 못했습니다.'); }
     finally { setLoading(false); }
   }, []);
@@ -276,7 +290,7 @@ function TemplateTab() {
     try {
       const full = await getApprovalTemplate(rec.id);
       setFields(full.fieldsJson ? JSON.parse(full.fieldsJson) : []);
-      setDefaultLine(parseApprovalLine(full.lineJson, users));
+      setDefaultLine(parseApprovalLine(full.lineJson, users, approverGroups));
     } catch {}
     setModalOpen(true);
   };
@@ -287,7 +301,7 @@ function TemplateTab() {
       const full = await getApprovalTemplate(rec.id);
       form.setFieldsValue({ formTypeId: full.formType?.id, name: `${full.name} (복사)`, description: full.description, code: full.code });
       setFields(full.fieldsJson ? JSON.parse(full.fieldsJson) : []);
-      setDefaultLine(parseApprovalLine(full.lineJson, users));
+      setDefaultLine(parseApprovalLine(full.lineJson, users, approverGroups));
     } catch { message.error('복제할 템플릿을 불러오지 못했습니다.'); return; }
     setModalOpen(true);
   };
@@ -474,9 +488,30 @@ function TemplateTab() {
           지정 사용자 또는 직급/직책 규칙으로 프리셋을 만들면, 기안 시 기안자의 조직 기준으로 자동 지정됩니다.
           같은 <b>차수</b>는 병렬 결재입니다.
         </Text>
+        <Select
+          size="small" allowClear placeholder="다른 양식에서 결재선 복사"
+          style={{ width: 220, marginBottom: 8 }}
+          value={null}
+          onChange={async (srcId) => {
+            if (!srcId) return;
+            try {
+              const full = await getApprovalTemplate(srcId);
+              // 템플릿 자체에 결재선이 없으면 상위 '양식 종류'의 기본 결재선을 상속해 쓴다
+              // (백엔드 resolvePresetLine과 동일한 폴백 규칙) — 이걸 빼먹으면 상속으로 동작하는
+              // 템플릿을 "복사"했을 때 조용히 빈 결재선이 복사된다.
+              const lineJson = full.lineJson || types.find(t => t.id === full.formType?.id)?.lineJson || null;
+              setDefaultLine(parseApprovalLine(lineJson, users, approverGroups));
+              message.success(`'${full.name}'의 결재선을 복사했습니다.`);
+            } catch { message.error('결재선을 불러오지 못했습니다.'); }
+          }}
+        >
+          {templates.filter(t => t.id !== editing?.id).map(t => (
+            <Select.Option key={t.id} value={t.id}>{t.formType?.name ? `${t.formType.name} / ` : ''}{t.name}</Select.Option>
+          ))}
+        </Select>
         <ApprovalLineEditor
-          users={users} line={defaultLine}
-          onAddUser={addApprover} onAddRule={addRuleRaw} onRemove={removeApprover}
+          users={users} line={defaultLine} approverGroups={approverGroups}
+          onAddUser={addApprover} onAddRule={addRuleRaw} onAddGroup={addGroup} onRemove={removeApprover}
           onSetRole={setLineRole} onSetGroup={setLineGroup}
           withCondition onToggleCondition={toggleCondition} onSetCondition={setCondition}
           conditionFieldOptions={conditionFieldOptions}
@@ -553,6 +588,186 @@ function TemplateTab() {
   );
 }
 
+// ── 결재자 그룹 탭 — "구매팀 전체", "임원진" 같은 재사용 가능한 사용자 묶음을 관리한다.
+// 결재선 어디에나(양식종류·템플릿 기본 결재선) 그룹 하나로 끼워 넣을 수 있고, 조직 변경 시
+// 여기 멤버만 고치면 그 그룹을 쓰는 모든 양식에 자동 반영된다.
+function ApproverGroupTab() {
+  const [groups, setGroups] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [form] = Form.useForm();
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [groupList, userList] = await Promise.all([getApprovalApproverGroups(), getUsers()]);
+      setGroups(groupList);
+      setUsers(userList);
+    } catch { message.error('목록을 불러오지 못했습니다.'); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const openCreate = () => { setEditing(null); form.resetFields(); setModalOpen(true); };
+  const openEdit = (rec) => {
+    setEditing(rec);
+    form.setFieldsValue({ name: rec.name, memberIds: rec.memberIds });
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    try {
+      const values = await form.validateFields();
+      setSaving(true);
+      if (editing) {
+        await updateApprovalApproverGroup(editing.id, values);
+        message.success('수정되었습니다.');
+      } else {
+        await createApprovalApproverGroup(values);
+        message.success('생성되었습니다.');
+      }
+      setModalOpen(false);
+      load();
+    } catch (err) {
+      if (err?.errorFields) return;
+      message.error(err?.response?.data?.error || '저장 실패');
+    } finally { setSaving(false); }
+  };
+
+  const handleDelete = async (id) => {
+    try { await deleteApprovalApproverGroup(id); message.success('삭제되었습니다.'); load(); }
+    catch { message.error('삭제 실패'); }
+  };
+
+  const columns = [
+    { title: '이름', dataIndex: 'name' },
+    {
+      title: '멤버', dataIndex: 'memberIds',
+      render: (ids) => (
+        <Space size={[4, 4]} wrap>
+          {(ids || []).map((id) => {
+            const u = users.find((x) => x.id === id);
+            return <Tag key={id} color={u ? undefined : 'default'}>{u?.displayName || `사용자 ${id}`}</Tag>;
+          })}
+        </Space>
+      ),
+    },
+    {
+      title: '관리', key: 'actions', width: 100,
+      render: (_, rec) => (
+        <Space>
+          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(rec)} />
+          <Popconfirm title="삭제하시겠습니까? (이 그룹을 쓰는 결재선은 그룹을 못 찾게 됩니다)" onConfirm={() => handleDelete(rec.id)} okText="삭제" cancelText="취소">
+            <Button size="small" danger icon={<DeleteOutlined />} />
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <Button type="primary" size="small" icon={<PlusOutlined />} onClick={openCreate}>추가</Button>
+      </div>
+      <Table dataSource={groups} columns={columns} rowKey="id" loading={loading} size="small" pagination={false} />
+      <Modal title={editing ? '결재자 그룹 수정' : '결재자 그룹 추가'} open={modalOpen} onOk={handleSave} onCancel={() => setModalOpen(false)} confirmLoading={saving} okText="저장" cancelText="취소">
+        <Form form={form} layout="vertical" style={{ marginTop: 8 }}>
+          <Form.Item name="name" label="그룹 이름" rules={[{ required: true, message: '이름을 입력하세요.' }]}>
+            <Input placeholder="예) 구매팀 전체, 임원진" />
+          </Form.Item>
+          <Form.Item name="memberIds" label="멤버" rules={[{ required: true, message: '1명 이상 선택하세요.' }]}>
+            <Select mode="multiple" showSearch allowClear placeholder="멤버 선택"
+              filterOption={filterUserOption}
+              options={buildUserOptions(users, getMyDepartment())} />
+          </Form.Item>
+        </Form>
+      </Modal>
+    </>
+  );
+}
+
+// ── 결재 현황 탭 — 양식별 처리 현황 + 결재자별 응답 현황(평균 처리시간은 근사치: 순차 결재선의
+// 뒤쪽 단계는 대기 시간까지 포함되어 실제 "검토에 걸린 시간"보다 길게 잡힐 수 있음을 안내).
+function StatsTab() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [range, setRange] = useState(null); // [dayjs, dayjs] | null (null = 전체 기간)
+
+  const load = useCallback((r) => {
+    setLoading(true);
+    const params = r ? { from: r[0].format('YYYY-MM-DD'), to: r[1].format('YYYY-MM-DD') } : undefined;
+    getApprovalStats(params).then(setData).catch(() => message.error('통계를 불러오지 못했습니다.')).finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => { load(range); }, [load, range]);
+
+  const dateFilter = (
+    <Space style={{ marginBottom: 16 }}>
+      <DatePicker.RangePicker value={range} onChange={setRange} allowClear />
+      {range && <Button size="small" onClick={() => setRange(null)}>전체 기간</Button>}
+    </Space>
+  );
+
+  if (loading || !data) return <>{dateFilter}<Typography.Text type="secondary">불러오는 중...</Typography.Text></>;
+
+  const totals = data.byTemplate.reduce((acc, t) => ({
+    total: acc.total + t.total, pending: acc.pending + t.pending, overdue: acc.overdue + t.overdue,
+  }), { total: 0, pending: 0, overdue: 0 });
+
+  const templateColumns = [
+    { title: '양식', render: (_, r) => <span>{r.formTypeName} / {r.templateName}</span> },
+    { title: '전체', dataIndex: 'total', width: 70 },
+    { title: '승인', dataIndex: 'approved', width: 70, render: v => <Tag color="success">{v}</Tag> },
+    { title: '반려', dataIndex: 'rejected', width: 70, render: v => v > 0 ? <Tag color="error">{v}</Tag> : v },
+    { title: '진행중', dataIndex: 'pending', width: 70 },
+    { title: '기한초과', dataIndex: 'overdue', width: 80, render: v => v > 0 ? <Tag color="orange">{v}</Tag> : v },
+    { title: '평균 처리시간', dataIndex: 'avgTurnaroundHours', render: v => v == null ? '-' : `${v}시간` },
+  ];
+
+  const approverColumns = [
+    { title: '결재자', dataIndex: 'displayName' },
+    { title: '현재 대기', dataIndex: 'pendingNow', width: 80 },
+    { title: '승인 처리', dataIndex: 'approvedCount', width: 80 },
+    { title: '반려 처리', dataIndex: 'rejectedCount', width: 80 },
+    { title: '평균 응답시간', dataIndex: 'avgResponseHours', render: v => v == null ? '-' : `${v}시간` },
+  ];
+
+  return (
+    <div>
+      {dateFilter}
+      <Row gutter={16} style={{ marginBottom: 16 }}>
+        <Col span={8}><Card size="small"><Statistic title="전체 문서" value={totals.total} /></Card></Col>
+        <Col span={8}><Card size="small"><Statistic title="진행 중" value={totals.pending} /></Card></Col>
+        <Col span={8}><Card size="small"><Statistic title="기한 초과" value={totals.overdue} valueStyle={totals.overdue > 0 ? { color: '#cf1322' } : undefined} /></Card></Col>
+      </Row>
+      <Typography.Title level={5} style={{ fontSize: 14 }}>양식별 현황</Typography.Title>
+      <Table dataSource={data.byTemplate} columns={templateColumns} rowKey="templateId" size="small" pagination={false} style={{ marginBottom: 24 }} />
+      <Typography.Title level={5} style={{ fontSize: 14 }}>
+        결재자별 현황
+        <Typography.Text type="secondary" style={{ fontSize: 12, fontWeight: 400, marginLeft: 8 }}>
+          (평균 응답시간은 근사치 — 순차 결재선 뒤쪽 단계는 대기 시간이 섞여 실제보다 길게 보일 수 있음)
+        </Typography.Text>
+      </Typography.Title>
+      <Table dataSource={data.byApprover} columns={approverColumns} rowKey="userId" size="small" pagination={false} />
+      {data.byRejectCategory?.length > 0 && (
+        <>
+          <Typography.Title level={5} style={{ fontSize: 14, marginTop: 24 }}>반려 사유 분류</Typography.Title>
+          <Space size={[8, 8]} wrap>
+            {data.byRejectCategory.map(r => (
+              <Tag key={r.category} color={r.category === '미분류' ? 'default' : 'error'}>{r.category} {r.count}건</Tag>
+            ))}
+          </Space>
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function ApprovalAdmin() {
   return (
     <div style={{ padding: '20px 24px' }}>
@@ -561,6 +776,8 @@ export default function ApprovalAdmin() {
         items={[
           { key: 'types', label: '결재 양식 종류', children: <FormTypeTab /> },
           { key: 'templates', label: '양식 템플릿', children: <TemplateTab /> },
+          { key: 'approverGroups', label: '결재자 그룹', children: <ApproverGroupTab /> },
+          { key: 'stats', label: '결재 현황', children: <StatsTab /> },
         ]}
       />
     </div>

@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 
 const prisma = require('../lib/prisma');
+const userCache = require('../lib/userCache');
 
 const SIGNATURE_DIR = path.join(__dirname, '../../uploads/signatures');
 if (!fs.existsSync(SIGNATURE_DIR)) fs.mkdirSync(SIGNATURE_DIR, { recursive: true });
@@ -91,6 +92,7 @@ const update = async (req, res, next) => {
       data,
       select: USER_SELECT,
     });
+    userCache.invalidate(user.id);
     res.json(user);
   } catch (err) {
     next(err);
@@ -108,6 +110,7 @@ const deactivate = async (req, res, next) => {
       data: { isActive: false },
       select: { id: true, username: true, displayName: true, role: true, isActive: true },
     });
+    userCache.invalidate(user.id);
     res.json(user);
   } catch (err) {
     next(err);
@@ -122,6 +125,7 @@ const activate = async (req, res, next) => {
       data: { isActive: true },
       select: { id: true, username: true, displayName: true, role: true, isActive: true },
     });
+    userCache.invalidate(user.id);
     res.json(user);
   } catch (err) {
     next(err);
@@ -152,10 +156,14 @@ const resetPassword = async (req, res, next) => {
     const { id } = req.params;
     const tempPassword = generateTempPassword();
     const passwordHash = await bcrypt.hash(tempPassword, AUTH.BCRYPT_ROUNDS);
+    // passwordChangedAt을 갱신해야 auth.js의 `pwAt > decoded.pwAt` 체크가 트리거되어
+    // 기존에 발급된 토큰이 무효화된다 — 이게 없으면 "탈취 의심 계정 강제 초기화"가
+    // 공격자가 이미 쥔 토큰에는 아무 효과가 없다.
     await prisma.user.update({
       where: { id: Number(id) },
-      data: { passwordHash },
+      data: { passwordHash, passwordChangedAt: new Date(), mustChangePassword: true },
     });
+    userCache.invalidate(Number(id));
     res.json({ tempPassword });
   } catch (err) {
     next(err);
@@ -174,6 +182,7 @@ const updateAvatarColor = async (req, res, next) => {
       data: { avatarColor: color },
       select: USER_SELECT,
     });
+    userCache.invalidate(req.user.id);
     res.json(user);
   } catch (err) {
     next(err);

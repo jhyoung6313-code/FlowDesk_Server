@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const routes = require('./routes');
 const { scheduleNotifications } = require('./services/notificationService');
 const { scheduleRetention } = require('./services/retentionService');
+const { scheduleAutoBackup } = require('./services/backupScheduler');
 const { scheduleAnomalyScan } = require('./services/anomalyService');
 const { auditForbidden } = require('./middlewares/auditLogger');
 const { piiGuard } = require('./middlewares/piiGuard');
@@ -152,6 +153,7 @@ server.listen(PORT, () => {
   scheduleNotifications();
   scheduleRetention();    // 데이터 보유기간 자동 파기
   scheduleAnomalyScan();  // 비정상 접근 탐지
+  scheduleAutoBackup();   // 백업 자동 스케줄링(F-44)
   startScheduledMessageSender(io);
 });
 

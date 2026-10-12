@@ -9,6 +9,7 @@ const prisma = require('../lib/prisma');
 const { pushNotification } = require('./sseService');
 const emailService = require('./emailService');
 const linkedRoomService = require('./linkedRoomService');
+const { isEmailOptedOut } = require('./emailPreference');
 
 // ── 이벤트 · 액션 카탈로그 (프론트 자동화 편집기 드롭다운용) ──────────────────
 const EVENT_CATALOG = [
@@ -124,9 +125,16 @@ async function runAction(action, ctx, rule) {
       const usernames = toArray(cfg.toUsernames);
       const subject = render(cfg.subject || '[Flowdesk] 자동 알림', ctx);
       const html = render(cfg.body || '', ctx);
-      const oks = await Promise.all(usernames.map((u) => emailService.sendGenericEmail(u, subject, html)));
+      // approvalController/notificationService의 결재 이메일은 이미 "알림 이메일 받지 않기"
+      // 설정(isEmailOptedOut)을 존중하는데, 자동화 규칙의 이메일 액션만 이 설정을 무시하고
+      // 무조건 발송하고 있었다 — 사용자 수신거부 설정에 구멍이 생기는 지점.
+      const recipients = await prisma.user.findMany({ where: { username: { in: usernames } }, select: { id: true, username: true } });
+      const optOutFlags = await Promise.all(recipients.map((u) => isEmailOptedOut(u.id)));
+      const optedOutUsernames = new Set(recipients.filter((_, i) => optOutFlags[i]).map((u) => u.username));
+      const targets = usernames.filter((u) => !optedOutUsernames.has(u));
+      const oks = await Promise.all(targets.map((u) => emailService.sendGenericEmail(u, subject, html)));
       const sent = oks.filter(Boolean).length;
-      return `email → ${sent}/${usernames.length}건`;
+      return `email → ${sent}/${usernames.length}건${optedOutUsernames.size ? ` (수신거부 ${optedOutUsernames.size}건 제외)` : ''}`;
     }
     case 'chat': {
       const roomId = Number(cfg.roomId);

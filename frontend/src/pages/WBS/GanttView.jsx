@@ -37,6 +37,7 @@ function flattenToGantt(nodes, parentId = undefined) {
       const indent = LEVEL_INDENT[lvl] ?? '        ';
       const displayName = `${indent}${prefix} ${node.name || '(무제)'}`;
 
+      const critical = !!node.isCritical;
       result.push({
         id: String(node.id),
         name: displayName,
@@ -45,12 +46,13 @@ function flattenToGantt(nodes, parentId = undefined) {
         progress,
         type: hasChildren ? 'project' : 'task',
         project: parentId ? String(parentId) : undefined,
+        dependencies: (node.predecessorIds || []).map(String),
         isDisabled: true,
         styles: {
-          backgroundColor: lc.bar,
-          backgroundSelectedColor: lc.bar,
-          progressColor: lc.progress,
-          progressSelectedColor: lc.progress,
+          backgroundColor: critical ? '#ff4d4f' : lc.bar,
+          backgroundSelectedColor: critical ? '#ff4d4f' : lc.bar,
+          progressColor: critical ? '#ffa39e' : lc.progress,
+          progressSelectedColor: critical ? '#ffa39e' : lc.progress,
         },
       });
     }
@@ -75,7 +77,13 @@ function flattenAll(nodes) {
 export default function GanttView({ tasks, project }) {
   const [viewMode, setViewMode] = useState(ViewMode.Week);
 
-  const ganttTasks = useMemo(() => flattenToGantt(tasks || []), [tasks]);
+  const ganttTasks = useMemo(() => {
+    const flat = flattenToGantt(tasks || []);
+    const ids = new Set(flat.map((t) => t.id));
+    // 선행작업이 간트에 표시되지 않는 항목(날짜 미입력 등)을 가리키면 라이브러리 오류를 막기 위해 제외
+    flat.forEach((t) => { t.dependencies = (t.dependencies || []).filter((d) => ids.has(d)); });
+    return flat;
+  }, [tasks]);
 
   if (!ganttTasks.length) {
     return (
@@ -146,6 +154,7 @@ export default function GanttView({ tasks, project }) {
         <span><span style={{ display:'inline-block', width:12, height:12, background:'#2e7d32', borderRadius:2, marginRight:4, verticalAlign:'middle' }} />대분류</span>
         <span><span style={{ display:'inline-block', width:12, height:12, background:'#43a047', borderRadius:2, marginRight:4, verticalAlign:'middle' }} />중분류</span>
         <span><span style={{ display:'inline-block', width:12, height:12, background:'#66bb6a', borderRadius:2, marginRight:4, verticalAlign:'middle' }} />소분류</span>
+        <span><span style={{ display:'inline-block', width:12, height:12, background:'#ff4d4f', borderRadius:2, marginRight:4, verticalAlign:'middle' }} />크리티컬패스(여유시간 0)</span>
         <span style={{ marginLeft: 'auto' }}>
           <span style={{ display:'inline-block', width:12, height:12, background:'rgba(46,125,50,0.08)', border:'1px solid #2e7d32', marginRight:4, verticalAlign:'middle' }} />
           오늘

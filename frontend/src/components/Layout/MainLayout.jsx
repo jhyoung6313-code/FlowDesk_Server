@@ -12,6 +12,10 @@ import NotificationToast from '../Notification/NotificationToast';
 import CommandPalette from '../common/CommandPalette';
 import useNotificationStore from '../../store/notificationStore';
 import useThemeStore from '../../store/themeStore';
+import useUnreadStore from '../../store/unreadStore';
+import useAuthStore from '../../store/authStore';
+import { getApprovalPendingCount } from '../../api/approval';
+import { getUnreadCount as getMailUnreadCount } from '../../api/mail';
 
 const { Content } = Layout;
 
@@ -50,6 +54,22 @@ export default function MainLayout() {
   const addSSENotification = useNotificationStore((s) => s.addSSENotification);
   const esRef = useRef(null);
   const reconnectTimer = useRef(null);
+  const user = useAuthStore((s) => s.user);
+  const setApprovalPending = useUnreadStore((s) => s.setApprovalPending);
+  const setMailUnread = useUnreadStore((s) => s.setMailUnread);
+
+  // 전자결재 대기건수 / 메일 안읽음 폴링 — AppHeader·Sidebar가 각각 60초마다
+  // 중복 호출하던 것을 레이아웃 최상단에서 한 번만 돌려 공유 스토어에 반영한다.
+  useEffect(() => {
+    if (!user) return;
+    const sync = () => {
+      getApprovalPendingCount().then((r) => setApprovalPending(r.count || 0)).catch(() => {});
+      getMailUnreadCount().then((r) => setMailUnread(r.count || 0)).catch(() => {});
+    };
+    sync();
+    const timer = setInterval(sync, 60000);
+    return () => clearInterval(timer);
+  }, [user, setApprovalPending, setMailUnread]);
 
   useEffect(() => {
     fetchNotifications();

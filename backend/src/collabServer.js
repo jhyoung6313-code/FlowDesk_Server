@@ -7,6 +7,7 @@ const { WebSocketServer } = require('ws');
 const jwt = require('jsonwebtoken');
 const { setupWSConnection, setPersistence } = require('y-websocket/bin/utils');
 const prisma = require('./lib/prisma');
+const userCache = require('./lib/userCache');
 
 // DB 저장은 클라이언트가 담당하므로 서버측 영속화는 no-op이면 충분하다. 하지만 persistence가
 // null이면 y-websocket의 closeConn()이 "마지막 연결 종료 시 문서를 메모리에서 제거"하는 분기를
@@ -98,10 +99,10 @@ function setupCollab(server) {
 
     // 문서 단위 권한 검증(REST API와 동일 규칙) — 비공개 스페이스·기밀 문서·비참석 회의는 거부
     try {
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.userId },
-        select: { id: true, role: true, isActive: true, passwordChangedAt: true, sessionNonce: true },
-      });
+      // y-websocket은 네트워크 끊김/탭 백그라운드 등으로 자주 재연결하므로, 매 업그레이드마다
+      // DB를 직접 치면 200명 동시접속 환경에서 auth.js/socket.js와 동일한 핫 패스 부하가 생긴다.
+      // 공유 TTL 캐시를 재사용한다.
+      const user = await userCache.getUser(decoded.userId);
       if (!user || !user.isActive) throw new Error('inactive');
       // REST의 authenticate 미들웨어와 동일하게 비밀번호 변경(탈취 토큰 차단)·중복 로그인(단일세션,
       // F-57) 무효화를 여기서도 검증한다 — 이게 없으면 REST에서는 즉시 401로 끊기는 토큰이

@@ -55,9 +55,12 @@ model User {
   recurringTasks   RecurringTask[]
   assignedTasks    TaskAssignee[]
   taskAttachments  TaskAttachment[]  @relation("AttachmentUploader")
+  documentFavorites DocumentFavorite[]
   taskComments     TaskComment[]
   taskHistories    TaskHistory[]     @relation("HistoryUser")
+  approvalDocumentHistories ApprovalDocumentHistory[] @relation("ApprovalHistoryUser")
   taskTemplates    TaskTemplate[]
+  taskTemplateSets TaskTemplateSet[]
   createdTasks     Task[]            @relation("TaskCreator")
   timeEntries      TimeEntry[]
   ledgerEntries    LedgerEntry[]
@@ -97,6 +100,7 @@ model User {
   bbsAttachments       BbsAttachment[]        @relation("BbsAttachmentUploader")
   approvalFormTypes    ApprovalFormType[]     @relation("ApprovalFormTypeCreator")
   approvalTemplates    ApprovalTemplate[]     @relation("ApprovalTemplateCreator")
+  approvalApproverGroups ApprovalApproverGroup[] @relation("ApprovalApproverGroupCreator")
   approvalDocuments    ApprovalDocument[]     @relation("ApprovalDocumentCreator")
   approvalSteps        ApprovalStep[]         @relation("ApprovalStepApprover")
   approvalComments     ApprovalComment[]      @relation("ApprovalCommentUser")
@@ -182,6 +186,9 @@ model Task {
   timeEntries     TimeEntry[]
   boardCards      BoardCard[]
 
+  @@index([delYn, status])
+  @@index([dueDate])
+  @@index([createdBy])
   @@map("tasks")
 }
 
@@ -236,6 +243,8 @@ model Notification {
   user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   actor      User?            @relation("NotificationActor", fields: [actorId], references: [id], onDelete: SetNull)
 
+  @@index([userId, isRead])
+  @@index([delYn, createdAt])
   @@map("notifications")
 }
 
@@ -447,6 +456,10 @@ model WbsTask {
   deliverable         String?    @db.VarChar(200)
   deliverableFile     String?    @map("deliverable_file") @db.VarChar(500)
   deliverableOrigName String?    @map("deliverable_orig_name") @db.VarChar(500)
+  deliverableMime     String?    @map("deliverable_mime") @db.VarChar(120)
+  deliverableSize     Int?       @map("deliverable_size")
+  deliverableUploadedBy Int?     @map("deliverable_uploaded_by") // users 테이블 FK 미설정(wbs_project_members와 동일 패턴, 외부 인원 허용)
+  deliverableUploadedAt DateTime? @map("deliverable_uploaded_at")
   startDate       DateTime?  @map("start_date") @db.Date
   endDate         DateTime?  @map("end_date") @db.Date
   plannedProgress Decimal    @default(0) @map("planned_progress") @db.Decimal(5, 2)
@@ -457,6 +470,8 @@ model WbsTask {
   parent          WbsTask?   @relation("WbsTaskChildren", fields: [parentId], references: [id], onDelete: Cascade)
   children        WbsTask[]  @relation("WbsTaskChildren")
   project         WbsProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  predecessors    WbsTaskDependency[] @relation("WbsSuccessor")
+  successors      WbsTaskDependency[] @relation("WbsPredecessor")
 
   @@map("wbs_tasks")
 }
@@ -513,13 +528,30 @@ model TaskTemplate {
   durationDays    Int?     @map("duration_days")
   assigneeIdsJson String?  @map("assignee_ids_json")
   extraNamesJson  String?  @map("extra_names_json")
+  setId           Int?     @map("set_id") // 템플릿 세트(F-41 확장) 소속 — null이면 단독 템플릿
+  dayOffset       Int      @default(0) @map("day_offset") // 세트 적용 시 기준일(킥오프일) + N일을 마감일로 사용
   createdBy       Int      @map("created_by")
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
   creator         User     @relation(fields: [createdBy], references: [id])
   part            Team?    @relation(fields: [partId], references: [id])
+  set             TaskTemplateSet? @relation(fields: [setId], references: [id], onDelete: SetNull)
 
   @@map("task_templates")
+}
+
+/// 템플릿 세트(F-41 확장) — 여러 업무 템플릿을 묶어 "새 프로젝트 킥오프" 등 한 번에 생성
+model TaskTemplateSet {
+  id          Int            @id @default(autoincrement())
+  name        String         @db.VarChar(100)
+  description String?
+  createdBy   Int            @map("created_by")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  creator     User           @relation(fields: [createdBy], references: [id])
+  items       TaskTemplate[]
+
+  @@map("task_template_sets")
 }
 
 model Milestone {
@@ -822,6 +854,8 @@ model ChatMessage {
   savedBy         ChatSavedMessage[]
   pinnedIn        ChatPinnedMessage[]
 
+  @@index([roomId, createdAt])
+  @@index([parentId])
   @@map("chat_messages")
 }
 
@@ -1500,6 +1534,21 @@ enum ApprovalStepStatus {
   skipped
 }
 
+/// 재사용 가능한 결재자 그룹("구매팀 전체", "임원진" 등) — 결재선에 그룹 하나로 끼워 넣으면
+/// 상신 시점에 현재 멤버 전원으로 확장된다(같은 차수=병렬). 조직 변경 시 그룹 하나만 고치면
+/// 그 그룹을 쓰는 모든 양식에 반영된다(양식마다 결재선을 따로 고칠 필요 없음).
+model ApprovalApproverGroup {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  memberIds Int[]    @map("member_ids")
+  createdBy Int      @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  creator   User     @relation("ApprovalApproverGroupCreator", fields: [createdBy], references: [id])
+
+  @@map("approval_approver_groups")
+}
+
 model ApprovalFormType {
   id          Int               @id @default(autoincrement())
   name        String            @db.VarChar(100)
@@ -1550,6 +1599,9 @@ model ApprovalDocument {
   totalSteps  Int                  @default(0) @map("total_steps")
   docNo        String?             @map("doc_no") @db.VarChar(30)
   rejectedStep Int?                @map("rejected_step")
+  rejectReasonCategory String?     @map("reject_reason_category") @db.VarChar(30)
+  groupPolicyJson String?          @map("group_policy_json") @db.Text
+  fieldsJsonSnap String?           @map("fields_json_snap") @db.Text
   isUrgent    Boolean              @default(false) @map("is_urgent")
   dueDate     DateTime?            @map("due_date")
   createdBy   Int                  @map("created_by")
@@ -1561,6 +1613,7 @@ model ApprovalDocument {
   steps       ApprovalStep[]
   attachments ApprovalAttachment[]
   comments    ApprovalComment[]
+  histories   ApprovalDocumentHistory[]
 
   @@index([createdBy, delYn])
   @@index([docNo])
@@ -1601,6 +1654,7 @@ model ApprovalStep {
 model ApprovalAttachment {
   id           Int              @id @default(autoincrement())
   documentId   Int              @map("document_id")
+  commentId    Int?             @map("comment_id")
   uploadedBy   Int              @map("uploaded_by")
   originalName String           @map("original_name") @db.VarChar(255)
   storedName   String           @map("stored_name") @db.VarChar(255)
@@ -1608,22 +1662,42 @@ model ApprovalAttachment {
   size         Int
   createdAt    DateTime         @default(now()) @map("created_at")
   document     ApprovalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  comment      ApprovalComment? @relation(fields: [commentId], references: [id], onDelete: SetNull)
   uploader     User             @relation("ApprovalAttachmentUploader", fields: [uploadedBy], references: [id], onDelete: Cascade)
 
   @@map("approval_attachments")
 }
 
 model ApprovalComment {
+  id          Int                  @id @default(autoincrement())
+  documentId  Int                  @map("document_id")
+  userId      Int                  @map("user_id")
+  content     String               @db.Text
+  createdAt   DateTime             @default(now()) @map("created_at")
+  updatedAt   DateTime             @updatedAt @map("updated_at")
+  document    ApprovalDocument     @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  user        User                 @relation("ApprovalCommentUser", fields: [userId], references: [id], onDelete: Cascade)
+  attachments ApprovalAttachment[]
+
+  @@map("approval_comments")
+}
+
+/// 상신 후 결재선 변경(결재자/참조자 추가·제거) 이력 — TaskHistory와 동일한 모양.
+/// "왜 이 사람이 결재선에 있지?"를 나중에 추적할 수 있도록 누가/언제/무엇을 남긴다.
+model ApprovalDocumentHistory {
   id         Int              @id @default(autoincrement())
   documentId Int              @map("document_id")
   userId     Int              @map("user_id")
-  content    String           @db.Text
+  action     String           @db.VarChar(50) // 'step_added' | 'step_removed'
+  field      String?          @db.VarChar(100) // 사람이 읽을 대상자 요약(표시이름 등)
+  oldValue   String?          @map("old_value")
+  newValue   String?          @map("new_value")
   createdAt  DateTime         @default(now()) @map("created_at")
-  updatedAt  DateTime         @updatedAt @map("updated_at")
   document   ApprovalDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  user       User             @relation("ApprovalCommentUser", fields: [userId], references: [id], onDelete: Cascade)
+  user       User             @relation("ApprovalHistoryUser", fields: [userId], references: [id], onDelete: Cascade)
 
-  @@map("approval_comments")
+  @@index([documentId, createdAt])
+  @@map("approval_document_histories")
 }
 
 // ── 사내 메일 ────────────────────────────────────────────────
@@ -2067,4 +2141,30 @@ model FormAnswer {
   @@index([responseId])
   @@index([fieldId])
   @@map("form_answers")
+}
+
+/// WBS 작업 선후행 의존성(크리티컬패스 계산용) — 일반 업무 TaskDependency와 동일 패턴
+model WbsTaskDependency {
+  id            Int     @id @default(autoincrement())
+  predecessorId Int     @map("predecessor_id")
+  successorId   Int     @map("successor_id")
+  predecessor   WbsTask @relation("WbsPredecessor", fields: [predecessorId], references: [id], onDelete: Cascade)
+  successor     WbsTask @relation("WbsSuccessor", fields: [successorId], references: [id], onDelete: Cascade)
+
+  @@unique([predecessorId, successorId])
+  @@map("wbs_task_dependencies")
+}
+
+/// 문서함(F-68) 즐겨찾기 — source(task|board|bbs|approval|mail|wbs) + refId(원본 레코드 PK) 조합을 북마크
+model DocumentFavorite {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  source    String   @db.VarChar(20)
+  refId     Int      @map("ref_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, source, refId])
+  @@index([userId])
+  @@map("document_favorites")
 }

@@ -369,6 +369,16 @@ function assignNumbers(nodes, prefix = '') {
   });
 }
 
+// ─── 선행작업 선택용: 트리를 평평하게(검색 필터 미적용, 전체 작업 대상) ────────────
+function flattenAllTasks(nodes) {
+  const result = [];
+  (nodes || []).forEach((n) => {
+    result.push(n);
+    if (n.children?.length) result.push(...flattenAllTasks(n.children));
+  });
+  return result;
+}
+
 // ─── 검색어로 트리 필터링 (자식 포함 유지) ────────────
 function filterTree(nodes, keyword) {
   if (!keyword) return nodes;
@@ -395,6 +405,7 @@ const LEVEL_CONFIG = [
 
 const DEFAULT_COL_WIDTHS = {
   _num: 72, name: 200, deliverable: 160, duration: 60,
+  predecessors: 160,
   startDate: 90, endDate: 90,
   plannedProgress: 140, actualProgress: 140,
   compliance: 80, delay: 70, memo: 210,
@@ -420,6 +431,7 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
 
   const filteredTasks = useMemo(() => filterTree(tasks || [], searchText), [tasks, searchText]);
   const numbered = useMemo(() => assignNumbers(filteredTasks), [filteredTasks]);
+  const allTasksFlat = useMemo(() => flattenAllTasks(tasks), [tasks]);
 
   // 작업명 → 이슈 목록 맵 (closed 제외한 활성 이슈)
   const issuesByTask = useMemo(() => {
@@ -491,7 +503,10 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
 
   const handleUpdate = async (taskId, field, value) => {
     try {
-      await wbsApi.updateTask(taskId, { [field]: value });
+      const updated = await wbsApi.updateTask(taskId, { [field]: value });
+      // predecessorIds 수정 시 순환/무효 후보가 조용히 제외될 수 있다 — 응답이 성공(200)이어도
+      // 사용자가 요청한 일부 변경이 반영되지 않았을 수 있으므로 warnings를 눈에 보이게 알려준다.
+      if (updated?.warnings?.length) updated.warnings.forEach((w) => message.warning(w));
       onRefresh();
     } catch {
       message.error('수정 실패');
@@ -593,6 +608,11 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
                 onChange={(v) => handleUpdate(record.id, 'name', v)}
                 style={{ color: cfg.textColor, fontWeight: cfg.fontWeight, fontSize: cfg.fontSize }}
               />
+              {record.isCritical && (
+                <Tooltip title="크리티컬패스: 선행작업 체인 중 여유시간이 없어 전체 일정에 직접 영향을 줍니다.">
+                  <Tag color="red" style={{ marginInlineEnd: 0, fontSize: 13, lineHeight: '16px', padding: '0 4px' }}>CP</Tag>
+                </Tooltip>
+              )}
               {hasIssue && (
                 <Tooltip title={`클릭하여 이슈 ${activeIssues.length}건 보기`} placement="right">
                   <span
@@ -651,6 +671,26 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
         />
       ),
     }),
+    withResize('predecessors', {
+      title: '선행작업',
+      dataIndex: 'predecessorIds',
+      key: 'predecessors',
+      render: (_, record) => (
+        <Select
+          mode="multiple"
+          size="small"
+          allowClear
+          placeholder="선행작업 선택"
+          style={{ width: '100%' }}
+          value={record.predecessorIds || []}
+          maxTagCount={1}
+          onChange={(ids) => handleUpdate(record.id, 'predecessorIds', ids)}
+          options={allTasksFlat
+            .filter((t) => t.id !== record.id)
+            .map((t) => ({ value: t.id, label: t.name }))}
+        />
+      ),
+    }),
     withResize('duration', {
       title: '기간',
       key: 'duration',
@@ -686,12 +726,18 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
       render: (val, record) => (
         <div>
           <DualProgressBar planned={Number(val) || 0} actual={Number(record.actualProgress) || 0} />
-          <EditCell
-            value={Number(val) || 0}
-            type="progress"
-            onChange={(v) => handleUpdate(record.id, 'plannedProgress', v)}
-            style={{ marginTop: 2 }}
-          />
+          {record.isRollup ? (
+            <Tooltip title="하위 작업 기간 가중평균으로 자동 계산됩니다 (직접 수정 불가)">
+              <span style={{ fontSize: 13, color: 'var(--fd-text-secondary)', cursor: 'help' }}>{Number(val) || 0}% (자동)</span>
+            </Tooltip>
+          ) : (
+            <EditCell
+              value={Number(val) || 0}
+              type="progress"
+              onChange={(v) => handleUpdate(record.id, 'plannedProgress', v)}
+              style={{ marginTop: 2 }}
+            />
+          )}
         </div>
       ),
     }),
@@ -705,11 +751,17 @@ export default function WbsSheet({ projectId, tasks, issues = [], onRefresh, ref
       dataIndex: 'actualProgress',
       key: 'actualProgress',
       render: (val, record) => (
-        <EditCell
-          value={Number(val) || 0}
-          type="progress"
-          onChange={(v) => handleUpdate(record.id, 'actualProgress', v)}
-        />
+        record.isRollup ? (
+          <Tooltip title="하위 작업 기간 가중평균으로 자동 계산됩니다 (직접 수정 불가)">
+            <span style={{ fontSize: 13, color: 'var(--fd-text-secondary)', cursor: 'help' }}>{Number(val) || 0}% (자동)</span>
+          </Tooltip>
+        ) : (
+          <EditCell
+            value={Number(val) || 0}
+            type="progress"
+            onChange={(v) => handleUpdate(record.id, 'actualProgress', v)}
+          />
+        )
       ),
     }),
     withResize('compliance', {

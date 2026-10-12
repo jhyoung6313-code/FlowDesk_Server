@@ -105,6 +105,24 @@ async function sendGenericEmail(toEmail, subject, html) {
 }
 
 /**
+ * 결재 관련 알림(요청/리마인더/멘션/다이제스트)이 공유하는 이메일 템플릿.
+ * approvalController.js와 notificationService.js가 각자 동일한 HTML 문자열을 들고 있던 것을
+ * 한 곳으로 모았다 — 문구/스타일을 바꿀 때 한쪽만 고치고 다른 쪽을 놓치는 걸 방지한다.
+ * @param {string} toEmail
+ * @param {string} subject    "[FlowDesk] ..." 형태로 호출부에서 접두사까지 만들어 전달
+ * @param {string} displayName
+ * @param {string} message
+ * @returns {Promise<boolean>} 발송 여부
+ */
+async function sendApprovalStyledEmail(toEmail, subject, displayName, message) {
+  return sendGenericEmail(
+    toEmail,
+    subject,
+    `<p>안녕하세요, <strong>${displayName}</strong>님.</p><p>${message}</p><p style="color:#888;font-size:13px;">FlowDesk에 접속해 결재 문서를 확인해주세요.</p>`,
+  );
+}
+
+/**
  * SMTP 연결 테스트
  */
 async function testSmtpConnection(config) {
@@ -117,4 +135,4 @@ async function testSmtpConnection(config) {
   await transporter.verify();
 }
 
-module.exports = { sendDeadlineEmail, testSmtpConnection, sendGenericEmail };
+module.exports = { sendDeadlineEmail, testSmtpConnection, sendGenericEmail, sendApprovalStyledEmail };

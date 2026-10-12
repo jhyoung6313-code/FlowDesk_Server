@@ -3,6 +3,8 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const prisma = require('../lib/prisma');
+const { computeCriticalPath, durationDays } = require('../services/wbsCriticalPath');
+const { applyProgressRollup } = require('../services/wbsRollup');
 
 const DELIVERABLE_DIR = path.join(__dirname, '../../uploads/wbs-deliverables');
 
@@ -137,11 +139,32 @@ exports.deleteProject = async (req, res, next) => {
 // ─── WBS 항목 목록 (트리) ─────────────────────────────
 exports.getTasks = async (req, res, next) => {
   try {
-    const tasks = await prisma.wbsTask.findMany({
-      where: { projectId: Number(req.params.id) },
-      orderBy: [{ level: 'asc' }, { order: 'asc' }],
+    const projectId = Number(req.params.id);
+    const [tasks, dependencies] = await Promise.all([
+      prisma.wbsTask.findMany({
+        where: { projectId },
+        orderBy: [{ level: 'asc' }, { order: 'asc' }],
+      }),
+      prisma.wbsTaskDependency.findMany({
+        where: { predecessor: { projectId }, successor: { projectId } },
+        select: { predecessorId: true, successorId: true },
+      }),
+    ]);
+
+    const predecessorsByTask = new Map();
+    dependencies.forEach((d) => {
+      if (!predecessorsByTask.has(d.successorId)) predecessorsByTask.set(d.successorId, []);
+      predecessorsByTask.get(d.successorId).push(d.predecessorId);
     });
-    res.json(buildTree(tasks));
+    const critical = computeCriticalPath(tasks, dependencies);
+
+    const enriched = tasks.map((t) => ({
+      ...t,
+      predecessorIds: predecessorsByTask.get(t.id) || [],
+      isCritical: critical.has(t.id),
+    }));
+
+    res.json(applyProgressRollup(buildTree(enriched)));
   } catch (err) {
     next(err);
   }
@@ -195,11 +218,80 @@ exports.createTask = async (req, res, next) => {
 exports.updateTask = async (req, res, next) => {
   try {
     const id = Number(req.params.taskId);
-    const { name, deliverable, startDate, endDate, plannedProgress, actualProgress, memo } = req.body;
+    const { name, deliverable, startDate, endDate, plannedProgress, actualProgress, memo, predecessorIds } = req.body;
 
     if (name !== undefined && (!name || !name.trim())) return res.status(400).json({ error: '작업명은 필수입니다.' });
 
     const clamp = (v) => Math.min(100, Math.max(0, Number(v) || 0));
+    const warnings = [];
+
+    if (predecessorIds !== undefined) {
+      const current = await prisma.wbsTask.findUnique({ where: { id }, select: { projectId: true } });
+      if (!current) return res.status(404).json({ error: '항목을 찾을 수 없습니다.' });
+
+      const ids = [...new Set(predecessorIds.map(Number))].filter((pid) => pid && pid !== id);
+
+      // 순환검사(조회)와 반영(쓰기)을 하나의 트랜잭션으로 묶고, 프로젝트 단위 advisory lock으로
+      // 같은 프로젝트의 동시 의존성 수정 요청을 직렬화한다. 이게 없으면 서로 다른 두 업무(A, B)를
+      // 동시에 수정하는 두 요청이 각자 조회 시점 기준으로는 순환이 없다고 판단해 둘 다 통과시켜도
+      // 결과적으로 A→B, B→A 교차 순환이 만들어질 수 있었다 — 이 경우 Kahn 토폴로지 정렬(크리티컬
+      // 패스 계산)이 순환을 감지해 에러 없이 프로젝트 전체 크리티컬패스를 조용히 빈 집합으로
+      // 반환해버린다.
+      const { invalidIds, cyclicIds } = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(${current.projectId})`;
+
+        if (ids.length) {
+          const validPreds = await tx.wbsTask.findMany({
+            where: { id: { in: ids }, projectId: current.projectId },
+            select: { id: true },
+          });
+          const validIds = new Set(validPreds.map((t) => t.id));
+          const filtered = ids.filter((pid) => validIds.has(pid));
+          const droppedInvalid = ids.filter((pid) => !validIds.has(pid));
+
+          // 순환 의존성 방지: 후보 predecessor에서 거슬러 올라가 본인(id)이 다시 나오면 거부
+          const existing = await tx.wbsTaskDependency.findMany({
+            where: { successor: { projectId: current.projectId } },
+            select: { predecessorId: true, successorId: true },
+          });
+          const predMap = new Map();
+          existing.forEach((e) => {
+            if (!predMap.has(e.successorId)) predMap.set(e.successorId, []);
+            predMap.get(e.successorId).push(e.predecessorId);
+          });
+          const wouldCycle = (startId) => {
+            const seen = new Set();
+            const stack = [startId];
+            while (stack.length) {
+              const cur = stack.pop();
+              if (cur === id) return true;
+              if (seen.has(cur)) continue;
+              seen.add(cur);
+              (predMap.get(cur) || []).forEach((p) => stack.push(p));
+            }
+            return false;
+          };
+          const safeIds = filtered.filter((pid) => !wouldCycle(pid));
+          const droppedCycle = filtered.filter((pid) => wouldCycle(pid));
+
+          await tx.wbsTaskDependency.deleteMany({ where: { successorId: id } });
+          if (safeIds.length) {
+            await tx.wbsTaskDependency.createMany({
+              data: safeIds.map((pid) => ({ predecessorId: pid, successorId: id })),
+              skipDuplicates: true,
+            });
+          }
+          return { invalidIds: droppedInvalid, cyclicIds: droppedCycle };
+        }
+        await tx.wbsTaskDependency.deleteMany({ where: { successorId: id } });
+        return { invalidIds: [], cyclicIds: [] };
+      });
+
+      // 순환/무효 후보를 조용히 드랍하면 응답이 200으로 성공해 보여도 사용자가 요청한 일부
+      // 변경이 반영되지 않은 걸 알 방법이 없었다 — warnings로 알려준다.
+      if (cyclicIds.length) warnings.push(`순환 의존성이 되는 선행작업 ${cyclicIds.length}건을 제외했습니다.`);
+      if (invalidIds.length) warnings.push(`존재하지 않거나 다른 프로젝트의 선행작업 ${invalidIds.length}건을 제외했습니다.`);
+    }
 
     const task = await prisma.wbsTask.update({
       where: { id },
@@ -213,7 +305,7 @@ exports.updateTask = async (req, res, next) => {
         ...(memo !== undefined && { memo: memo || null }),
       },
     });
-    res.json(task);
+    res.json(warnings.length ? { ...task, warnings } : task);
   } catch (err) {
     next(err);
   }
@@ -244,6 +336,10 @@ exports.uploadDeliverable = async (req, res, next) => {
       data: {
         deliverableFile: storedName,
         deliverableOrigName: Buffer.from(req.file.originalname, 'latin1').toString('utf8'),
+        deliverableMime: req.file.mimetype || null,
+        deliverableSize: req.file.size || null,
+        deliverableUploadedBy: req.user.id,
+        deliverableUploadedAt: new Date(),
       },
     });
     res.json({ deliverableFile: updated.deliverableFile, deliverableOrigName: updated.deliverableOrigName });
@@ -284,7 +380,11 @@ exports.deleteDeliverable = async (req, res, next) => {
 
     await prisma.wbsTask.update({
       where: { id },
-      data: { deliverableFile: null, deliverableOrigName: null },
+      data: {
+        deliverableFile: null, deliverableOrigName: null,
+        deliverableMime: null, deliverableSize: null,
+        deliverableUploadedBy: null, deliverableUploadedAt: null,
+      },
     });
     res.json({ message: '파일이 삭제되었습니다.' });
   } catch (err) {
@@ -413,19 +513,32 @@ exports.exportTasksExcel = async (req, res, next) => {
     const fmtDate = (d) => (d ? new Date(d).toISOString().slice(0, 10) : '');
     const indent = (level) => '  '.repeat(level);
 
-    const rows = tasks.map((t) => ({
-      레벨: t.level,
-      작업명: indent(t.level) + t.name,
-      산출물명: t.deliverable ?? '',
-      시작일: fmtDate(t.startDate),
-      종료일: fmtDate(t.endDate),
-      기간: t.startDate && t.endDate
-        ? Math.ceil((new Date(t.endDate) - new Date(t.startDate)) / 86400000) + 1
-        : '',
-      계획진척률: Number(t.plannedProgress),
-      실적진척률: Number(t.actualProgress),
-      메모: t.memo ?? '',
-    }));
+    // getTasks()가 화면에 내려주는 값과 엑셀이 어긋나지 않도록, 상위 작업 진척률도 동일하게
+    // applyProgressRollup(하위 작업 가중평균)을 거친다 — 이전에는 엑셀만 원본 컬럼(raw
+    // plannedProgress/actualProgress)을 그대로 써서 화면과 엑셀의 상위 작업 진척률이 서로
+    // 달랐다.
+    const flatten = (nodes, out = []) => {
+      nodes.forEach((n) => { out.push(n); if (n.children?.length) flatten(n.children, out); });
+      return out;
+    };
+    const rolledMap = new Map(flatten(applyProgressRollup(buildTree(tasks))).map((n) => [n.id, n]));
+
+    const rows = tasks.map((t) => {
+      const r = rolledMap.get(t.id) || t;
+      return {
+        레벨: t.level,
+        작업명: indent(t.level) + t.name,
+        산출물명: t.deliverable ?? '',
+        시작일: fmtDate(t.startDate),
+        종료일: fmtDate(t.endDate),
+        // wbsCriticalPath.durationDays와 동일한 수식 사용 — 이전에는 이 엑셀 내보내기만 ceil을
+        // 써서, 화면(크리티컬패스/진척률 롤업)과 다른 기간 값이 나올 수 있었다.
+        기간: t.startDate && t.endDate ? durationDays(t.startDate, t.endDate) : '',
+        계획진척률: Number(r.plannedProgress),
+        실적진척률: Number(r.actualProgress),
+        메모: t.memo ?? '',
+      };
+    });
 
     const ws = XLSX.utils.json_to_sheet(rows);
     ws['!cols'] = [

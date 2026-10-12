@@ -41,7 +41,6 @@ import useAuthStore from '../../store/authStore';
 import useThemeStore from '../../store/themeStore';
 import useChatStore from '../../store/chatStore';
 import useUnreadStore from '../../store/unreadStore';
-import { getApprovalPendingCount } from '../../api/approval';
 import { getAvatarColor } from '../../utils/colors';
 import { getMe } from '../../api/auth';
 import * as wbsApi from '../../api/wbs';
@@ -192,7 +191,8 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
   };
   const skin = useThemeStore((s) => s.skin);
 
-  const [approvalPendingCount, setApprovalPendingCount] = useState(0);
+  // MainLayout이 한 번만 폴링해 공유 스토어에 반영한 값을 읽기만 한다 (중복 API 호출 방지).
+  const approvalPendingCount = useUnreadStore((s) => s.approvalPending);
 
   // WBS 프로젝트 목록 상태
   const [wbsProjects, setWbsProjects] = useState([]);
@@ -224,16 +224,6 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     window.addEventListener('wbs-projects-changed', handler);
     return () => window.removeEventListener('wbs-projects-changed', handler);
   }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    const fetchPending = () => {
-      getApprovalPendingCount().then(r => setApprovalPendingCount(r.count || 0)).catch(() => {});
-    };
-    fetchPending();
-    const timer = setInterval(fetchPending, 60000);
-    return () => clearInterval(timer);
-  }, [user]);
 
   // 로그인 직후 user에 clientIp가 없으면 getMe로 보강
   useEffect(() => {

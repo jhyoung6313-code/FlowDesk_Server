@@ -1,4 +1,6 @@
 const crypto = require('crypto');
+const fs = require('fs');
+const path = require('path');
 
 const prisma = require('../lib/prisma');
 const MAGIC = Buffer.from('FLW1');
@@ -69,6 +71,10 @@ const EXTRA_TABLES = [
   { key: 'playbookRuns', model: 'playbookRun', dates: ['dueAt', 'startedAt', 'endedAt', 'createdAt', 'updatedAt'] },
   { key: 'runSteps', model: 'runStep', dates: ['dueAt', 'startedAt', 'completedAt', 'createdAt', 'updatedAt'] },
   { key: 'runParticipants', model: 'runParticipant', dates: ['joinedAt'] },
+  // WBS 작업 의존성(F-13 확장) — wbsTasks 이후
+  { key: 'wbsTaskDependencies', model: 'wbsTaskDependency', pk: ['predecessorId', 'successorId'], dates: [] },
+  // 문서함 즐겨찾기(F-68) — users 이후
+  { key: 'documentFavorites', model: 'documentFavorite', dates: ['createdAt'] },
 ];
 
 function deriveKey() {
@@ -95,9 +101,9 @@ function decryptBackup(buf) {
   return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
 }
 
-const backup = async (req, res, next) => {
-  try {
-    const [
+// 백업 데이터 조회+암호화(HTTP 다운로드·예약 백업 공용) — {buffer, filename} 반환
+async function buildBackupBuffer() {
+  const [
       users, departments, teams, tasks, taskAssignees, taskExtraAssignees, taskDependencies,
       taskComments, taskAttachments, taskHistories, taskTags,
       tags, milestones, notifications, recurringTasks, taskTemplates,
@@ -179,7 +185,13 @@ const backup = async (req, res, next) => {
     const extraResults = await Promise.all(EXTRA_TABLES.map((t) => prisma[t.model].findMany()));
     EXTRA_TABLES.forEach((t, i) => { backupData.data[t.key] = extraResults[i]; });
 
-    const encrypted = encryptBackup(JSON.stringify(backupData));
+  const encrypted = encryptBackup(JSON.stringify(backupData));
+  return encrypted;
+}
+
+const backup = async (req, res, next) => {
+  try {
+    const encrypted = await buildBackupBuffer();
     const filename = `flowdesk_backup_${new Date().toISOString().slice(0, 10)}.enc`;
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
@@ -607,4 +619,34 @@ const restore = async (req, res, next) => {
   }
 };
 
-module.exports = { backup, restore };
+// GET /api/admin/backup/auto — 자동 백업 설정·보관 파일 목록 조회
+const listAutoBackups = (req, res, next) => {
+  try {
+    const scheduler = require('../services/backupScheduler');
+    res.json({
+      enabled: scheduler.isEnabled(),
+      cron: scheduler.getCron(),
+      retentionCount: scheduler.getRetentionCount(),
+      files: scheduler.listAutoBackups(),
+    });
+  } catch (err) { next(err); }
+};
+
+// GET /api/admin/backup/auto/:filename/download — 자동 백업 파일 하나를 내려받기
+const downloadAutoBackup = (req, res, next) => {
+  try {
+    const scheduler = require('../services/backupScheduler');
+    const filename = path.basename(req.params.filename); // 경로 조작 방지
+    if (!filename.startsWith('flowdesk_auto_backup_') || !filename.endsWith('.enc')) {
+      return res.status(400).json({ error: '올바르지 않은 파일명입니다.' });
+    }
+    const filePath = path.join(scheduler.BACKUP_DIR, filename);
+    if (!fs.existsSync(filePath)) return res.status(404).json({ error: '파일을 찾을 수 없습니다.' });
+
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.sendFile(filePath);
+  } catch (err) { next(err); }
+};
+
+module.exports = { backup, restore, buildBackupBuffer, listAutoBackups, downloadAutoBackup };

@@ -1,6 +1,6 @@
 const jwt = require('jsonwebtoken');
 
-const prisma = require('../lib/prisma');
+const userCache = require('../lib/userCache');
 
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -11,10 +11,7 @@ const authenticate = async (req, res, next) => {
   const token = authHeader.split(' ')[1];
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: { id: true, username: true, displayName: true, role: true, isActive: true, passwordChangedAt: true, sessionNonce: true, permissions: true },
-    });
+    const user = await userCache.getUser(decoded.userId);
 
     if (!user || !user.isActive) {
       return res.status(401).json({ error: '유효하지 않은 계정입니다.' });

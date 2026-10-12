@@ -1,16 +1,26 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import {
-  Card, Button, Space, Typography, Alert, Popconfirm, message, Divider, Upload,
+  Card, Button, Space, Typography, Alert, Popconfirm, message, List, Tag, Empty,
 } from 'antd';
 import {
-  DownloadOutlined, UploadOutlined, DatabaseOutlined,
+  DownloadOutlined, UploadOutlined, DatabaseOutlined, ClockCircleOutlined,
 } from '@ant-design/icons';
-import { downloadBackup, restoreBackup } from '../../api/admin';
+import dayjs from 'dayjs';
+import { downloadBackup, restoreBackup, getAutoBackups, downloadAutoBackup } from '../../api/admin';
+
+const fmtSize = (n) => (n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${(n / 1024).toFixed(0)} KB`);
 
 export default function BackupPage() {
   const [backing, setBacking] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const fileInputRef = useRef(null);
+  const [autoInfo, setAutoInfo] = useState(null);
+
+  const loadAutoInfo = useCallback(() => {
+    getAutoBackups().then(setAutoInfo).catch(() => {});
+  }, []);
+
+  useEffect(() => { loadAutoInfo(); }, [loadAutoInfo]);
 
   const handleBackup = async () => {
     setBacking(true);
@@ -67,6 +77,39 @@ export default function BackupPage() {
             백업 파일 다운로드
           </Button>
         </Space>
+      </Card>
+
+      <Card title={<><ClockCircleOutlined /> 자동 백업</>} style={{ marginBottom: 16, borderRadius: 8 }}>
+        {autoInfo ? (
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <Space wrap>
+              <Tag color={autoInfo.enabled ? 'green' : 'default'}>{autoInfo.enabled ? '활성화' : '비활성화'}</Tag>
+              {autoInfo.enabled && <Typography.Text type="secondary">cron: {autoInfo.cron} · 서버 로컬에 최근 {autoInfo.retentionCount}개 보관</Typography.Text>}
+            </Space>
+            {autoInfo.files.length === 0 ? (
+              <Empty description="아직 생성된 자동 백업이 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            ) : (
+              <List
+                size="small"
+                dataSource={autoInfo.files}
+                renderItem={(f) => (
+                  <List.Item
+                    actions={[
+                      <Button key="dl" type="link" size="small" icon={<DownloadOutlined />} onClick={() => downloadAutoBackup(f.filename)}>
+                        다운로드
+                      </Button>,
+                    ]}
+                  >
+                    <Typography.Text>{f.filename}</Typography.Text>
+                    <Typography.Text type="secondary" style={{ marginLeft: 8, fontSize: 13 }}>
+                      {fmtSize(f.size)} · {dayjs(f.createdAt).format('YYYY-MM-DD HH:mm')}
+                    </Typography.Text>
+                  </List.Item>
+                )}
+              />
+            )}
+          </Space>
+        ) : <Typography.Text type="secondary">불러오는 중...</Typography.Text>}
       </Card>
 
       <Card title="데이터 복원" style={{ borderRadius: 8 }}>

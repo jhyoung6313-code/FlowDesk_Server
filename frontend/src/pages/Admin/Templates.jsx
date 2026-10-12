@@ -1,12 +1,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
   Table, Button, Space, Typography, Tag, Popconfirm, message,
-  Modal, Form, Input, Select, InputNumber, Descriptions, Tooltip,
+  Modal, Form, Input, Select, InputNumber, Descriptions, Tooltip, DatePicker, Card, Empty,
 } from 'antd';
 import {
-  DeleteOutlined, EditOutlined, FileTextOutlined, EyeOutlined,
+  DeleteOutlined, EditOutlined, FileTextOutlined, EyeOutlined, PlusOutlined, ThunderboltOutlined, AppstoreOutlined,
 } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import { getTemplates, updateTemplate, deleteTemplate } from '../../api/templates';
+import { getTemplateSets, createTemplateSet, deleteTemplateSet, applyTemplateSet } from '../../api/templateSets';
 import { getParts } from '../../api/parts';
 import { getUsers } from '../../api/users';
 import { buildUserOptions, filterUserOption, getMyDepartment } from '../../utils/userOptions';
@@ -30,13 +32,23 @@ export default function TemplatesPage() {
   const [form] = Form.useForm();
   const [saving, setSaving]       = useState(false);
 
+  // 템플릿 세트
+  const [sets, setSets] = useState([]);
+  const [setCreateOpen, setSetCreateOpen] = useState(false);
+  const [setForm] = Form.useForm();
+  const [setCreating, setSetCreating] = useState(false);
+  const [applyTarget, setApplyTarget] = useState(null); // 적용할 세트
+  const [applyDate, setApplyDate] = useState(null);
+  const [applying, setApplying] = useState(false);
+
   const load = useCallback(() => {
     setLoading(true);
-    Promise.all([getTemplates(), getParts(), getUsers()])
-      .then(([t, p, u]) => {
+    Promise.all([getTemplates(), getParts(), getUsers(), getTemplateSets()])
+      .then(([t, p, u, s]) => {
         setItems(t);
         setParts(p);
         setUsers(u.filter((u) => u.isActive));
+        setSets(s);
       })
       .catch(() => message.error('데이터를 불러오지 못했습니다.'))
       .finally(() => setLoading(false));
@@ -55,6 +67,8 @@ export default function TemplatesPage() {
       durationDays: record.durationDays ?? undefined,
       assigneeIds:  record.assigneeIds ?? [],
       extraNames:   (record.extraNames ?? []).join(', '),
+      setId:        record.setId ?? undefined,
+      dayOffset:    record.dayOffset ?? 0,
     });
     setEditOpen(true);
   };
@@ -77,6 +91,8 @@ export default function TemplatesPage() {
         durationDays: values.durationDays ?? null,
         assigneeIds:  values.assigneeIds ?? [],
         extraNames,
+        setId:        values.setId ?? null,
+        dayOffset:    values.dayOffset ?? 0,
       });
       message.success('수정되었습니다.');
       setEditOpen(false);
@@ -86,6 +102,48 @@ export default function TemplatesPage() {
       message.error(err?.response?.data?.error || '저장에 실패했습니다.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCreateSet = async () => {
+    try {
+      const values = await setForm.validateFields();
+      setSetCreating(true);
+      await createTemplateSet({ name: values.name.trim(), description: values.description });
+      message.success('세트가 생성되었습니다. 이제 각 템플릿을 수정하여 이 세트에 포함시키세요.');
+      setSetCreateOpen(false);
+      setForm.resetFields();
+      load();
+    } catch (err) {
+      if (err?.errorFields) return;
+      message.error(err?.response?.data?.error || '생성에 실패했습니다.');
+    } finally {
+      setSetCreating(false);
+    }
+  };
+
+  const handleDeleteSet = async (id) => {
+    try {
+      await deleteTemplateSet(id);
+      message.success('세트가 삭제되었습니다. (소속 템플릿은 유지됩니다)');
+      load();
+    } catch {
+      message.error('삭제에 실패했습니다.');
+    }
+  };
+
+  const handleApplySet = async () => {
+    if (!applyDate) { message.warning('기준일을 선택하세요.'); return; }
+    setApplying(true);
+    try {
+      const result = await applyTemplateSet(applyTarget.id, applyDate.format('YYYY-MM-DD'));
+      message.success(result.message || '업무가 생성되었습니다.');
+      setApplyTarget(null);
+      setApplyDate(null);
+    } catch (err) {
+      message.error(err?.response?.data?.error || '적용에 실패했습니다.');
+    } finally {
+      setApplying(false);
     }
   };
 
@@ -157,6 +215,15 @@ export default function TemplatesPage() {
       },
     },
     {
+      title: '세트',
+      key: 'set',
+      render: (_, r) => {
+        const s = sets.find((s) => s.id === r.setId);
+        if (!s) return <Typography.Text type="secondary">-</Typography.Text>;
+        return <Tag color="purple">{s.name} (D+{r.dayOffset || 0})</Tag>;
+      },
+    },
+    {
       title: '등록자',
       key: 'creator',
       render: (_, r) => r.creator?.displayName ?? '-',
@@ -191,6 +258,42 @@ export default function TemplatesPage() {
           업무 폼에서 "템플릿으로 저장" 버튼으로 등록된 템플릿을 관리합니다.
         </Typography.Text>
       </Space>
+
+      <Card
+        size="small"
+        title={<><AppstoreOutlined /> 템플릿 세트</>}
+        extra={<Button size="small" icon={<PlusOutlined />} onClick={() => setSetCreateOpen(true)}>새 세트</Button>}
+        style={{ marginBottom: 16, borderRadius: 8 }}
+      >
+        <Typography.Paragraph type="secondary" style={{ marginBottom: 12 }}>
+          여러 업무 템플릿을 하나의 세트로 묶으면, 기준일(킥오프일) 하나만 지정해 세트에 속한 업무를 한 번에 생성할 수 있습니다.
+          각 템플릿을 수정해 "소속 세트"와 "마감 오프셋(D+n)"을 지정하세요.
+        </Typography.Paragraph>
+        {sets.length === 0 ? (
+          <Empty description="등록된 세트가 없습니다." image={Empty.PRESENTED_IMAGE_SIMPLE} />
+        ) : (
+          <Space wrap size={[8, 8]}>
+            {sets.map((s) => (
+              <Card key={s.id} size="small" style={{ width: 220 }}>
+                <Typography.Text strong>{s.name}</Typography.Text>
+                <div><Tag>{s.itemCount}개 템플릿</Tag></div>
+                <Space style={{ marginTop: 8 }}>
+                  <Button
+                    size="small" type="primary" icon={<ThunderboltOutlined />}
+                    disabled={s.itemCount === 0}
+                    onClick={() => setApplyTarget(s)}
+                  >
+                    적용
+                  </Button>
+                  <Popconfirm title="이 세트를 삭제하시겠습니까? (소속 템플릿은 유지됩니다)" onConfirm={() => handleDeleteSet(s.id)}>
+                    <Button size="small" danger icon={<DeleteOutlined />} />
+                  </Popconfirm>
+                </Space>
+              </Card>
+            ))}
+          </Space>
+        )}
+      </Card>
 
       <Table
         dataSource={items}
@@ -297,7 +400,51 @@ export default function TemplatesPage() {
           <Form.Item name="extraNames" label="외부 담당자 (쉼표 구분)">
             <Input placeholder="예: 홍길동, 김철수" />
           </Form.Item>
+          <Form.Item name="setId" label="소속 세트">
+            <Select placeholder="세트 선택 (단독 템플릿이면 비워두기)" allowClear>
+              {sets.map((s) => <Option key={s.id} value={s.id}>{s.name}</Option>)}
+            </Select>
+          </Form.Item>
+          <Form.Item name="dayOffset" label="마감 오프셋 (기준일 + N일)">
+            <InputNumber min={0} max={3650} style={{ width: '100%' }} />
+          </Form.Item>
         </Form>
+      </Modal>
+
+      {/* 세트 생성 모달 */}
+      <Modal
+        title="템플릿 세트 생성"
+        open={setCreateOpen}
+        onOk={handleCreateSet}
+        onCancel={() => setSetCreateOpen(false)}
+        okText="생성"
+        cancelText="취소"
+        confirmLoading={setCreating}
+      >
+        <Form form={setForm} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item name="name" label="세트 이름" rules={[{ required: true, message: '세트 이름을 입력하세요.' }]}>
+            <Input placeholder="예: 신규 프로젝트 킥오프" maxLength={100} />
+          </Form.Item>
+          <Form.Item name="description" label="설명">
+            <Input.TextArea rows={2} placeholder="세트 설명 (선택)" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* 세트 적용 모달 */}
+      <Modal
+        title={`"${applyTarget?.name}" 세트 적용`}
+        open={!!applyTarget}
+        onOk={handleApplySet}
+        onCancel={() => { setApplyTarget(null); setApplyDate(null); }}
+        okText="업무 일괄 생성"
+        cancelText="취소"
+        confirmLoading={applying}
+      >
+        <Typography.Paragraph type="secondary">
+          기준일(킥오프일)을 선택하면 세트에 속한 각 템플릿의 "마감 오프셋(D+n)"만큼 더한 날짜를 마감일로 하여 업무가 일괄 생성됩니다.
+        </Typography.Paragraph>
+        <DatePicker style={{ width: '100%' }} value={applyDate} onChange={setApplyDate} placeholder="기준일 선택" />
       </Modal>
     </div>
   );

@@ -6,6 +6,13 @@ const useUnreadStore = create((set, get) => ({
   boardUnreadMap: {},      // 보드별 안읽음 { [boardId]: count } (보드 트리 배지용)
   playbookUnread: 0,
 
+  // 전자결재 대기건수 / 메일 안읽음 — AppHeader·Sidebar가 각자 60초 폴링하던 것을
+  // 여기 하나로 모아 200명 동시접속 시 중복 API 호출을 절반으로 줄인다.
+  approvalPending: 0,
+  mailUnread: 0,
+  setApprovalPending: (n) => set({ approvalPending: Math.max(0, n) }),
+  setMailUnread: (n) => set({ mailUnread: Math.max(0, n) }),
+
   // 현재 보고 있는 대상 — 이 대상의 새 활동은 안읽음으로 누적하지 않는다.
   boardViewingId: null,   // 열람 중인 보드 id (없으면 null)
   playbookViewing: false, // Playbook/Run 목록 화면을 보는 중인지

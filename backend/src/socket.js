@@ -2,6 +2,30 @@ const { Server } = require('socket.io');
 const jwt = require('jsonwebtoken');
 
 const prisma = require('./lib/prisma');
+const userCache = require('./lib/userCache');
+
+// REDIS_URL이 설정된 경우에만 Redis adapter를 붙여 멀티 인스턴스(수평 확장)를 지원한다.
+// 설정이 없으면 기존처럼 단일 프로세스 인메모리 어댑터로 동작 — 폐쇄망에 Redis를 아직
+// 준비하지 못한 환경에서도 그대로 돌아간다.
+// 주의(알려진 한계): onlineUsers Map과 kickUserSockets()의 중복 로그인 차단은 여전히
+// "이 프로세스가 들고 있는 소켓"만 추적한다. Redis adapter는 방(room) 브로드캐스트를
+// 인스턴스 간에 전파해주지만, 동일 유저가 다른 인스턴스로 다시 로그인했을 때 그 인스턴스의
+// 소켓까지 강제 종료하려면 presence 저장소 자체를 Redis로 옮기는 추가 작업이 필요하다.
+// 멀티 인스턴스로 실제 운영하기 전에는 별도로 이 부분을 완성해야 한다.
+async function attachRedisAdapter(io) {
+  if (!process.env.REDIS_URL) return;
+  const { createAdapter } = require('@socket.io/redis-adapter');
+  const { Redis } = require('ioredis');
+
+  const pubClient = new Redis(process.env.REDIS_URL);
+  const subClient = pubClient.duplicate();
+
+  pubClient.on('error', (err) => console.error('[socket] Redis pub 오류:', err.message));
+  subClient.on('error', (err) => console.error('[socket] Redis sub 오류:', err.message));
+
+  io.adapter(createAdapter(pubClient, subClient));
+  console.log('[socket] Redis adapter 연결됨 — 멀티 인스턴스 브로드캐스트 활성화');
+}
 
 // 접속 중인 userId → Set<socketId>
 const onlineUsers = new Map();
@@ -78,15 +102,14 @@ function setupSocketIO(server) {
     },
   });
 
+  attachRedisAdapter(io).catch((err) => console.error('[socket] Redis adapter 연결 실패:', err.message));
+
   io.use(async (socket, next) => {
     const token = socket.handshake.auth.token;
     if (!token) return next(new Error('인증 토큰이 없습니다.'));
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await prisma.user.findUnique({
-        where: { id: decoded.userId },
-        select: { id: true, username: true, displayName: true, role: true, isActive: true, avatarColor: true, sessionNonce: true },
-      });
+      const user = await userCache.getUser(decoded.userId);
       if (!user || !user.isActive) return next(new Error('유효하지 않은 계정입니다.'));
       // 중복 로그인 차단: 소켓 연결 시점에도 nonce 검증
       if (user.sessionNonce && decoded.sn !== user.sessionNonce) {

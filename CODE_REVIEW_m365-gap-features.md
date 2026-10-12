@@ -369,6 +369,341 @@
 
 ---
 
+## 4회차 리뷰 — 전자결재 작성 화면 UX 개선 (결재선 그룹 UI, 2026-10-01)
+
+사용자가 "전자결재의 사용자 편의성·가독성이 부족하다"고 지적해 ① 목록의 병렬결재 진행 텍스트 ② 결재문서 상세의 도장 그리드 가로스크롤 ③ **결재 요청 작성 화면의 결재선 구성 UI(숫자 직접입력 → 그룹 박스 드래그 병합 방식으로 전면 교체)** 3건을 구현한 diff에 대한 로컬 max 리뷰. 10개 관점을 모두 서브에이전트로 병렬 실행(A~J 전부 완료, 세션 한도로 중단된 관점 없음). 리뷰 대상은 `frontend/src/pages/Approval/{DocumentForm.jsx,DocumentDetail.jsx,index.jsx}` 3개 파일의 작업트리 diff.
+
+### 요약
+
+| 우선순위 | 건수 |
+|---|---|
+| 🔴 Critical (크래시) | 1 |
+| 🟠 High (핵심기능 무결성) | 2 |
+| 🟡 Medium (UI 불일치/엣지케이스) | 2 |
+| 🟢 Low (설계 취약점/성능/가독성) | 6 |
+| 참고: 이번 diff가 만든 게 아니라 "노출"시킨 기존 버그 | 2 |
+
+**조치 완료(2026-10-01)** — 아래 "조치 완료" 절 참조. 사용자가 Critical~Low 전부(근본원인 포함) 조치를 요청해 반영함.
+
+### 발견 사항
+
+#### 🔴 Critical — `DocumentForm.jsx`에서 `Tag` import 누락 → 병렬결재 그룹 렌더 시 크래시
+- **파일**: `frontend/src/pages/Approval/DocumentForm.jsx:582`
+- **5개 독립 관점(A/B/C/D/E) 전원이 동일하게 발견 + 직접 grep 재검증 완료**: 새로 추가한 `<Tag color="cyan">병렬</Tag>` 배지가 쓰였는데, 파일 상단 antd import(3~6행)에 `Tag`가 없음(`DocumentDetail.jsx`는 import돼 있어, 그 패턴을 베끼면서 import만 누락한 것으로 보임). 파일 전체에서 `Tag` 사용처는 이 한 줄뿐.
+- **재현**: 결재자 2명 이상을 같은 차수(병렬)로 묶는 순간 — 템플릿의 기본 결재선에 병렬 그룹이 있거나, 기존 문서를 수정 화면에서 열거나, 이번에 추가한 드래그-병합 기능을 한 번만 써도 — `items.length > 1`이 되어 `ReferenceError: Tag is not defined`가 던져지며 **DocumentForm 전체가 빈 화면/에러로 깨짐**. 이번 diff의 핵심 신규 기능(병렬결재 그룹 UI) 자체가 단 한 번도 정상 동작할 수 없는 상태.
+- **조치(예정)**: `import { ... Tag } from 'antd'` 한 줄 추가.
+
+#### 🟠 High — 결재선 편집 함수들이 `approverId`를 고유키로 가정하지만, 실제로는 같은 사람이 결재선에 2회 이상 등장할 수 있음
+- **파일**: `frontend/src/pages/Approval/DocumentForm.jsx:206(mergeIntoGroup)`, `:210(splitToNewGroup)`, `:353(removeApprover)`, `:355(setRole)`
+- **3개 관점(C/F/G) 교차 확인**: 이번 diff에서 결재자 식별 방식을 배열 인덱스(`idx`) → `approverId`로 바꿨는데, `approverId` 유일성을 보장하는 곳이 어디에도 없음.
+  - 백엔드 `resolvePresetLine`(`backend/src/services/approvalLine.js:53-93`)은 직급/직책 규칙(`by:'position'`)을 실제 사용자로 치환할 때, 특정 직책 보유자가 다른 행에 **직접 지정**으로도 들어 있으면 같은 `approverId`가 2행에 등장할 수 있음(중복 체크 없음).
+  - 관리자용 `ApprovalLineEditor.jsx`도, 백엔드 `normalizeSteps`/`ApprovalStep` 스키마(`@@index([documentId, stepOrder])`뿐, `approverId` 유니크 제약 없음)도 중복을 막지 않음.
+  - `addApprover`의 중복 체크(`approvalLine.some(...)`)도 클로저로 캡처한 `approvalLine`을 읽어, 더블클릭 등으로 같은 틱에 두 번 호출되면 통과해버림.
+- **재현(예)**: "팀장" 직책 보유자 A가 직접 지정 결재자로도 1차에 들어있고, "팀장" 규칙으로 또 다른 행에도 들어오면 `approvalLine`에 A가 2행 존재. 이 상태에서 A의 아무 칩에서나 삭제/역할변경/드래그-병합/분리를 하면 **두 행이 동시에 변경·삭제**됨 — 사용자는 하나만 건드렸다고 생각하지만 실제로는 둘 다 바뀜. React `key={step.approverId}`도 중복되어 렌더 경고 발생.
+- **조치 방향(예정)**: approvalLine 각 행에 안정적인 로컬 식별자(예: 추가 시 부여하는 `_uid`)를 두고, 모든 조작 함수를 `_uid` 기준으로 전환. `addApprover`의 중복 체크는 `setApprovalLine(prev => ...)` 업데이터 내부에서 수행하도록 변경.
+
+#### 🟠 High — `moveGroup`(차수 이동 ▲▼)이 stepOrder가 1..N 연속이라고 가정 — gap이 있으면 조용히 no-op
+- **파일**: `frontend/src/pages/Approval/DocumentForm.jsx:225`
+- **4개 관점(A/D/G/H) 독립 확인 + 역추적으로 근본 원인까지 확인**: `mergeIntoGroup`/`splitToNewGroup`/`removeApprover`/`setRole`은 전부 끝에 `compactGroups`를 호출해 stepOrder를 1..N으로 압축하지만, `moveGroup`만 빠져있고 — 더 중요하게는 — **approvalLine을 외부에서 채워 넣는 4곳(프리셋 불러오기, 수정화면 문서로드, 복제화면 문서로드, 템플릿선택 결과)이 전부 compaction 없이 그대로 주입**함.
+  - 근본 원인은 이번 diff보다 위: 관리자용 `ApprovalLineEditor.jsx`의 `setGroup`이 숫자 상한/연속성 검사 없이 `Math.max(1, v)`만 적용하고, 백엔드 `resolvePresetLine`/`normalizeSteps`/`countFlowGroups`(`totalSteps = Math.max(orders)`, distinct 개수 아님)도 전부 동일하게 gap을 그대로 통과시킴. 즉 **이번 diff 이전부터 있던 결함**이며, 이번 diff는 그 결함 위에 "▲▼ 버튼"이라는 새 UI를 얹어 증상을 노출시킨 것.
+- **재현**: 템플릿의 결재선이 (예: 조건부 결재자가 조건 불충족으로 빠지는 흔한 케이스) stepOrder {1, 3}으로 로드된 상태에서 "1차" 박스의 ▼를 누르면 `neighbor=2`인데 2차가 없어 **아무 일도 안 일어나고 숫자만 1→2로 바뀜** — 버튼은 활성화돼 있고 클릭해도 에러가 없어 사용자는 성공했다고 믿지만 실제 순서는 그대로임. 제출 시 백엔드의 `totalSteps`도 잘못 채번되어 목록(`index.jsx`)의 진행률 표시가 틀어짐(예: 2단계짜리 문서가 "2/99"로 표시).
+- **검증 쿼리**: `CODE_REVIEW_VERIFY.sql` §13-1/13-3 — **실제 DB에는 아직 영향 0건**(현재 템플릿 3개 모두 gap 없음, 운영 중인 approval_documents에도 gap 없음). 즉 지금 당장 터진 버그는 아니지만, 이번에 추가한 ▲▼ UI를 한 번이라도 쓰면 처음으로 노출될 잠재 결함.
+- **조치 방향(예정)**: 근본 수정은 `compactGroups`를 approvalLine을 세팅하는 모든 지점(4곳)에서 호출하도록 통일하거나, `setApprovalLine`을 감싸는 단일 세터로 교체해 구조적으로 compaction을 강제. 최소 수정은 `moveGroup`이 `order+dir` 대신 정렬된 `orders` 배열의 실제 이웃 값(`orders[gi+dir]`)과 스왑하도록 변경.
+
+#### 🟡 Medium — 목록의 `progressText`가 "내 차례"를 판단할 때 병렬 그룹 내 내 결재 상태(이미 승인했는지)를 보지 않음
+- **파일**: `frontend/src/pages/Approval/index.jsx:176`
+- 2인 이상 병렬 그룹에서 내가 이미 승인(`status==='approved'`)했고 동료가 아직 대기 중이어도, `curGroup.some(s.approverId===user.id)`는 상태와 무관하게 true라 "내 차례"로 계속 표시됨. 같은 파일의 `isMyPendingTurn`(63~64행, 이번 diff 미변경)은 `status==='pending'`까지 확인해 행 하이라이트/승인·반려 버튼은 정확히 숨기므로, **같은 행에서 "내 차례" 라벨과 실제 버튼 유무가 서로 모순**되게 보일 수 있음.
+- **조치 방향(예정)**: `curGroup` 필터에 `s.status === 'pending'` 조건 추가(또는 `isMyPendingTurn`과 동일 로직 재사용).
+
+#### 🟡 Medium — 드래그 상태 판별이 `approverId`를 truthy로 체크 (`id===0`이면 드래그 무시)
+- **파일**: `frontend/src/pages/Approval/DocumentForm.jsx:572-573`
+- `if (draggingApproverId)` 형태라 `approverId===0`인 사용자는 드래그 자체가 동작 안 함. Prisma 자동증가 PK는 1부터 시작해 현재 시드/운영 데이터로는 재현 안 되지만(검증 쿼리 결과 users.id=0 없음), 데이터 복원/시퀀스 리셋 등으로 생길 수 있는 저렴한 방어 코드 누락.
+- **조치 방향(예정)**: `!= null` 비교로 교체.
+
+#### 🟢 Low — 그 외 (설계 취약점·중복·성능, 조치 우선순위 낮음)
+- 드래그 시작 시 `e.dataTransfer.setData(...)`를 호출하지 않아 Firefox에서 드래그-병합이 동작하지 않을 수 있음(기존 코드에도 있던 패턴이나, 이번에 핵심 상호작용으로 승격됨). `DocumentForm.jsx:592`
+- `splitToNewGroup`이 `curOrder + 0.5`라는 소수 stepOrder를 임시로 만든 뒤 `compactGroups`로 정리 — 동작은 하지만 "차수는 정수"라는 암묵 규칙을 깨는 우회로라 가독성 저하. `DocumentForm.jsx:217`
+- 결재선 그룹 계산(`flowItems`/`refItems`/`orders`)이 렌더 바디의 IIFE 안에서 `useMemo` 없이 매 렌더(긴급 체크박스, 마감일 선택 등 결재선과 무관한 상태 변경 포함) 재계산됨 — 팀 규모(2~10인) 상 체감 비용은 없음. `DocumentForm.jsx:560`
+- "참조 제외 + stepOrder 기준 그룹화" 로직이 `DocumentForm.jsx`(2곳)·`DocumentDetail.jsx`·`index.jsx`·`ApprovalLineEditor.jsx`에 각자 다른 모양으로 중복 구현됨 — 공유 헬퍼(`utils/approvalLine.js`) 추출 권장.
+- `nextGroupNo`가 `ApprovalLineEditor.jsx`에 이미 export된 동일 함수와 중복 정의됨.
+- 플로우 칩/참조 칩 렌더 블록(`DocumentForm.jsx:589-617` vs `627-644`)이 거의 동일한 마크업을 복붙 — `ApproverChip` 서브컴포넌트로 추출 권장.
+
+### 참고 — 이번 diff가 만든 게 아니라 "노출"시킨 기존 버그 (별도 조치 필요, 이번 범위 밖)
+- 백엔드 `countFlowGroups()`(`backend/src/controllers/approvalController.js:38-42`)가 `totalSteps`를 `Math.max(orders)`로 계산 — gap이 있으면 distinct 그룹 수가 아니라 최댓값이 들어가 영구히 DB에 저장됨. 프론트 compaction만으로는 못 고치는 서버 측 결함.
+- 관리자용 `ApprovalLineEditor.jsx`의 `setGroup`이 중복/gap 검증 없이 임의 정수를 허용 — 결재선 오염의 실제 발생지. 템플릿 저장 시점(`serializeApprovalLine`)이나 `resolvePresetLine` 조회 시점에 compaction 추가 필요.
+
+### 검증 쿼리 결과 (2026-10-01, `flowdesk_server` 기준)
+| 쿼리 | 결과 |
+|---|---|
+| §13-1 totalSteps vs 실제 그룹 수 불일치 문서 | **0건** |
+| §13-2 같은 문서 내 approver_id 중복 | **0건** |
+| §13-3 stepOrder gap 있는 문서 | **0건** |
+| §13-4 템플릿 line_json 원본 확인 | 3개 템플릿 모두 gap/중복 없음(규칙 기반 항목뿐, 직접 지정 approverId 혼용 사례 없음) |
+
+**해석**: 현재 운영 데이터에는 영향이 없다(아직 아무도 병렬 그룹·▲▼ 이동·드래그 병합을 실사용 데이터로 만들지 않았으므로 당연함). 다만 🔴 Critical(Tag 크래시)은 데이터와 무관하게 **코드를 조금이라도 쓰면 즉시 재현**되므로 데이터 유무와 별개로 반드시 수정 필요.
+
+### 조치 완료 (2026-10-01)
+사용자가 "Critical~Low 전부(근본원인 포함)" 조치를 요청해 아래와 같이 모두 반영함.
+
+| # | 조치 |
+|---|---|
+| 🔴 Tag import 누락 | ✅ `DocumentForm.jsx` antd import에 `Tag` 추가 |
+| 🟠 approverId 중복 식별 | ✅ approvalLine 각 행에 생성 시점에 로컬 `_uid`를 부여하고, `mergeIntoGroup`/`splitToNewGroup`/`removeApprover`/`setRole`/드래그 상태를 전부 `_uid` 기준으로 전환. `addApprover`의 중복 체크도 `setApprovalLine` 업데이터 내부에서 수행하도록 이동(더블클릭 레이스 방지) |
+| 🟠 moveGroup 이웃 조회 버그 | ✅ `order+dir` 산술 대신 실제 정렬된 차수 목록(`groupOrdersOf`)에서 진짜 이웃 값을 찾아 스왑하도록 변경 — gap이 있어도 조용히 no-op 되지 않음 |
+| 🟡 progressText가 병렬그룹 내 내 상태 미확인 | ✅ `isMyPendingTurn`과 동일하게 `status==='pending'`까지 확인하도록 수정 |
+| 🟡 draggingId falsy 체크(id=0 무시) | ✅ `_uid`(문자열, 항상 truthy)로 식별자를 바꾸면서 자연히 해소 + `!= null` 비교로 명시 |
+| 🟢 Firefox dataTransfer.setData 누락 | ✅ `onDragStart`에서 `e.dataTransfer.setData(...)` 호출 추가 |
+| 🟢 splitToNewGroup의 소수(0.5) 임시값 | ✅ 정수 shift로 교체(뒤쪽 차수를 먼저 +1씩 밀고 그 자리에 정수로 배정) |
+| 🟢 IIFE + useMemo 누락 | ✅ `flowItems`/`refItems`/`orders`를 렌더 바디 `useMemo`로 호이스트 |
+| 🟢 그룹화 로직 4곳 중복 | ✅ `frontend/src/utils/approvalLine.js` 신설(`flowStepsOf`/`groupOrdersOf`/`nextGroupNo`/`compactGroups`) — `DocumentForm.jsx`·`ApprovalLineEditor.jsx`·`index.jsx`가 공유 |
+| 🟢 nextGroupNo 중복 정의 | ✅ `ApprovalLineEditor.jsx`의 로컬 정의 제거, 공유 유틸 import로 교체(다른 파일에서 이 함수를 import하는 곳 없음을 확인 후 안전하게 제거) |
+| 🟢 병렬 Tag 배지 마크업 복붙 | 보류 — 1줄짜리 트리비얼한 중복이라 컴포넌트 추출 비용이 더 큼, 조치 안 함 |
+
+#### 근본원인(backend) — 신중하게 범위를 좁혀 조치
+처음 분석에서는 "approvalLine을 채우는 모든 지점에서 compactGroups를 강제하자"는 제안이 있었으나, **직접 코드 확인 결과 이것이 틀렸음을 발견**: `backend/src/services/approvalLine.js`의 `resolvePresetLine`과 `approvalTemplateController.resolveLine`은 조건부 결재자가 통과 조건을 아직 만족하지 못할 때 **의도적으로 차수에 빈 자리(gap)를 남겨**, 상신 시점에 조건이 충족되면 그 자리에 정확히 끼워 넣는 설계(`approvalController.submit()`의 `toInject` 로직)다. 즉 gap은 버그가 아니라 "조건부 결재자 예약 슬롯"일 수 있어, 프론트에서 이를 강제로 압축(compact)하면 오히려 상신 시점 자동주입과 어긋나는 더 심각한 회귀를 만들 위험이 있음을 확인하고 **그 방향은 채택하지 않음**.
+대신 실제로 깨져 있던 증상만 정확히 겨냥해 수정:
+- ✅ `backend/src/controllers/approvalController.js`의 `countFlowGroups()` — `Math.max(stepOrder)` 대신 **distinct 그룹 수**로 변경(gap이 있어도 `totalSteps`가 항상 정확).
+- ✅ `frontend/src/pages/Approval/index.jsx`의 `progressText`/`progressPct` — `doc.currentStep`/`doc.rejectedStep`을 분자로 직접 쓰지 않고, `groupOrdersOf(doc.steps)`에서 **실제 순위(rank)**를 구해 분모(distinct 그룹 수)와 단위를 맞춤. (수정 전 상태로는 `countFlowGroups`만 고치면 gap이 있는 문서에서 오히려 진행률이 더 틀어질 뻔했음 — 두 수정을 반드시 같이 적용해야 함을 확인.)
+- ❌ (의도적 비조치) 관리자용 `ApprovalLineEditor.jsx`의 `setGroup`/admin 저장 시점 compaction — 위와 같은 이유로 "gap 자체를 없애는" 방향은 설계와 충돌해 보류. `totalSteps`/진행률이 이미 gap에 안전해졌으므로 더 이상 긴급하지 않음.
+
+### 검증
+- 백엔드 전체 테스트 31 스위트 **316건** 통과(approval.test.js의 `totalSteps` 기대값도 그대로 통과 — gap 없는 정상 케이스에서는 동작 변화 없음을 재확인).
+- 프론트 프로덕션 빌드 성공(`npm run build`).
+- 수정된 3개 프론트 파일 + 신규 유틸 파일 전부 esbuild 구문 검사 통과, dev 서버(vite)에서 200 응답 확인.
+- `CODE_REVIEW_VERIFY.sql` §13 재실행 결과는 수정 전과 동일하게 0건(현재 데이터엔 gap/중복 없음 — 코드 수정으로 "생겨도 안전"하게 만든 것이지 지금 뭔가를 고친 것은 아님).
+
+---
+
+## 6회차 리뷰 — 전자결재 자유도 확대 6종 (2026-10-02)
+
+사용자가 "전자결재 워크플로우 사용자 자유도를 높이고 싶다"고 요청해, ① 자유 양식(제목+본문만으로 즉시 상신) ② 팀 공유 결재선 프리셋 ③ 병렬결재 완료조건(전원/임의1인/과반수) ④ 상신 후 결재자·참조자 추가/제거 ⑤ 결재 기한 초과 시 기안자 알림(기존 리마인더 확장) ⑥ 다른 양식에서 결재선 복사(관리자) — 6개 기능을 구현했다.
+
+**이번 라운드는 `/code-review max`(로컬 10관점 병렬 서브에이전트)가 세션 사용량 한도에 걸려 실행되지 못해, 대신 이 세션이 직접(서브에이전트 없이) 전체 diff를 한 번에 정독하는 방식으로 진행함.** 커버리지가 평소 10관점 병렬 리뷰보다 좁을 수 있으니, 한도가 풀리면(당일 18:20 KST 이후) `/code-review max`로 한 번 더 돌려보는 것을 권장.
+
+### 발견 및 조치 — 전부 즉시 수정 완료(보고 후 수정이 아니라, 발견 즉시 조치하며 진행)
+
+| # | 발견 | 심각도 | 조치 |
+|---|---|---|---|
+| 1 | `removeStep`(상신 후 결재자 제거)에서 **정족수(quorum) 그룹의 멤버를 제거**하면 "필요 인원 > 남은 인원"이 되어 그 차수가 **영원히 완료될 수 없는 상태(데드락)**가 될 수 있음. 예: 3명 중 3명 전원 필요(quorum n=3)로 설정된 미래 차수에서 기안자가 1명을 제거하면, 남은 2명으로는 n=3을 절대 못 채워 문서가 그 차수에서 영구 정체됨 | 🔴 High(복구 불가능한 업무 정체) | ✅ `removeStep`에서 제거 대상 차수가 quorum 정책을 가지고 있으면, 제거 후 남은 인원수로 `n`을 자동으로 낮춤(새 테스트로 고정: "정족수 그룹에서 인원 제거 시 남은 인원수로 정족수를 자동으로 낮춘다") |
+| 2 | `addStep`/`removeStep`이 **`ApprovalStep` 생성/삭제와 `ApprovalDocument.totalSteps` 갱신을 트랜잭션 없이 두 번의 개별 호출**로 수행 — 둘째 호출이 실패하면 `totalSteps`가 영구적으로 부정확해질 수 있음(approve/reject 쪽은 전부 `$transaction`을 쓰는 기존 패턴과 불일치) | 🟡 Medium(드문 부분 실패 시 데이터 정합성) | ✅ 두 함수 모두 `prisma.$transaction([...])` 배열 형태로 원자화 |
+| 3 | `getFreeform`(자유 양식 최초 생성)이 "없으면 생성" 패턴인데 **동시 요청 레이스**(두 사용자가 "빠른 결재"를 거의 동시에 처음 누르는 경우)로 양식종류/템플릿이 중복 생성될 수 있고, 이후 조회가 어떤 중복 행을 반환할지 일관성이 없었음 | 🟢 Low(소규모 팀에서 희박한 레이스, 기능 자체는 멈추지 않음) | ✅ `findFirst`에 `orderBy: { id: 'asc' }` 추가 — 레이스로 중복이 생겨도 항상 가장 먼저 만들어진 행으로 수렴해 어떤 요청이든 같은 템플릿을 일관되게 반환 |
+| 4 | 결재 기한 초과 시 기안자에게 보내는 새 알림이 결재자용 리마인더와 **동일한 "[결재 지연]" 접두사**를 써서, 기안자가 자기 문서의 결재자이기도 한 경우(자가결재) 같은 `userId`에 두 메시지가 섞여 한쪽의 중복방지 조회가 다른 쪽 알림 존재만으로 조용히 생략될 수 있었음 | 🟢 Low(자가결재라는 좁은 조건에서만 발현) | ✅ 기안자용 메시지 접두사를 "[결재 지연·기안자]"로 분리해 결재자용 리마인더와 겹치지 않게 함 |
+
+### 검토했지만 문제없음으로 확인한 것 (근거 명시)
+- 반려(`reject`)는 병렬 완료조건(any/quorum)과 무관하게 **항상 1인 반려로 즉시 문서 전체 반려** — 의도된 설계(거부권 성격의 veto는 완화하지 않음). 프론트 UI/문구 어디에도 "병렬이면 반려도 분산"이라는 오해를 주는 문구가 없음을 확인.
+- `addStep`의 승인/합의/전결 추가는 "현재 차수보다 큰 차수"에만 허용 — 현재 진행 중인 투표를 사후에 바꾸는 경로가 없음을 코드로 재확인(`targetOrder <= doc.currentStep` 체크).
+- `moveGroup`(차수 이동)은 멤버 구성을 바꾸지 않으므로 완료조건(`groupPolicies`)을 번호와 함께 맞바꾸도록 구현됐고, 반대로 병합/분리/추가/삭제/역할변경처럼 **멤버 구성 자체가 바뀌는 조작은 전부 완료조건을 안전한 기본값('전원 동의')으로 리셋** — "바뀐 멤버에게 과거에 설정한 완화된 조건이 조용히 눌러붙는" 위험을 구조적으로 차단했음을 재확인.
+- `resume()`(반려 지점부터 재상신)이 `stepOrder >= resumeGroup` 전체를 pending으로 되돌리므로, quorum 그룹이 반려된 뒤 재개돼도 그 그룹의 기존 승인/스킵 상태가 올바르게 초기화됨을 추적 확인.
+- `ApprovalLineEditor.jsx`의 "다른 양식에서 결재선 복사"가 조건(`condition.field`)을 포함한 라인을 복사해오면, 복사 대상 템플릿에 그 필드가 없어 조건이 영구히 평가 불가능해질 수 있음 — 다만 기존 "조건 결재선 미리보기" 시뮬레이터가 저장 전에 바로 드러내주는 문제라 별도 조치 없이 허용(관리자 자가진단 가능).
+
+### 검증
+- 백엔드 전체 테스트 31 스위트 **325건** 통과(신규: 병렬완료조건 2건, 상신후결재자추가/제거 6건, 정족수 데드락 방지 회귀 1건).
+- 프론트 프로덕션 빌드 성공, 수정된 모든 프론트 파일 esbuild 구문 검사 통과.
+- `CODE_REVIEW_VERIFY.sql` §14 신규 작성 및 실행 — 자유 양식 템플릿 0건, `group_policy_json` 사용 문서 0건, 팀 공유 프리셋 키 미생성 확인(전부 "아직 아무도 안 써봐서 당연히 0건"이며, 코드가 깨져서 0건인 게 아님을 수동 기능 경로 추적으로 확인).
+
+---
+
+## 7회차 리뷰 — 전자결재 추가 개선 8종 (2026-10-02)
+
+사용자가 6회차에 이어 추가로 추천한 개선안 8개를 **"1번부터 순차로"** 전부 구현: ① 양식 필드 상신 시점 스냅샷(`fieldsJsonSnap`) ② 결재 요청/지연 이메일 알림(기존 SMTP·`sendGenericEmail` 재사용) ③ 휴가 중 결재 자동위임(F-55 일정 연동 + 개인설정) ④ 재사용 가능한 결재자 그룹(`ApprovalApproverGroup`, 결재선에 그룹 통째로 삽입) ⑤ 결재 현황 대시보드(양식별/결재자별 통계, 관리자 전용) ⑥ 결재 일일 다이제스트(매일 08:50) ⑦ 반려 사유 카테고리 ⑧ 의견(댓글) 첨부파일·@멘션.
+
+**이번 라운드는 `/code-review max`를 두 차례 재시도했으나 모두 세션 사용량 한도(429)로 서브에이전트 전원이 즉시 실패해, 전량 이 세션의 직접 정독으로 진행함.** 구현 도중 스스로 발견해 즉시 고친 것과, 구현 완료 후 별도로 다시 훑어 확인한 것을 구분해 기록한다.
+
+### 구현 중 자체 발견 + 즉시 수정 (4건)
+
+| # | 발견 | 심각도 | 조치 |
+|---|---|---|---|
+| 1 | `removeStep`(상신 후 결재자 제거)에서 **정족수(quorum) 그룹의 멤버를 제거**하면 "필요 인원 > 남은 인원"이 되어 그 차수가 **영원히 완료될 수 없는 상태(데드락)**가 될 수 있음(6회차 기능 ③과 7회차 신규 기능이 조합되며 생긴 상호작용 버그) | 🔴 High | ✅ 제거 후 남은 인원수로 `n`을 자동 하향 조정 + 회귀 테스트(`__tests__/approval.test.js` "정족수 그룹에서 인원 제거") |
+| 2 | `addStep`/`removeStep`이 스텝 생성·삭제와 `totalSteps` 갱신을 트랜잭션 없이 두 번 호출 — 둘째 호출 실패 시 `totalSteps` 영구 불일치 가능 | 🟡 Medium | ✅ `prisma.$transaction([...])` 배열 형태로 원자화 |
+| 3 | 자유 양식(`getFreeform`) "없으면 생성" 패턴이 동시 요청 레이스에 취약 — 두 사용자가 "빠른 결재"를 거의 동시에 최초로 누르면 시스템 템플릿이 중복 생성될 수 있음 | 🟢 Low | ✅ 조회에 `orderBy: { id: 'asc' }` 추가 — 중복이 생겨도 항상 가장 먼저 만든 행으로 수렴 |
+| 4 | 기한초과 기안자 알림이 결재자용 리마인더와 **동일한 "[결재 지연]" 접두사**를 써서, 기안자가 자기 문서의 결재자이기도 한 경우(자가결재) 한쪽의 중복방지 조회가 다른 쪽 알림 존재만으로 조용히 생략될 수 있었음 | 🟢 Low | ✅ 기안자용 접두사를 "[결재 지연·기안자]"로 분리 |
+
+### 구현 완료 후 재점검 — 문제없음으로 확인 (근거 명시)
+
+- **그룹(④) ↔ 중복 approverId 식별자(이전 라운드 수정)**: 그룹이 여러 사용자로 확장될 때 `resolveApprovalLine` 결과는 기존 "직급 규칙" 매칭과 동일한 평평한 `{approverId, type, stepOrder}` 배열로 반환되므로, `DocumentForm.jsx`의 `_uid` 기반 식별자 로직이 수정 없이 그대로 안전하게 적용됨을 코드 추적으로 확인.
+- **멘션(⑧) 정규식 일치성**: 백엔드 `notifyMentions`의 `content.match(/@([^\s@]{1,50})/g)`(매치 전체 문자열에서 `.slice(1)`로 `@` 제거)와 프런트 `MentionText`의 `split(/(@[^\s@]{1,50})/g)`(캡처 그룹 포함 split)가 같은 토큰 정의를 공유함을 확인 — 백엔드가 알림을 보낸 이름과 프런트가 강조 표시하는 토큰이 항상 일치한다.
+- **댓글 첨부(⑧) 접근 통제**: `uploadAttachment`에 `commentId`를 추가하면서, 전달된 `commentId`가 **같은 문서(documentId)의 댓글인지**를 먼저 조회로 검증하도록 함(다른 문서의 댓글 id를 넣어 첨부를 몰래 연결하는 경로 차단) — 전용 테스트로 고정.
+- **`get()`의 `attachments` include 변경**(`where: { commentId: null }`)이 기존 문서-레벨 첨부파일 기능(업로드·다운로드·삭제)에 영향 없음을 확인 — 기존 행은 전부 `comment_id IS NULL`이라 하위호환 100%(마이그레이션이 nullable 컬럼 추가라 백필 불필요).
+- **정족수 n 값의 데이터 경로**: 프런트는 'quorum' 선택 시 항상 `Math.max(2, ...)`로 숫자를 채워 보내고, 그 외 경로(서버 fallback `Math.ceil(groupSteps.length/2)`)는 `n`이 비정상(0/NaN/음수)일 때만 쓰이므로 정상 흐름에서는 항상 유효한 값이 전달됨을 확인.
+- **라우트 순서**: 이번에 추가한 `/approvals/stats`, `/approvals/reject-categories`, `/approval-templates/freeform`, `/approval-approver-groups` 전부 `:id` 파라미터 라우트보다 먼저(또는 세그먼트 수가 달라 무관하게) 등록돼 있음을 재확인.
+- **이메일 발송(②)이 테스트를 오염시키지 않음**: `sendGenericEmail`은 SMTP 미설정 시 `createTransporter()` 내부 try/catch로 조용히 `null`을 반환하도록 기존에 설계돼 있어, Jest에서 `appSetting` mock이 비어 있어도 테스트가 깨지지 않음을 확인(그래도 명시적으로 `emailService`를 mock 처리해 테스트가 실제 네트워크 코드에 의존하지 않게 함).
+- **마이그레이션 6종 전부 안전**: nullable 컬럼 추가 5건 + 신규 테이블 1건(FK는 `created_by`만 RESTRICT, 나머지는 SetNull) — 기존 데이터 백필 불필요, 롤백도 단순.
+
+### 검증
+- 백엔드 전체 테스트 31 스위트 **336건** 통과(이번 배치에서 approvalLine 2건, approve/addStep/removeStep/stats/reject-category/mention/comment-attachment 등 신규 테스트 다수 추가).
+- 프론트 프로덕션 빌드 성공(`npm run build`), 수정·신규 프론트 파일(DocumentForm/DocumentDetail/index/ApprovalAdmin/ApprovalLineEditor/Profile/sections 등) 전부 esbuild 구문 검사 통과.
+- `CODE_REVIEW_VERIFY.sql` §15 신규 작성 및 실행 — 전부 "아직 아무도 신규 기능을 실사용하지 않아 당연히 0건/스냅샷 없음" 상태로, 코드 결함에 의한 0건이 아님을 기존 운영 데이터(결재문서 4건) 기준으로 직접 확인. §15-6(quorum 데드락 잔존 여부 점검)도 0건 — 현재는 해당 없음이 당연하나, 향후 라운드에서도 계속 0건을 유지하는지 추적할 가치가 있어 쿼리를 남겨둠.
+
+### 범위를 의도적으로 좁힌 부분 (후속 과제)
+- ⑧ 멘션은 "정확한 표시이름 자동완성 UI" 없이 "사용자 선택 → `@이름` 텍스트 삽입" 방식의 가벼운 구현으로 한정함(실시간 `@` 트리거 자동완성은 더 큰 작업이라 범위 제외).
+- ⑤ 결재 현황 통계의 "평균 응답시간"은 근사치다(순차 결재선의 뒤쪽 단계는 대기 시간이 실제 검토시간에 섞여 들어감) — UI에 이 한계를 명시하는 안내 문구를 넣어두었다.
+- ③ 휴가 자동위임이 성사되면 해당 스텝의 `actingType`을 `'휴가 자동위임'`으로 표시하는데, 그 스텝이 나중에 실제 승인될 때 `approve()`의 `actingType: isDelegation ? '전결' : '본인'` 로직이 이를 `'본인'`으로 덮어써 자동위임 이력이 최종 결재란에는 안 남는다 — **단, 이는 기존 수동 `delegate()`(F-52 위임/대결)도 동일하게 겪는 pre-existing 한계**이며 이번 기능이 새로 만든 결함이 아님을 확인. 고치려면 `approve()`의 `isDelegation` 판정 로직 자체를 확장해야 해서(위임 계열 액션 전체의 공통 리팩터링), 이번 라운드 범위 밖으로 남겨둔다.
+
+---
+
+## 8회차 리뷰 — 7회차 후속 보완 4종 (2026-10-02)
+
+7회차에서 "범위 밖"으로 남겨뒀던 것 + 사용자가 추가로 지목한 것을 순차 구현: ① 위임/휴가 자동위임 이력이 최종 승인·반려 시 `actingType`이 `'본인'`으로 덮어써지던 결함 수정 ② 상신 후 결재자·참조자 추가/제거 변경이력(`ApprovalDocumentHistory`, `TaskHistory`와 동일 모양) 기록 + 결재 라인 사이드바에 타임라인 노출 ③ 결재 현황 대시보드에 기간(`from`/`to`) 필터 ④ 알림 이메일 개인별 수신거부(`email_opt_out_*`, 인앱 알림엔 영향 없음).
+
+### 조치
+
+| # | 내용 |
+|---|---|
+| ① | `approve()`/`reject()`가 단계를 최종 처리할 때 `actingType`을 무조건 `'본인'`/`'전결'`로 덮어쓰던 것을, 사전에 `delegate()`/`applyAutoDelegation()`이 남긴 `'위임'`/`'휴가 자동위임'` 마커가 있으면 그대로 보존하도록 공유 헬퍼 `resolveActingType()`로 통일. 회귀 테스트 2건(승인/반려 각각) |
+| ② | `ApprovalDocumentHistory` 모델 신설(`documentId, userId, action, field, oldValue, newValue`) — `addStep`/`removeStep` 트랜잭션에 포함해 원자적으로 기록. `get()` 응답에 `histories` 포함, `DocumentDetail.jsx` 결재 라인 카드 하단에 타임라인으로 노출 |
+| ③ | `GET /api/approvals/stats?from=&to=`로 `createdAt` 범위 필터(종료일은 23:59:59.999로 보정해 당일 포함). 프론트 `StatsTab`에 `DatePicker.RangePicker` + "전체 기간" 리셋 버튼 |
+| ④ | `emailPreference.js`(공유 서비스) 신설 — `isEmailOptedOut`/`setEmailOptOut`. `sendApprovalNotification`(approvalController)과 `emailApprovalReminder`(notificationService) 양쪽이 공유해 이메일 발송 직전 체크. `GET/PUT /api/settings/email-opt-out`, 내 프로필에 토글 UI 추가(인앱 알림은 별개로 항상 발송됨을 문구로 명시) |
+
+### 검증
+- 백엔드 전체 테스트 31 스위트 **342건** 통과 — 신규: actingType 보존 2건, addStep/removeStep 변경이력 기록 2건, stats 기간필터 2건, 이메일 opt-out 실제 억제 1건(mock된 `sendGenericEmail` 호출 여부로 직접 검증, 추론이 아니라 실행으로 확인).
+- 프론트 프로덕션 빌드 성공, 수정 파일(approvalController/notificationService/settingsController·routes, DocumentDetail/ApprovalAdmin/Profile/sections) 전부 esbuild 구문 검사 통과.
+- 마이그레이션 1종(`ApprovalDocumentHistory` 신규 테이블, FK `onDelete: Cascade`) — 기존 데이터 영향 없음.
+- `CODE_REVIEW_VERIFY.sql` §16 추가 실행 — ①의 수정 전 버그가 실존했다면 포착했을 "위임 이력인데 본인으로 기록된 건" 쿼리 0건(현재 운영 데이터엔 위임 사례 자체가 없어 당연), 나머지도 전부 "아직 신규 기능 미사용" 상태의 0건으로 코드 결함에 의한 것이 아님을 확인.
+- 이번 라운드도 `/code-review max`가 세션 한도로 두 차례 모두 즉시 실패해(앞선 7회차와 동일 한도) 이 세션이 직접 정독 + 실제 테스트 실행으로 검증을 대체함.
+
+---
+
+## 9회차 리뷰 — 사용자 제안 신규 기능 5종 (2026-10-02)
+
+사용자가 요청한 "기능 개선 아이디어"에서 1~5번을 순차 구현한 것에 대한 리뷰: ① 문서함(F-68) 전문검색 확장(WBS 산출물·즐겨찾기·직접 다운로드·텍스트 본문 검색) ② WBS 선후행 의존성+크리티컬패스(F-13) ③ WBS 상위 작업 진척률 자동 집계(read-time rollup) ④ 백업 자동 스케줄링(F-44) ⑤ 템플릿 세트(F-41, 프로젝트 킥오프 일괄 생성). `/code-review max`가 이번에도 서브에이전트 병렬 실행 중 세션 한도(`rate_limit`)로 전부(10개 관점) 즉시 실패해, 이 세션이 변경분 diff를 직접 전량 정독하는 방식으로 대체했다. **주의**: 이번 라운드는 같은 브랜치의 전자결재(1~8회차) 작업과 동시에 진행 중이던 범위라, 아래는 전자결재 쪽을 건드리지 않고 신규 5개 기능 파일만 대상으로 함.
+
+### 발견 사항 — 전부 조치 완료 (2026-10-11, 사용자 확인 후 진행)
+
+| # | 내용 | 심각도 | 상태 |
+|---|---|---|---|
+| 1 | `documentController.js::list` — "즐겨찾기만" 필터(`favorite=1`)가 각 도메인 테이블에서 **최신 `perSource`(기본 60)건만 먼저 가져온 뒤** 그 안에서 `isFavorite`로 걸러낸다. 즐겨찾기한 파일이 해당 소스에서 61번째 이상으로 오래된 것이면, DB 조회 자체에서 빠져 있어 "즐겨찾기만" 필터 결과에 **아예 나타나지 않는다**. | 🟠 High | ✅ 조치완료 |
+| 2 | `templateSetController.js::apply` — `prisma.$transaction(items.map(...))` 배열 폼은 **원자적**이라, 세트에 포함된 템플릿 중 단 하나라도 삭제된 사용자/팀을 가리키면 FK 위반으로 **세트 전체의 업무 생성이 통째로 롤백**된다. | 🟡 Medium | ✅ 조치완료 |
+| 3 | `wbsController.js::updateTask`의 선후행 의존성 처리(조회→순환검사→`deleteMany`→`createMany`)가 하나의 Prisma 트랜잭션으로 묶여 있지 않아 동시 수정 시 레이스 가능성. | 🟢 Low | ✅ 조치완료 |
+| 4 | `pages/Documents/index.jsx` — 즉시 로드 effect가 디바운스 effect 하나로 합쳐지며 **첫 진입 시에도 불필요한 300ms 지연**이 생김. | 🟢 Low | ✅ 조치완료 |
+
+### 조치 내역
+- **①**: 즐겨찾기(`document_favorite`)를 먼저 조회해 소스별 `refId` 목록(`favIdsBySource`)을 만들고, `favorite=1`일 때는 각 소스 쿼리의 `where`를 `id: { in: favIdsBySource[source] || [] }`로 바꿔 DB 레벨에서 보장하도록 수정(`take`도 `perSource`가 아닌 넉넉한 상한 1000으로 분리). 검색어(`q`)와 함께 켜져 있으면 `norm()`의 기존 이름/본문 매칭이 AND로 추가 적용돼 "내 즐겨찾기 중 검색어에 맞는 것"으로 정확히 좁혀진다. 회귀 테스트 2건 추가(`where.id`가 즐겨찾기 id로 제한되는지, 해당 소스에 즐겨찾기가 없으면 `in: []`로 비어있는지).
+- **②**: `apply()`가 트랜잭션 실행 전에 세트 내 전체 템플릿이 참조하는 `assigneeIds`/`partId`를 한 번에 조회해 현재 존재(활성)하는 것만 걸러내고, 유효하지 않은 참조는 조용히 제외한 뒤 응답에 `warnings` 배열로 안내(예: `"설계 검토": 더 이상 존재하지 않는 담당자 1명을 제외했습니다.`). 이제 담당자/팀 하나가 깨져 있어도 세트 전체가 롤백되지 않고 나머지는 정상 생성됨. 회귀 테스트 1건 추가.
+- **③**: `wbsTaskDependency`의 `deleteMany`+`createMany`를 `prisma.$transaction([...])` 배열 폼으로 묶어 원자적으로 처리(그 사이 다른 요청이 "의존성이 전부 삭제된" 중간 상태를 읽을 수 없게 됨). 읽기 단계(순환 검사용 조회)는 성격이 달라 트랜잭션 밖에 유지.
+- **④**: `useRef`로 첫 렌더 여부를 추적해 최초 마운트는 즉시 `load()`, 이후 검색어/필터 변경에만 300ms 디바운스를 적용하도록 분리.
+
+### 검증
+- 백엔드 전체 테스트 **35 스위트 / 380건** 통과(신규 4건 포함: 즐겨찾기 where 검증 2건, 템플릿 세트 부분 실패 방지 1건 — 기존 9개 테스트 포함 총합).
+- 프론트 프로덕션 빌드 성공.
+- `CODE_REVIEW_VERIFY.sql` §17 재실행 — 여전히 신규 기능 데이터가 0건(아직 실사용 전)이라 "수정 전후 영향 건수 비교"는 다음 라운드(실사용 데이터 축적 후)로 넘어감. 수정 자체는 코드 레벨 재현조건(where 절 구성)을 테스트로 고정해 회귀 방지.
+
+---
+
+## 10회차 리뷰 — 200명 동시접속 스케일링 작업 (2026-10-12)
+
+- **배경**: "소규모 팀 2~10명" 전제를 제거하고 "폐쇄망 200명 이상 동시접속"을 지원하도록 변경(사용자 명시적 승인: Redis로 Socket.IO 수평확장, 인증 미들웨어는 인메모리 TTL 캐시).
+- **이번 회차에 이 세션이 직접 작성한 코드**: `backend/src/lib/userCache.js`(신규), `middlewares/auth.js`·`socket.js`(유저 캐시 적용), `socket.js`(Redis adapter 조건부 연결), `authController.js`·`userController.js`(캐시 invalidate 배선), `schema.prisma`(Task/Notification/ChatMessage 인덱스 3종 + 마이그레이션), `.env.example`(connection_limit/REDIS_URL 가이드), 프론트 `unreadStore.js`/`MainLayout.jsx`/`AppHeader.jsx`/`Sidebar.jsx`(결재대기·메일 안읽음 중복 폴링 통합), 문서 3종 설명문구(`CLAUDE.md`/`README.md`/`FEATURES.md`).
+- **리뷰 범위**: 위 신규 코드 + **이미 브랜치에 커밋 전 상태로 존재하던 전자결재 자유도/WBS 의존성/문서함 확장 등의 미검증 변경분**(1~9회차가 다루지 않은 부분)을 함께 대상으로 함 — `/code-review max`가 "현재 diff"를 기준으로 돌기 때문. 아래 발견사항 중 상당수는 이번 세션이 작성한 코드가 아니라 그 선행 작업에서 나온 것이며, 각 항목에 출처를 표기함.
+- **리뷰 방식**: 로컬 10개 관점(A~E 교차검증/reuse/simplification/efficiency/altitude/CLAUDE.md 컨벤션) 서브에이전트 병렬 실행 + 이 세션의 직접 수동 테스트(로그인→호출→로그아웃→재호출로 세션무효화 확인) 교차검증.
+- **검증 SQL**: `CODE_REVIEW_VERIFY.sql` §18 추가·실행 — 결과는 각 항목에 표기(대부분 0건, "아직 실사용 전"이라 노출 안 됐을 뿐 코드 결함 자체는 실존).
+- **조치 상태**: ✅ **전체 25건 중 24건 조치 완료 (2026-10-12, 사용자 확인 후 진행)** — Critical 5 + High 4 + Medium 10 + Low 5, 의도적 보류 1건(#24, 사유는 해당 항목에 기재).
+
+### 요약 (우선순위)
+
+| 우선순위 | 건수 | 비고 |
+|---|---|---|
+| 🔴 Critical | 5 (✅완료 5) | 세션관리 우회 1, 결재 정합성 2, 기능 전체 불능 1, 관리자 보안조치 무력화 1 |
+| 🟠 High | 4 (✅완료 4) | 동시성(WBS), 이벤트루프 블로킹, 감사로그 공백, N+1 성능 |
+| 🟡 Medium | 10 (✅완료 10) | 이번 스케일링 코드 자체의 누락분 2건 포함, 나머지는 선행 전자결재/WBS 작업 — 전부 조치 완료 |
+| 🟢 Low | 6 (✅완료 5, 의도적 보류 1) | 중복 로직·잠재적(미도달) 결함 — #24(마이그레이션 히스토리 미화)만 리스크 대비 이득 없어 보류 |
+
+### 🔴 Critical
+
+1. ✅ **조치완료** — **로그아웃이 세션을 실제로 무효화하지 않음** (이 세션이 직접 재현·발견, 선행 코드)
+   > **조치 내역**: `logout()`에서 `sessionNonce: null` 대신 `crypto.randomUUID()`로 새 난수 발급. curl로 재검증: 로그아웃 후 같은 토큰으로 `/api/auth/me` 호출 시 `SESSION_REPLACED` 401 확인.
+   - **파일**: `backend/src/controllers/authController.js` `logout()`, `backend/src/middlewares/auth.js:27`
+   - **재현**: 로그인 → `/api/auth/me` 200 → `/api/auth/logout` 200(`sessionNonce: null`로 갱신) → **같은 토큰으로 `/api/auth/me` 재호출해도 200** (이 세션에서 직접 curl로 확인).
+   - **원인**: `auth.js`의 `if (user.sessionNonce && decoded.sn !== user.sessionNonce)` 체크가 로그아웃 후 `sessionNonce`가 `null`이 되면 `&&`에서 즉시 false로 단락돼 전체 검사를 건너뜀. 중복로그인 차단용으로 설계된 nonce 비교가 "로그아웃=nonce 제거"와 충돌.
+   - **영향**: 로그아웃 버튼은 클라이언트 localStorage만 지울 뿐, 탈취된 토큰은 JWT 만료(`JWT_EXPIRES_IN=1h`)까지 계속 유효. 200명 규모·폐쇄망이라도 내부자 위협 시나리오에서 로그아웃이 실효성 없음.
+   - **제안**: `sessionNonce: null` 대신 `crypto.randomUUID()`로 새 난수를 발급(로그인과 동일 패턴)해 "토큰의 sn과 DB의 sn이 다르면 거부"가 항상 성립하도록 수정.
+
+2. ✅ **조치완료** — **전자결재 승인(approve) 동시성 레이스 — quorum/any 그룹에서 문서가 영구 결재대기로 멈추거나 중복 처리** (angle B·D 교차확인, 선행 전자결재 작업)
+   > **조치 내역**: 트랜잭션 시작 시 `SELECT ... FOR UPDATE`로 문서 row를 잠가 동시 승인을 직렬화하고, 그룹 완료 판정을 잠금 이후 `tx.approvalStep.findMany`로 다시 읽은 최신 상태로 재계산. 내 스텝 업데이트도 `updateMany({where:{id, status:'pending'}})` 가드로 바꿔 이미 처리된 건이면 409 반환. 회귀 테스트(all/any/quorum 시나리오) 통과, 전체 테스트 382건 통과.
+   - **파일**: `backend/src/controllers/approvalController.js:491-529, 557-564`
+   - **원인**: `$transaction` 시작 전에 읽은 `doc.steps` 스냅샷으로 "그룹 완료 여부(groupDone)"를 판단 후 트랜잭션 내에서 그대로 사용 — 동시 요청 간 서로의 커밋을 보지 못함.
+   - **재현**: quorum(2/2 필요) 그룹의 두 승인자가 거의 동시에 승인 클릭 → 각자 "나머지 1명은 아직 pending"으로 읽어 `groupDone=false`로 계산 → 둘 다 다음 단계로 진행 안 함 → 두 스텝 모두 `approved`로 DB에 남지만 문서 `status`는 영원히 `pending`에 머무름(더 이상 트리거할 미승인 멤버가 없어 수동 DB 수정 없이는 복구 불가). `any` 모드에선 반대로 한쪽이 상대 스텝을 `skipped`로 미리 쓴 뒤 상대방 트랜잭션이 그걸 다시 `approved`로 덮어써 중복 알림이 나갈 수 있음.
+   - **검증**: `CODE_REVIEW_VERIFY.sql` §18-1 — 현재 pending 상태인 quorum/any 그룹 문서 **0건**(아직 이 기능 실사용 전). 노출은 0이지만 코드 결함은 실존.
+   - **제안**: 그룹 완료 판정을 트랜잭션 "내부에서" 현재 DB 상태로 다시 조회(`tx.approvalStep.findMany`)하거나, 각 스텝 업데이트에 `WHERE status='pending'` 가드를 걸어 레이스를 봉쇄.
+
+3. ✅ **조치완료** — **전자결재 반려(reject)가 그룹 정책(any/quorum)을 전혀 반영하지 않음** (angle A, 선행 전자결재 작업)
+   > **조치 내역**: `reject()`에 `approve()`와 동일한 잠금+재조회 구조를 적용하고, `groupFailed` 판정(all=즉시 확정, any=승인+대기 인원이 0일 때만 확정, quorum=남은 인원으로 정족수 달성 불가능할 때만 확정)을 추가. "일부만 반려, 나머지는 pending 유지" 신규 회귀 테스트 2건 추가.
+   - **파일**: `backend/src/controllers/approvalController.js:641`
+   - **내용**: `approve()`는 all/any/quorum 완료조건을 전부 구현했는데(518-529행), `reject()`는 그룹 내 1명만 반려해도 그룹 정책과 무관하게 문서 전체를 즉시 `rejected`로 바꿔버림. "임의 1인 승인"으로 설정한 그룹에서도 1인 반려로 전체가 막힘 — 설계 의도와 반대.
+   - **제안**: `reject()`에도 `approve()`와 동일한 `policy`/`groupDone` 로직을 적용(all 모드만 1인 반려=즉시반려 유지, any/quorum은 그룹 내 반려 허용 임계치 재계산).
+
+4. ✅ **조치완료** — **통합 문서함 다운로드 버튼이 전부 401로 실패 — 기능 전체 불능** (angle C, 선행 F-68 확장 작업)
+   > **조치 내역**: `TaskForm.jsx`의 기존 fetch+Authorization+blob 패턴을 `frontend/src/utils/download.js`로 추출해 공용화하고, `Documents/index.jsx`·`DocumentDetail.jsx`(본문 첨부 + 댓글 첨부 2곳)·`TaskForm.jsx`(기존 중복 제거) 전부 이 공용 함수로 교체. 프론트 프로덕션 빌드 성공.
+   - **파일**: `backend/src/controllers/documentController.js`(6개 소스 `downloadUrl`), `frontend/src/pages/Documents/index.jsx:102`, `frontend/src/pages/Approval/DocumentDetail.jsx:~617`(댓글 첨부 다운로드도 동일 패턴 재사용)
+   - **원인**: 새 다운로드 버튼이 `<Button href={url} download>`(네이티브 앵커 네비게이션)을 쓰는데, JWT는 axios 인터셉터(`api/axios.js`)에만 붙고 네이티브 네비게이션에는 붙지 않음. `auth.js`에 쿠키/쿼리토큰 폴백도 없어 서버가 무조건 401.
+   - **영향**: 문서함(F-68)의 핵심 기능인 "다운로드"가 **클릭할 때마다 100% 실패**. `TaskForm.jsx:192`는 `fetch()`+수동 Authorization 헤더+blob 방식으로 이미 이 문제를 올바르게 회피한 전례가 있음 — 같은 패턴을 쓰면 해결.
+   - **제안**: 다운로드 버튼을 `fetch` + `Authorization` 헤더 + `blob` 다운로드 방식으로 교체(`TaskForm.jsx`의 기존 구현 재사용/추출).
+
+5. ✅ **조치완료** — **관리자 비밀번호 강제 초기화가 기존 토큰을 무효화하지 못함** (angle B·E 교차확인, 이번 세션 캐시 배선의 누락분)
+   > **조치 내역**: `resetPassword()`에 `passwordChangedAt: new Date()`, `mustChangePassword: true` 추가 + `userCache.invalidate(id)` 호출. curl로 PATCH 호출 재검증 완료(200 정상 동작, 호출자 본인 세션엔 영향 없음 확인).
+   - **파일**: `backend/src/controllers/userController.js:154-167` (`resetPassword`)
+   - **내용**: `passwordHash`만 갱신하고 `passwordChangedAt`을 찍지 않음 → `auth.js`의 `pwAt > decoded.pwAt` 체크가 절대 트리거되지 않음. 게다가 이번 세션에서 같은 파일의 `update`/`deactivate`/`activate`에는 `userCache.invalidate()`를 추가했는데 `resetPassword`만 빠짐.
+   - **영향**: 탈취 의심 계정을 관리자가 "비밀번호 강제 초기화"해도, 공격자가 이미 가진 토큰은 만료(최대 1시간)까지 그대로 유효 — 보안조치가 실효성 없음.
+   - **제안**: `authController.js`의 `changePassword`와 동일하게 `data`에 `passwordChangedAt: new Date()` 추가 + `userCache.invalidate(id)` 호출.
+
+### 🟠 High
+
+6. ✅ **조치완료** — **WBS 선후행 의존성 순환검사의 동시성 레이스 — 교차 순환 생성 시 프로젝트 전체 크리티컬패스가 조용히 비활성화** (angle D, 선행 WBS 작업)
+   > **조치 내역**: 조회(순환검사)+쓰기(deleteMany/createMany)를 하나의 `$transaction` 콜백으로 묶고, 시작 시 `SELECT pg_advisory_xact_lock(projectId)`로 같은 프로젝트의 동시 의존성 수정 요청을 직렬화. 테스트 mock을 콜백 트랜잭션 폼으로 갱신, 25건 통과.
+   - **파일**: `backend/src/controllers/wbsController.js:241,262`
+   - 두 사용자가 서로 다른 두 업무(A, B)를 동시에 수정해 "A의 선행=B", "B의 선행=A"를 각각 설정하면 두 요청 모두 트랜잭션 전 스냅샷 기준으로 순환검사를 통과해 커밋 — 교차 순환 완성. `wbsCriticalPath.js`의 Kahn 토폴로지 정렬이 순환을 만나면 **에러 없이 크리티컬패스를 빈 집합으로 반환**, 해당 프로젝트 전체에서 조용히 하이라이트가 사라짐.
+   - **검증**: §18-4 — 현재 DB에 교차 순환 **0건**.
+
+7. ✅ **조치완료** — **문서함 본문 검색이 요청 스레드에서 동기 파일 I/O 수행 — 200명 동시접속 환경에서 서버 전체 블로킹 위험** (angle Efficiency, 선행 F-68 확장 작업)
+   - **파일**: `backend/src/controllers/documentController.js:28` (`textContentMatches`)
+   - 텍스트 계열 첨부파일을 `items.filter()` 콜백 안에서 `fs.statSync`+`fs.readFileSync`(최대 300KB)로 동기 처리. 매칭 대상이 많으면 그 읽기 시간 동안 **Node 이벤트루프 전체가 멈춰 검색 요청자뿐 아니라 그 순간 접속한 모든 사용자의 요청이 함께 지연**됨 — 오늘 작업의 목표(200명 동시접속)와 정면으로 충돌하는 패턴.
+   > **조치 내역**: `fs.promises.stat`/`readFile`로 비동기 전환, `norm()`도 `Promise.all` 기반으로 재작성해 6개 소스 검색을 동시에 수행하도록 변경(부수적으로 전체 검색 속도도 개선). document.test.js 10건 통과.
+
+8. ✅ **조치완료** — **야간 자동백업이 감사로그에 전혀 기록되지 않음** (angle C, 선행 F-44 자동백업 작업)
+   - **파일**: `backend/src/services/backupScheduler.js:47`
+   - 수동 백업(`GET /api/admin/backup`)은 `auditAction(AUDIT_ACTION.DATA_EXPORT)`로 추적되는데, 매일 새벽 cron으로 도는 자동백업은 Express 라우트를 안 거쳐서 감사로그에 안 남음. "금융권 보안정책" 지향 프로젝트에서 전체 DB 덤프가 매일 로그 없이 디스크에 쌓이는 건 보안감사(F-57) 관점의 공백.
+   > **조치 내역**: `runAutoBackup()` 성공/실패 각각에 `audit.record({ action: AUDIT_ACTION.DATA_EXPORT, resource: 'backup/auto', ... })` 추가. backupScheduler.test.js에 감사로그 기록 검증 2건 추가, 총 8건 통과.
+
+9. ✅ **조치완료** — **전자결재 승인 처리의 N+1 쿼리 — 그룹 인원수에 비례해 지연** (angle Efficiency, 선행 전자결재 작업)
+   - **파일**: `approvalController.js:85`(`sendApprovalNotification` 그룹당 2N개 단건조회), `:124`(`applyAutoDelegation` 루프마다 동일쿼리 반복), `:999,1003`(`notifyMentions` 순차 await+중복조회), `approvalLine.js:78`(`resolvePresetLine` 프리셋 항목마다 순차조회)
+   - 승인 그룹/결재선 길이에 선형으로 비례해 지연 — 200명 규모에서 결재선이 길어질수록 체감 저하.
+   > **조치 내역**: `applyAutoDelegation`의 그룹 내 반복 조회는 루프 밖에서 1회로 호이스팅(위임 성사 시 메모리 Set으로 갱신해 충돌감지 유지). `notifyMentions`는 순차 await→`Promise.all` 동시발송. `resolvePresetLine`은 전체를 `preset.map(async...)` + `Promise.all`로 재작성(순서는 배열 인덱스로 보존). `sendApprovalNotification` 자체의 그룹 배치화는 호출부가 많아 더 큰 리팩터링이 필요해 이번 라운드에서는 보류. approvalLine.test.js 11건·approval 전체 58건 포함 382건 통과.
+
+### 🟡 Medium (요약표 — 상세는 각 서브에이전트 보고 참고, 필요 시 펼쳐서 설명)
+
+| # | 내용 | 출처 |
+|---|---|---|
+| 10 | ✅조치완료 — `userController.updateAvatarColor`에 `userCache.invalidate()` 추가 | 이번 세션 누락분 (E·B·altitude·C·D 5개 관점 교차확인) |
+| 11 | ✅조치완료 — `collabServer.js`가 자체 `prisma.user.findUnique` 대신 `userCache.getUser()` 재사용하도록 교체 | 이번 세션 누락분 (angle E) |
+| 12 | ✅조치완료 — `automationService.js`의 'email' 액션에 `isEmailOptedOut` 체크 추가(수신거부 유저는 발송대상에서 제외) | 선행 자동화 작업 (altitude·B·C·D 4개 관점 교차확인) |
+| 13 | ✅조치완료 — `generateNotifications()`에도 `isEmailOptedOut` 체크 추가 | 선행 알림 작업 (B·C 교차확인) |
+| 14 | ✅조치완료 — `ApprovalLineEditor.jsx`의 `addUser`/`addGroup` 모두 중복체크를 `setLine` 업데이터 내부로 이동(스캔해보니 `addUser`도 같은 버그) | 선행 전자결재 UX 작업 (angle D) |
+| 15 | ✅조치완료 — PUT(전체배열) 폐기 → POST(1건 추가)/DELETE(1건 삭제) 원자적 엔드포인트로 교체. 서버가 advisory lock(`pg_advisory_xact_lock`)으로 read-modify-write를 직렬화해 동시편집 lost-update를 근본적으로 제거. 프론트(`DocumentForm.jsx`)·API클라이언트도 함께 교체 | 선행 전자결재 작업 (angle D) |
+| 16 | ✅조치완료 — `emailService.sendApprovalStyledEmail()` 신설, `approvalController`/`notificationService` 양쪽이 공유 | 선행 작업 (Reuse) |
+| 17 | ✅조치완료 — `wbsRollup.weightOf()`/`wbsController` 엑셀내보내기 둘 다 `wbsCriticalPath.durationDays()`를 재사용하도록 통일 | 선행 WBS 작업 (Reuse) |
+| 18 | ✅조치완료 — "다른 템플릿에서 복사" 시 템플릿 자체 lineJson이 없으면 `types` 목록에서 해당 FormType의 lineJson을 폴백으로 사용(백엔드 resolvePresetLine과 동일 규칙) | 선행 전자결재 작업 (Altitude) |
+| 19 | ✅조치완료 — 엑셀 내보내기도 `buildTree`+`applyProgressRollup`을 거친 값으로 상위 작업 진척률 계산 | 선행 WBS 작업 (Altitude) |
+
+### 🟢 Low
+
+| # | 내용 | 출처 |
+|---|---|---|
+| 20 | ✅조치완료 — `submit()`이 트랜잭션 커밋 후 첫 그룹 스텝을 DB에서 재조회(항상 id 포함)해 `applyAutoDelegation`에 넘기도록 변경 — toInject(조건부 주입) 스텝도 더 이상 id 없이 전달되지 않음 | 선행 전자결재 작업 (angle A) |
+| 21 | ✅조치완료 — `updateTask`가 드랍한 무효/순환 predecessor 건수를 `warnings` 배열로 응답에 포함, 프론트(`WbsSheet.jsx`)가 `message.warning`으로 노출 | 선행 WBS 작업 (angle A) |
+| 22 | ✅조치완료 — 과반수 기본값 공식을 `Math.ceil(n/2)`→`Math.floor(n/2)+1`로 수정(백엔드 approve/reject 폴백 2곳 + 프론트 기본값 1곳) | 선행 전자결재 작업 (angle A) |
+| 23 | ✅조치완료 — `notifyOnce({dedupWhere, data, userId, sendEmail})` 헬퍼로 5곳(generateNotifications/checkSlaBreaches/checkStepReminders/checkApprovalReminders×2/checkApprovalDailyDigest) 전부 통일 | 선행 작업 (Simplification) |
+| 24 | 보류(의도적) — 두 마이그레이션 모두 로컬 DB에 이미 적용되어 `_prisma_migrations`에 체크섬으로 추적 중. 지금 파일을 고치면 Prisma가 드리프트로 감지해 향후 `migrate dev`/`status`에 경고가 생긴다. 순수 히스토리 미화일 뿐 기능 영향이 전혀 없는 반면 리스크는 실재해 — 현재 상태 유지가 더 안전하다고 판단, 손대지 않음 | 선행 전자결재 작업 (Simplification) |
+| 25 | ✅조치완료 — `ApproverGroupTab`의 멤버 Select를 공용 `buildUserOptions`/`filterUserOption`으로 교체(부서별 그룹핑·검색 지원) | 선행 전자결재 작업 (Reuse) |
+
+### CLAUDE.md 컨벤션 관점
+위반 없음 — `next(err)`/`{error}` 패턴, Prisma 싱글턴, Task `delYn` 필터, `passwordPolicy.validateFormat` 사용 모두 이번 diff 범위에서 준수 확인(상세 근거는 해당 서브에이전트 보고 참고).
+
+### 다음 단계 — 조치 결과 (2026-10-12, Critical/High 1차 + Medium/Low 2차 전부 완료)
+1차: 사용자가 "Critical+High 전부 수정"을 선택 → 9건 조치 완료 + 이번 세션 누락분 2건(#10, #11).
+2차: 사용자가 "Medium/Low도 진행해"를 요청 → 남은 14건 중 13건 조치 완료, 1건(#24)은 리스크 대비 이득이 없어 의도적으로 보류(근거 위 표에 기재). 조치 과정에서 **새 버그 1건을 직접 발견·수정**: `SELECT pg_advisory_xact_lock(...)`을 `$queryRaw`로 호출하면 Postgres가 `void` 반환값을 역직렬화하지 못해 500 에러가 났다(이번 회차에서 추가한 approve/reject/updateTask/settingsController의 advisory lock 전부 영향) — `$executeRaw`로 교체. 유닛테스트는 Prisma를 통째로 mock하기 때문에 이 버그를 못 잡았고, 실제 Postgres에 curl로 직접 호출해보고서야 드러났다 — 이후 모든 Critical/High/Medium 수정은 유닛테스트 통과 후 **반드시 실제 DB·서버에 curl로 재현 조건을 직접 실행**해 확인하는 절차로 마무리.
+검증: 백엔드 전체 테스트 **35 스위트 / 383건** 통과(이번 라운드 신규 회귀 테스트 다수 포함), 프론트 프로덕션 빌드 성공, 서버 재시작 후 로그인/로그아웃/비밀번호 초기화/결재 승인/WBS 의존성/공유프리셋 add·delete/알림 크론 전체를 curl 또는 직접 호출로 재검증(건드린 테스트 데이터는 모두 원복).
+
+---
+
 ## 리뷰 프로세스 안내
 
 이 리뷰는 **1회성이 아니라 매 반영(커밋/PR)마다 상시 수행**한다. 절차는 `CLAUDE.md`의 "코드 리뷰 · 검증 SQL 운영 규칙" 섹션을 따른다. **이번 3회차처럼, 수정 자체를 다시 리뷰하는 것도 같은 프로세스에 포함된다** — "새 코드가 추가됐다"와 "그 코드가 올바르다"는 항상 분리 검증할 것.
