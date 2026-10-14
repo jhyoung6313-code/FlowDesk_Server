@@ -2,7 +2,7 @@ import {
   DashboardOutlined, ScheduleOutlined, CheckSquareOutlined, CalendarOutlined, BarChartOutlined,
   TeamOutlined, FlagOutlined, SnippetsOutlined, MessageOutlined, AppstoreOutlined, ReadOutlined,
   FileDoneOutlined, FormOutlined, FolderOutlined, BookOutlined, ProjectOutlined, MailOutlined,
-  NotificationOutlined, WalletOutlined,
+  NotificationOutlined, WalletOutlined, AuditOutlined,
 } from '@ant-design/icons';
 
 /* 좌측 레일에 고정할 수 있는 이동 가능 화면 목록 (단일 원천).
@@ -32,7 +32,7 @@ export const NAV_ITEMS = [
   { key: '/wbs',       title: '프로젝트',  icon: <ProjectOutlined />,      group: 'collab' },
   { key: '/mail',      title: '메일',      icon: <MailOutlined />,         group: 'biz', badge: 'mail' },
   { key: '/bbs',       title: '게시판',    icon: <NotificationOutlined />, group: 'biz' },
-  { key: '/approvals', title: '전자결재',  icon: <FileDoneOutlined />,     group: 'biz', badge: 'approval' },
+  { key: '/approvals', title: '전자결재',  icon: <AuditOutlined />,        group: 'biz', badge: 'approval' },
   { key: '/ledger',    title: '가계부',    icon: <WalletOutlined />,       group: 'biz' },
 ];
 

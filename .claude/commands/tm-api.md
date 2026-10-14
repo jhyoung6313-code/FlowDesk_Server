@@ -26,6 +26,8 @@
 | `/api/search` | searchController.search (F-49) |
 | `/api/webhooks/trigger/:token` | webhookController (인증 불필요) |
 
+> `/api/settings` 개인 설정(본인): `theme`, `dashboard-layout`, `widgets`, **`preferences`(v2.15, `GET`/`PUT` 최상위 키 병합·`null` 삭제, 키 `[A-Za-z0-9_]{1,40}`·30개·32KB·깊이 6 제한, `__proto__`/`constructor`/`prototype` 거부, 사용자별 advisory lock 트랜잭션)**, `approval-lines`, `email-opt-out` 등
+
 ## 주요 엔드포인트 (도메인별)
 - **인증**: `POST /api/auth/login`, `/otp/*`, `/reset-password/*`, `PUT /api/auth/idle-timeout`, `POST /api/auth/verify-password`, `POST /api/auth/logout` — [tm-auth]
 - **업무**: `GET/POST /api/tasks`, `PUT/DELETE /api/tasks/:id`, `PATCH /api/tasks/:id/status`, `POST /api/tasks/bulk`, `/calendar`, `/gantt`, `/export` — [tm-core]

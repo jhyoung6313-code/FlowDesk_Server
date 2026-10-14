@@ -7,7 +7,7 @@ import { getCycles, getTree } from '../../api/okr';
 /* 대시보드 추가 위젯 카탈로그 — 기본은 숨김, 편집 모드의 "+ 위젯" 에서 추가한다.
    id 는 저장된 레이아웃(v:1)의 키이므로 변경하지 않는다. needs='myday' 는 getMyToday 데이터가 필요함. */
 export const EXTRA_BLOCKS = [
-  { id: 'x-counts',    title: '☀️ 오늘 한눈에',   needs: 'myday', layout: { w: 12, h: 3 } },
+  { id: 'x-counts',    title: '☀️ 오늘 한눈에',   needs: 'myday', layout: { w: 12, h: 4 } },
   { id: 'x-approvals', title: '✍️ 결재 대기',     needs: 'myday', layout: { w: 6,  h: 6 } },
   { id: 'x-meetings',  title: '🗓 오늘 회의',     needs: 'myday', layout: { w: 6,  h: 6 } },
   { id: 'x-actions',   title: '✅ 내 액션아이템', needs: 'myday', layout: { w: 6,  h: 6 } },
@@ -31,7 +31,12 @@ const Title = ({ children, to, D }) => {
 };
 const Empty_ = ({ text }) => <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={text} />;
 
-export function CountsWidget({ data, D }) {
+/* 내 하루 데이터가 아직 없을 때(로딩/실패)의 안내 — "비어 있음" 문구와 구분한다 */
+const Pending = ({ status }) => (
+  <Empty_ text={status === 'error' ? '불러오지 못했습니다. 잠시 후 다시 시도됩니다.' : '불러오는 중...'} />
+);
+
+export function CountsWidget({ data, status, D }) {
   const navigate = useNavigate();
   const c = data?.counts;
   const items = c ? [
@@ -46,6 +51,7 @@ export function CountsWidget({ data, D }) {
   return (
     <div style={wrap}>
       <Title D={D}>☀️ 오늘 한눈에</Title>
+      {!data && <Pending status={status} />}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         {items.map(([label, v, to, color]) => (
           <div key={label} onClick={() => navigate(to)}
@@ -59,14 +65,14 @@ export function CountsWidget({ data, D }) {
   );
 }
 
-export function ApprovalsWidget({ data, D }) {
+export function ApprovalsWidget({ data, status, D }) {
   const navigate = useNavigate();
   const list = data?.approvals || [];
   return (
     <div style={wrap}>
       <Title D={D} to="/approvals">✍️ 결재 대기 <Tag>{list.length}</Tag></Title>
       <div style={{ flex: 1, overflow: 'auto' }}>
-        {list.length ? list.map((a) => (
+        {!data ? <Pending status={status} /> : list.length ? list.map((a) => (
           <div key={a.id} style={rowStyle(D)} onClick={() => navigate(`/approvals/${a.id}`)}>
             <span>{a.docNo && <Tag>{a.docNo}</Tag>}{a.title}</span>
           </div>
@@ -76,14 +82,14 @@ export function ApprovalsWidget({ data, D }) {
   );
 }
 
-export function MeetingsWidget({ data, D }) {
+export function MeetingsWidget({ data, status, D }) {
   const navigate = useNavigate();
   const list = data?.meetings || [];
   return (
     <div style={wrap}>
       <Title D={D} to="/meetings">🗓 오늘 회의 <Tag>{list.length}</Tag></Title>
       <div style={{ flex: 1, overflow: 'auto' }}>
-        {list.length ? list.map((m) => (
+        {!data ? <Pending status={status} /> : list.length ? list.map((m) => (
           <div key={m.id} style={rowStyle(D)} onClick={() => navigate(`/meetings?id=${m.id}`)}>
             <span>{m.title}</span>
             <span style={{ color: D.text2 }}>{dayjs(m.startAt).format('HH:mm')}{m.location ? ` · ${m.location}` : ''}</span>
@@ -94,14 +100,14 @@ export function MeetingsWidget({ data, D }) {
   );
 }
 
-export function ActionsWidget({ data, D }) {
+export function ActionsWidget({ data, status, D }) {
   const navigate = useNavigate();
   const list = data?.actionItems || [];
   return (
     <div style={wrap}>
       <Title D={D} to="/meetings">✅ 내 액션아이템 <Tag>{list.length}</Tag></Title>
       <div style={{ flex: 1, overflow: 'auto' }}>
-        {list.length ? list.map((a) => (
+        {!data ? <Pending status={status} /> : list.length ? list.map((a) => (
           <div key={a.id} style={rowStyle(D)} onClick={() => navigate(`/meetings?id=${a.meetingId}`)}>
             <span>{a.content}</span>
             <span>
@@ -126,8 +132,12 @@ export function OkrWidget({ D, userId }) {
       try {
         const cycles = await getCycles();
         const today = dayjs();
-        const cycle = cycles.find((c) => c.isActive && !today.isBefore(c.startDate, 'day') && !today.isAfter(c.endDate, 'day'))
-          || cycles.find((c) => c.isActive) || cycles[0];
+        const active = cycles.filter((c) => c.isActive);
+        const current = active.find((c) => !today.isBefore(c.startDate, 'day') && !today.isAfter(c.endDate, 'day'));
+        const lastEnded = active
+          .filter((c) => today.isAfter(c.endDate, 'day'))
+          .sort((x, y) => dayjs(y.endDate).valueOf() - dayjs(x.endDate).valueOf())[0];
+        const cycle = current || lastEnded || active[0] || cycles[0];
         if (!cycle) return alive && setState({ loading: false, cycle: null, objs: [] });
         const tree = await getTree(cycle.id);
         const mine = tree.filter((o) => o.ownerId === userId);

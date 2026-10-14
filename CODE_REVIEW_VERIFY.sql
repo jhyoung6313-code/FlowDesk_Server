@@ -362,3 +362,28 @@ JOIN wbs_task_dependencies d2
 SELECT 'task' AS source, COUNT(*) FROM task_attachments
 UNION ALL SELECT 'board', COUNT(*) FROM board_card_attachments
 UNION ALL SELECT 'approval', COUNT(*) FROM approval_attachments;
+
+-- ============================================================
+-- 라운드 3 (feat/widget-home) — 레일 메뉴 개인화 · 대시보드 위젯 카탈로그
+-- ============================================================
+
+-- 19-1. 기존 저장된 대시보드 레이아웃 보유 사용자 수 (신규 x-* 블록 병합 로직의 영향 범위)
+SELECT COUNT(*) AS users_with_saved_dashboard_layout
+FROM app_settings WHERE key LIKE 'dashboard_layout_%';
+
+-- 19-2. 저장된 레이아웃 중 이미 x- 블록을 가진 행 (0이어야 정상: 아직 출시 전)
+SELECT COUNT(*) AS layouts_already_containing_x_blocks
+FROM app_settings WHERE key LIKE 'dashboard_layout_%' AND value LIKE '%"i":"x-%';
+
+-- 19-3. 개인 설정(user_prefs_*) 저장 행 수 / 최대 크기(바이트) — 32KB 제한 대비 현황
+SELECT COUNT(*) AS user_prefs_rows, COALESCE(MAX(length(value)), 0) AS max_bytes
+FROM app_settings WHERE key LIKE 'user_prefs_%';
+
+-- 19-4. 저장된 nav.pinned 중 라우트가 없는 키가 섞인 행 (현재 유효 키 20개 기준)
+SELECT key, value FROM app_settings
+WHERE key LIKE 'user_prefs_%'
+  AND value ~ '"pinned":\[[^\]]*"/(?!(my-day|tasks|calendar|gantt|workload|okr|memos|chat|boards|wiki|meetings|forms|documents|playbooks|wbs|mail|bbs|approvals|ledger)")[a-z-]+"';
+
+-- 19-5. 위젯 데이터 원천 규모 — OKR 활성 주기 / 내가 맡은 목표가 있는 사용자 수
+SELECT (SELECT COUNT(*) FROM okr_cycles WHERE is_active) AS active_cycles,
+       (SELECT COUNT(DISTINCT owner_id) FROM objectives WHERE del_yn = '0') AS users_owning_objectives;

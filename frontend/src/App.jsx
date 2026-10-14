@@ -139,7 +139,7 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     getThemePrefs().then(hydrateTheme).catch(() => {});
-    getPreferences().then(hydratePrefs).catch(() => {});
+    getPreferences().then((p) => hydratePrefs(p, user.id)).catch(() => {});
   }, [user, hydrateTheme, hydratePrefs]);
 
   // 로그인 상태가 아니면(토큰 만료 등) 잠금 잔재를 정리한다.

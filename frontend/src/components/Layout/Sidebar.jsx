@@ -596,7 +596,11 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
     return { key: it.key, icon: it.icon, title: it.title, color: railAccent, dot: n > 0, count: showCount ? n : 0 };
   };
   const railItems = navPinned.map((k) => NAV_BY_KEY[k]).filter(Boolean).map(toRailItem);
-  const railActive = (key) => (key === '/' ? pathname === '/' : pathname.startsWith(key));
+  // 하위 화면이 다른 경로 접두사를 쓰는 항목(Playbook 실행 화면 /runs 등)
+  const RAIL_ALIASES = { '/playbooks': ['/runs'] };
+  const railActive = (key) => (key === '/'
+    ? pathname === '/'
+    : [key, ...(RAIL_ALIASES[key] || [])].some((p) => pathname.startsWith(p)));
 
   const RailIcon = ({ itemKey, icon, title, color, dot, count }) => {
     const active = railActive(itemKey);

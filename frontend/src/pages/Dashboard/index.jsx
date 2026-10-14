@@ -155,6 +155,7 @@ export default function DashboardPage() {
   const [bbsPosts, setBbsPosts] = useState([]);
   const [approvals, setApprovals] = useState([]);
   const [myDay, setMyDay] = useState(null);   // 추가 위젯(내 하루 집계) 공용 데이터
+  const [myDayStatus, setMyDayStatus] = useState('idle');   // idle | loading | ok | error
 
   /* ── 대시보드 커스터마이즈(레이아웃/사용여부) 상태 ── */
   const [dashLayout, setDashLayout]   = useState(ALL_DEFAULT_LAYOUT);
@@ -187,8 +188,18 @@ export default function DashboardPage() {
   // 내 하루 집계가 필요한 추가 위젯이 하나라도 켜져 있을 때만 호출 (기본 사용자는 추가 호출 없음)
   const needMyDayFlag = EXTRA_BLOCKS.some((b) => b.needs === 'myday' && dashEnabled[b.id]);
   useEffect(() => {
-    if (!needMyDayFlag) return;
-    getMyToday().then(setMyDay).catch(() => {});
+    if (!needMyDayFlag) { setMyDay(null); setMyDayStatus('idle'); return undefined; }
+    let alive = true;
+    const load = () => {
+      setMyDayStatus((s) => (s === 'ok' ? s : 'loading'));   // 갱신 중에는 기존 값을 유지
+      getMyToday()
+        .then((d) => { if (alive) { setMyDay(d); setMyDayStatus('ok'); } })
+        .catch(() => { if (alive) setMyDayStatus((s) => (s === 'ok' ? s : 'error')); });
+    };
+    load();
+    const timer = setInterval(load, 5 * 60 * 1000);   // 결재 처리 등 변경이 반영되도록 주기 갱신
+    window.addEventListener('focus', load);
+    return () => { alive = false; clearInterval(timer); window.removeEventListener('focus', load); };
   }, [needMyDayFlag]);
 
   const persistDash = useCallback((layout, enabled) => {
@@ -1084,10 +1095,10 @@ export default function DashboardPage() {
       {EXTRA_BLOCKS.filter((b) => extraOn(b.id)).map((b) => (
         <div key={b.id}>
           <DashBlock editing={dashEditing} onHide={() => toggleDashBlock(b.id)} D={D}>
-            {b.id === 'x-counts'    && <CountsWidget data={myDay} D={D} />}
-            {b.id === 'x-approvals' && <ApprovalsWidget data={myDay} D={D} />}
-            {b.id === 'x-meetings'  && <MeetingsWidget data={myDay} D={D} />}
-            {b.id === 'x-actions'   && <ActionsWidget data={myDay} D={D} />}
+            {b.id === 'x-counts'    && <CountsWidget data={myDay} status={myDayStatus} D={D} />}
+            {b.id === 'x-approvals' && <ApprovalsWidget data={myDay} status={myDayStatus} D={D} />}
+            {b.id === 'x-meetings'  && <MeetingsWidget data={myDay} status={myDayStatus} D={D} />}
+            {b.id === 'x-actions'   && <ActionsWidget data={myDay} status={myDayStatus} D={D} />}
             {b.id === 'x-okr'       && <OkrWidget D={D} userId={user?.id} />}
           </DashBlock>
         </div>

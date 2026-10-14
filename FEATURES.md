@@ -116,6 +116,8 @@
 - **화면**: S-02 대시보드
 - **설명**: Recharts 기반 통계 위젯 (상태별/파트별/우선순위별 도넛·바 차트, D-Day 현황, 최근 활동)
 - **API**: `GET /api/tasks` (필터 조합)
+- **[v2.15 추가] 위젯 카탈로그**: 대시보드는 `react-grid-layout` 블록 그리드(드래그·크기조절·숨김, `GET/PUT /api/settings/dashboard-layout`, 형식 `v:1`)이며, 편집 모드의 "+ 위젯"으로 **추가 위젯 5종**(오늘 한눈에·결재 대기·오늘 회의·내 액션아이템·OKR 진척)을 켤 수 있다(기본 숨김). 정의는 `pages/Dashboard/extraWidgets.jsx`의 `EXTRA_BLOCKS`. 내 하루 집계(`GET /api/me/today`)는 해당 위젯이 켜진 경우에만 호출.
+- **[v2.15 추가] 레일 메뉴 개인화**: 좌측 아이콘 레일의 고정 메뉴를 사용자별로 선택·정렬(`⋯` → 전체 메뉴 / 메뉴 편집). 메뉴 정의는 `utils/navRegistry.jsx`(20개 화면), 상태는 `store/preferenceStore.js`(localStorage 캐시 + 서버). 개인 설정 저장소 API: `GET/PUT /api/settings/preferences`(최상위 키 병합, `null`=삭제, 키 30개·32KB·중첩 깊이 6 제한, `__proto__` 등 예약 키 거부, 사용자별 advisory lock 트랜잭션으로 동시 저장 직렬화, `app_settings.user_prefs_<userId>`). 로그아웃 시 레일 설정 캐시를 초기화하고 계정이 바뀌면 이전 캐시를 버린다.
 
 ### F-20. 디자인 스킨 ~~(구 컬러 테마)~~
 - **[v2.14 변경]** 색상 테마 선택 기능은 **제거**되고 **디자인 스킨** 시스템으로 대체됨. 스킨은 형태(모서리·테두리·그림자·표면·폰트)와 강조색을 함께 정의하는 단일 커스터마이즈 축이다.

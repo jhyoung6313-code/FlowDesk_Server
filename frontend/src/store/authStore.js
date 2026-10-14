@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { getMe, login as apiLogin, logout as apiLogout } from '../api/auth';
 import useNotificationStore from './notificationStore';
+import usePreferenceStore from './preferenceStore';
 
 const useAuthStore = create((set) => ({
   user: null,
@@ -29,11 +30,14 @@ const useAuthStore = create((set) => ({
   },
 
   logout: async () => {
+    // 대기 중인 개인 설정 저장을 토큰이 살아 있을 때 먼저 보낸다
+    try { await usePreferenceStore.getState().flush(); } catch {}
     try {
       await apiLogout();
     } catch {}
     localStorage.removeItem('token');
     useNotificationStore.getState().resetSeenIds();
+    usePreferenceStore.getState().reset();   // 다음 사용자에게 이전 사용자의 메뉴 설정이 보이지 않게
     set({ user: null });
   },
 
