@@ -25,6 +25,8 @@ import TaskForm from '../../components/Task/TaskForm';
 import ScheduleWidget from '../../components/Schedule/ScheduleWidget';
 import AiWeeklySummary from '../../components/ai/AiWeeklySummary';
 import AiAsk from '../../components/ai/AiAsk';
+import { getMyToday } from '../../api/me';
+import { EXTRA_BLOCKS, EXTRA_IDS, CountsWidget, ApprovalsWidget, MeetingsWidget, ActionsWidget, OkrWidget } from './extraWidgets';
 
 dayjs.extend(relativeTime);
 dayjs.locale('ko');
@@ -67,7 +69,16 @@ const DASH_DEFAULT_LAYOUT = [
   { i: 'widgets',  x: 0, y: 21, w: 12, h: 8 },
   { i: 'memo',     x: 0, y: 29, w: 12, h: 3 },
 ];
-const DASH_DEFAULT_ENABLED = { focus: true, schedule: true, board: true, widgets: true, memo: true };
+// 추가 위젯(extraWidgets.jsx)은 기본 숨김 — 편집 모드에서 "+ 위젯"으로 추가한다.
+const DASH_DEFAULT_ENABLED = {
+  focus: true, schedule: true, board: true, widgets: true, memo: true,
+  ...Object.fromEntries(EXTRA_IDS.map((id) => [id, false])),
+};
+const ALL_BLOCKS = [...DASH_BLOCKS, ...EXTRA_BLOCKS];
+const ALL_DEFAULT_LAYOUT = [
+  ...DASH_DEFAULT_LAYOUT,
+  ...EXTRA_BLOCKS.map((b, n) => ({ i: b.id, x: (n % 2) * 6, y: 100 + n * 6, ...b.layout })),
+];
 
 /* 각 섹션을 감싸는 블록 카드 — 편집모드에서만 드래그 핸들/숨김 표시 */
 function DashBlock({ editing, onHide, D, children }) {
@@ -143,9 +154,10 @@ export default function DashboardPage() {
   });
   const [bbsPosts, setBbsPosts] = useState([]);
   const [approvals, setApprovals] = useState([]);
+  const [myDay, setMyDay] = useState(null);   // 추가 위젯(내 하루 집계) 공용 데이터
 
   /* ── 대시보드 커스터마이즈(레이아웃/사용여부) 상태 ── */
-  const [dashLayout, setDashLayout]   = useState(DASH_DEFAULT_LAYOUT);
+  const [dashLayout, setDashLayout]   = useState(ALL_DEFAULT_LAYOUT);
   const [dashEnabled, setDashEnabled] = useState(DASH_DEFAULT_ENABLED);
   const [dashEditing, setDashEditing] = useState(false);
   const dashSaveTimer = useRef(null);
@@ -161,9 +173,9 @@ export default function DashboardPage() {
     getDashboardLayout().then((d) => {
       if (d && Array.isArray(d.layout) && d.layout.length) {
         const byId = Object.fromEntries(d.layout.map((l) => [l.i, l]));
-        const merged = DASH_BLOCKS.map((b) => {
+        const merged = ALL_BLOCKS.map((b) => {
           const s = byId[b.id];
-          const def = DASH_DEFAULT_LAYOUT.find((dl) => dl.i === b.id);
+          const def = ALL_DEFAULT_LAYOUT.find((dl) => dl.i === b.id);
           return s ? { i: b.id, x: s.x, y: s.y, w: s.w, h: s.h } : def;
         });
         setDashLayout(merged);
@@ -171,6 +183,13 @@ export default function DashboardPage() {
       }
     }).catch(() => {});
   }, []);
+
+  // 내 하루 집계가 필요한 추가 위젯이 하나라도 켜져 있을 때만 호출 (기본 사용자는 추가 호출 없음)
+  const needMyDayFlag = EXTRA_BLOCKS.some((b) => b.needs === 'myday' && dashEnabled[b.id]);
+  useEffect(() => {
+    if (!needMyDayFlag) return;
+    getMyToday().then(setMyDay).catch(() => {});
+  }, [needMyDayFlag]);
 
   const persistDash = useCallback((layout, enabled) => {
     clearTimeout(dashSaveTimer.current);
@@ -197,9 +216,9 @@ export default function DashboardPage() {
   }, [persistDash]);
 
   const resetDashLayout = useCallback(() => {
-    setDashLayout(DASH_DEFAULT_LAYOUT);
+    setDashLayout(ALL_DEFAULT_LAYOUT);
     setDashEnabled(DASH_DEFAULT_ENABLED);
-    persistDash(DASH_DEFAULT_LAYOUT, DASH_DEFAULT_ENABLED);
+    persistDash(ALL_DEFAULT_LAYOUT, DASH_DEFAULT_ENABLED);
   }, [persistDash]);
 
   const finishDashEdit = useCallback(() => {
@@ -478,11 +497,13 @@ export default function DashboardPage() {
   });
 
   /* 표시할 블록 + 그리드 레이아웃 (숨김 블록·빈 메모는 제외) */
-  const dashVisibleIds = DASH_BLOCKS
+  const dashVisibleIds = ALL_BLOCKS
     .filter((b) => dashEnabled[b.id] && !(b.id === 'memo' && pinnedMemos.length === 0))
     .map((b) => b.id);
   const dashVisLayout = dashLayout.filter((l) => dashVisibleIds.includes(l.i));
-  const dashHiddenBlocks = DASH_BLOCKS.filter((b) => !dashEnabled[b.id]);
+  const dashHiddenBlocks = ALL_BLOCKS.filter((b) => !dashEnabled[b.id]);
+
+  const extraOn = (id) => !!dashEnabled[id];
 
   return (
     <div style={{
@@ -1059,6 +1080,18 @@ export default function DashboardPage() {
       </DashBlock>
       </div>
       )}
+
+      {EXTRA_BLOCKS.filter((b) => extraOn(b.id)).map((b) => (
+        <div key={b.id}>
+          <DashBlock editing={dashEditing} onHide={() => toggleDashBlock(b.id)} D={D}>
+            {b.id === 'x-counts'    && <CountsWidget data={myDay} D={D} />}
+            {b.id === 'x-approvals' && <ApprovalsWidget data={myDay} D={D} />}
+            {b.id === 'x-meetings'  && <MeetingsWidget data={myDay} D={D} />}
+            {b.id === 'x-actions'   && <ActionsWidget data={myDay} D={D} />}
+            {b.id === 'x-okr'       && <OkrWidget D={D} userId={user?.id} />}
+          </DashBlock>
+        </div>
+      ))}
 
       </RGL>
 
