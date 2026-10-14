@@ -10,7 +10,8 @@ import { requestNotificationPermission } from './utils/desktopNotification';
 import { ChatSocketContext } from './contexts/ChatSocketContext';
 import useThemeStore from './store/themeStore';
 import { SKINS, DEFAULT_SKIN } from './utils/skins';
-import { getThemePrefs } from './api/settings';
+import { getThemePrefs, getPreferences } from './api/settings';
+import usePreferenceStore from './store/preferenceStore';
 
 // 즉시 필요한 셸/진입/에러 화면은 eager 로드 (PrivateRoute에서 동기 렌더되는 에러 포함)
 import MainLayout from './components/Layout/MainLayout';
@@ -89,6 +90,7 @@ export default function App() {
   const density = useThemeStore((s) => s.density);
   const skin = useThemeStore((s) => s.skin);
   const hydrateTheme = useThemeStore((s) => s.hydrateFromServer);
+  const hydratePrefs = usePreferenceStore((s) => s.hydrateFromServer);
 
   // 스킨 표면/테두리를 AntD 토큰에 직접 연결 → 인라인 token.* 를 쓰는 화면
   // (메일·게시판·전자결재 등 2-pane)까지 스킨이 자동 반영된다.
@@ -137,7 +139,8 @@ export default function App() {
   useEffect(() => {
     if (!user) return;
     getThemePrefs().then(hydrateTheme).catch(() => {});
-  }, [user, hydrateTheme]);
+    getPreferences().then(hydratePrefs).catch(() => {});
+  }, [user, hydrateTheme, hydratePrefs]);
 
   // 로그인 상태가 아니면(토큰 만료 등) 잠금 잔재를 정리한다.
   useEffect(() => {

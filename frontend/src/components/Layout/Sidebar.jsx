@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Menu, ConfigProvider, Button, Modal, Form, Input, DatePicker, Tag, Space, message, Tooltip, Avatar, Dropdown } from 'antd';
+import { Menu, ConfigProvider, Button, Modal, Form, Input, DatePicker, Tag, Space, message, Tooltip, Avatar, Dropdown, Popover } from 'antd';
 import {
   DashboardOutlined,
   ScheduleOutlined,
@@ -36,7 +36,12 @@ import {
   SnippetsOutlined,
   ReadOutlined,
   FileDoneOutlined,
+  SettingOutlined,
+  EllipsisOutlined,
 } from '@ant-design/icons';
+import usePreferenceStore from '../../store/preferenceStore';
+import { NAV_ITEMS, NAV_GROUPS, NAV_BY_KEY } from '../../utils/navRegistry';
+import NavEditModal from './NavCustomizer';
 import useAuthStore from '../../store/authStore';
 import useThemeStore from '../../store/themeStore';
 import useChatStore from '../../store/chatStore';
@@ -193,6 +198,10 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
 
   // MainLayout이 한 번만 폴링해 공유 스토어에 반영한 값을 읽기만 한다 (중복 API 호출 방지).
   const approvalPendingCount = useUnreadStore((s) => s.approvalPending);
+  const mailUnread = useUnreadStore((s) => s.mailUnread);
+  const navPinned = usePreferenceStore((s) => s.navPinned);
+  const [allMenuOpen, setAllMenuOpen] = useState(false);
+  const [navEditOpen, setNavEditOpen] = useState(false);
 
   // WBS 프로젝트 목록 상태
   const [wbsProjects, setWbsProjects] = useState([]);
@@ -575,23 +584,24 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
 
   // ── 1차 아이콘 레일 항목 (활성 색 = 스킨 강조색) ──
   const railAccent = c.accentMid;
-  const railItems = [
-    { key: '/', icon: <DashboardOutlined />, title: '대시보드', color: railAccent },
-    { key: '/my-day', icon: <ScheduleOutlined />, title: '내 하루', color: railAccent },
-    { key: '/tasks', icon: <CheckSquareOutlined />, title: '업무 관리', color: railAccent },
-    { key: '/workload', icon: <TeamOutlined />, title: '워크로드', color: railAccent },
-    { key: '/memos', icon: <SnippetsOutlined />, title: '메모지', color: railAccent },
-    { key: '/chat', icon: <MessageOutlined />, title: '채팅', color: railAccent, dot: totalUnread > 0 },
-    { key: '/boards', icon: <AppstoreOutlined />, title: '보드', color: railAccent, dot: boardUnread > 0 },
-    { key: '/playbooks', icon: <BookOutlined />, title: 'Playbook', color: railAccent, dot: playbookUnread > 0 },
-    { key: '/wbs', icon: <ProjectOutlined />, title: '프로젝트', color: railAccent },
-  ];
+  // 사용자가 고른 고정 메뉴(순서 포함) — 전체 화면은 '전체 메뉴' 팝오버에서 접근
+  const badgeCounts = {
+    chat: totalUnread, board: boardUnread, playbook: playbookUnread,
+    mail: mailUnread, approval: approvalPendingCount,
+  };
+  const toRailItem = (it) => {
+    const n = it.badge ? badgeCounts[it.badge] || 0 : 0;
+    // 채팅·보드·Playbook 은 점만, 메일·결재는 건수 표시 (기존 동작 유지)
+    const showCount = it.badge === 'mail' || it.badge === 'approval';
+    return { key: it.key, icon: it.icon, title: it.title, color: railAccent, dot: n > 0, count: showCount ? n : 0 };
+  };
+  const railItems = navPinned.map((k) => NAV_BY_KEY[k]).filter(Boolean).map(toRailItem);
   const railActive = (key) => (key === '/' ? pathname === '/' : pathname.startsWith(key));
 
   const RailIcon = ({ itemKey, icon, title, color, dot, count }) => {
     const active = railActive(itemKey);
     return (
-      <Tooltip title={count > 0 ? `${title} (${count}건 미결재)` : title} placement="right">
+      <Tooltip title={count > 0 ? `${title} (${count}건)` : title} placement="right">
         <div
           onClick={() => go(itemKey)}
           style={{
@@ -664,8 +674,60 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
           }}
         >
           {railItems.map((it) => (
-            <RailIcon key={it.key} itemKey={it.key} icon={it.icon} title={it.title} color={it.color} dot={it.dot} />
+            <RailIcon key={it.key} itemKey={it.key} icon={it.icon} title={it.title} color={it.color} dot={it.dot} count={it.count} />
           ))}
+
+          {/* ── 전체 메뉴 (고정하지 않은 화면 포함) / 메뉴 편집 ── */}
+          <Popover
+            trigger="click"
+            placement="rightTop"
+            arrow={false}
+            open={allMenuOpen}
+            onOpenChange={setAllMenuOpen}
+            content={
+              <div style={{ width: 300 }}>
+                {NAV_GROUPS.map((g) => (
+                  <div key={g.key} style={{ marginBottom: 10 }}>
+                    <div style={{ fontSize: 12, opacity: 0.6, margin: '0 0 4px 4px' }}>{g.label}</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                      {NAV_ITEMS.filter((i) => i.group === g.key).map((i) => (
+                        <div
+                          key={i.key}
+                          onClick={() => { setAllMenuOpen(false); go(i.key); }}
+                          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 8, cursor: 'pointer', fontSize: 13 }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = RAIL.hoverBg; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                        >
+                          {i.icon}{i.title}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                <Button
+                  size="small"
+                  block
+                  icon={<SettingOutlined />}
+                  onClick={() => { setAllMenuOpen(false); setNavEditOpen(true); }}
+                >
+                  메뉴 편집
+                </Button>
+              </div>
+            }
+          >
+            <div
+              style={{
+                width: 40, height: 40, borderRadius: 'var(--fd-sk-radius, 11px)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 21, cursor: 'pointer', color: RAIL.idle,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = RAIL.hoverBg; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+              title="전체 메뉴"
+            >
+              <EllipsisOutlined />
+            </div>
+          </Popover>
 
           <div style={{ flex: 1 }} />
 
@@ -686,6 +748,7 @@ export default function Sidebar({ collapsed, onCollapse, onNavigate }) {
       </div>
 
       {/* ── 내 프로필 / 비밀번호 변경 팝업 ── */}
+      <NavEditModal open={navEditOpen} onClose={() => setNavEditOpen(false)} />
       <ProfileModal open={profileOpen} onClose={() => setProfileOpen(false)} />
       <ChangePasswordModal open={passwordOpen} onClose={() => setPasswordOpen(false)} />
 

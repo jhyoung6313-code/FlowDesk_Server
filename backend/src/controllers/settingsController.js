@@ -137,6 +137,52 @@ const updateThemePrefs = async (req, res, next) => {
   }
 };
 
+const PREF_KEY_RE = /^[a-zA-Z0-9_]{1,40}$/;
+const PREF_MAX_KEYS = 30;
+const PREF_MAX_BYTES = 32 * 1024;
+
+/** GET /api/settings/preferences — 개인 화면 설정(내비게이션 등) 전체 조회 (본인) */
+const getPreferences = async (req, res, next) => {
+  try {
+    const row = await prisma.appSetting.findUnique({ where: { key: `user_prefs_${req.user.id}` } });
+    if (!row) return res.json({});
+    try {
+      const v = JSON.parse(row.value);
+      res.json(v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+    } catch {
+      res.json({});
+    }
+  } catch (err) { next(err); }
+};
+
+/** PUT /api/settings/preferences — 전달된 최상위 키만 병합 저장 (값이 null이면 해당 키 삭제)
+ *  body: { nav: {...}, ... } */
+const updatePreferences = async (req, res, next) => {
+  try {
+    const body = req.body;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return res.status(400).json({ error: '잘못된 요청입니다.' });
+    }
+    if (Object.keys(body).some((k) => !PREF_KEY_RE.test(k))) {
+      return res.status(400).json({ error: '허용되지 않는 설정 키입니다.' });
+    }
+    const key = `user_prefs_${req.user.id}`;
+    const row = await prisma.appSetting.findUnique({ where: { key } });
+    let cur = {};
+    try { cur = row ? JSON.parse(row.value) : {}; } catch { cur = {}; }
+    const next_ = { ...cur };
+    for (const [k, v] of Object.entries(body)) {
+      if (v === null) delete next_[k]; else next_[k] = v;
+    }
+    const value = JSON.stringify(next_);
+    if (Object.keys(next_).length > PREF_MAX_KEYS || Buffer.byteLength(value) > PREF_MAX_BYTES) {
+      return res.status(413).json({ error: '저장할 수 있는 설정 크기를 초과했습니다.' });
+    }
+    await prisma.appSetting.upsert({ where: { key }, create: { key, value }, update: { value } });
+    res.json(next_);
+  } catch (err) { next(err); }
+};
+
 /** GET /api/settings/dashboard-layout — 개인 대시보드 레이아웃 조회 (본인) */
 const getDashboardLayout = async (req, res, next) => {
   try {
@@ -306,4 +352,4 @@ const updateEmailOptOut = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-module.exports = { getEmailSettings, updateEmailSettings, testEmail, getWidgetSettings, updateWidgetSettings, getThemePrefs, updateThemePrefs, getDashboardLayout, updateDashboardLayout, getApprovalLinePresets, updateApprovalLinePresets, getSharedApprovalLinePresets, addSharedApprovalLinePreset, deleteSharedApprovalLinePreset, getApprovalAutoDelegate, updateApprovalAutoDelegate, getEmailOptOut, updateEmailOptOut };
+module.exports = { getPreferences, updatePreferences, getEmailSettings, updateEmailSettings, testEmail, getWidgetSettings, updateWidgetSettings, getThemePrefs, updateThemePrefs, getDashboardLayout, updateDashboardLayout, getApprovalLinePresets, updateApprovalLinePresets, getSharedApprovalLinePresets, addSharedApprovalLinePreset, deleteSharedApprovalLinePreset, getApprovalAutoDelegate, updateApprovalAutoDelegate, getEmailOptOut, updateEmailOptOut };

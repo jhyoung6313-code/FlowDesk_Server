@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate } = require('../middlewares/auth');
 const { adminOnly } = require('../middlewares/adminOnly');
-const { getEmailSettings, updateEmailSettings, testEmail, getWidgetSettings, updateWidgetSettings, getThemePrefs, updateThemePrefs, getDashboardLayout, updateDashboardLayout, getApprovalLinePresets, updateApprovalLinePresets, getSharedApprovalLinePresets, addSharedApprovalLinePreset, deleteSharedApprovalLinePreset, getApprovalAutoDelegate, updateApprovalAutoDelegate, getEmailOptOut, updateEmailOptOut } = require('../controllers/settingsController');
+const { getPreferences, updatePreferences, getEmailSettings, updateEmailSettings, testEmail, getWidgetSettings, updateWidgetSettings, getThemePrefs, updateThemePrefs, getDashboardLayout, updateDashboardLayout, getApprovalLinePresets, updateApprovalLinePresets, getSharedApprovalLinePresets, addSharedApprovalLinePreset, deleteSharedApprovalLinePreset, getApprovalAutoDelegate, updateApprovalAutoDelegate, getEmailOptOut, updateEmailOptOut } = require('../controllers/settingsController');
 
 router.get('/email', authenticate, adminOnly, getEmailSettings);
 router.put('/email', authenticate, adminOnly, updateEmailSettings);
@@ -13,6 +13,9 @@ router.put('/widgets', authenticate, updateWidgetSettings);
 
 router.get('/theme', authenticate, getThemePrefs);
 router.put('/theme', authenticate, updateThemePrefs);
+
+router.get('/preferences', authenticate, getPreferences);
+router.put('/preferences', authenticate, updatePreferences);
 
 router.get('/dashboard-layout', authenticate, getDashboardLayout);
 router.put('/dashboard-layout', authenticate, updateDashboardLayout);

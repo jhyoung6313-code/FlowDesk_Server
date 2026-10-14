@@ -14,6 +14,11 @@ export const getThemePrefs = () => api.get('/settings/theme').then((r) => r.data
 
 export const updateThemePrefs = (data) => api.put('/settings/theme', data).then((r) => r.data);
 
+// 개인 화면 설정(내비게이션 등) — 전달한 최상위 키만 병합 저장, null 이면 삭제
+export const getPreferences = () => api.get('/settings/preferences').then((r) => r.data);
+
+export const updatePreferences = (patch) => api.put('/settings/preferences', patch).then((r) => r.data);
+
 export const getDashboardLayout = () => api.get('/settings/dashboard-layout').then((r) => r.data);
 
 export const updateDashboardLayout = (data) => api.put('/settings/dashboard-layout', data).then((r) => r.data);
