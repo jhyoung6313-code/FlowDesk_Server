@@ -36,6 +36,21 @@ async function getUser(userId) {
 
 function invalidate(userId) {
   cache.delete(userId);
+  lastTouch.delete(userId);
 }
 
-module.exports = { getUser, invalidate };
+// 1계정 1로그인의 '접속 중' 판단용 마지막 활동 시각 기록.
+// 매 요청마다 DB 에 쓰지 않도록 사용자당 TOUCH_INTERVAL_MS 에 한 번만 갱신한다.
+const TOUCH_INTERVAL_MS = 30000;
+const lastTouch = new Map(); // userId -> 마지막으로 DB 에 기록한 시각(ms)
+
+function touchActivity(userId) {
+  const now = Date.now();
+  if (now - (lastTouch.get(userId) || 0) < TOUCH_INTERVAL_MS) return;
+  lastTouch.set(userId, now);
+  prisma.user
+    .updateMany({ where: { id: userId }, data: { lastActiveAt: new Date(now) } })
+    .catch(() => { lastTouch.delete(userId); });
+}
+
+module.exports = { getUser, invalidate, touchActivity };

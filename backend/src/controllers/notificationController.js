@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const { addClient, removeClient } = require('../services/sseService');
 
 const prisma = require('../lib/prisma');
+const userCache = require('../lib/userCache');
 
 const list = async (req, res, next) => {
   try {
@@ -88,6 +89,7 @@ const stream = async (req, res) => {
   // 30초마다 keepalive
   const heartbeat = setInterval(() => {
     try { res.write(': keepalive\n\n'); } catch { clearInterval(heartbeat); }
+    userCache.touchActivity(userId);   // 알림 스트림이 열려 있는 동안은 접속 중으로 유지
   }, 30000);
 
   req.on('close', () => {

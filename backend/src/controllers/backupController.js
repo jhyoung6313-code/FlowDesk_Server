@@ -56,7 +56,7 @@ const EXTRA_TABLES = [
   { key: 'ledgerCategories', model: 'ledgerCategory', dates: ['createdAt'] },
   { key: 'ledgerRecurrings', model: 'ledgerRecurring', dates: ['createdAt', 'updatedAt'] },
   { key: 'ledgerEntries', model: 'ledgerEntry', dates: ['date', 'createdAt', 'updatedAt'] },
-  { key: 'ledgerBudgets', model: 'ledgerBudget', pk: ['categoryId', 'year', 'month'], dates: ['createdAt', 'updatedAt'] },
+  { key: 'ledgerBudgets', model: 'ledgerBudget', pk: ['userId', 'categoryId', 'year', 'month'], dates: ['createdAt', 'updatedAt'] },
   // 일정/자원(Schedule)
   { key: 'scheduleResources', model: 'scheduleResource', dates: ['createdAt', 'updatedAt'] },
   { key: 'scheduleEvents', model: 'scheduleEvent', dates: ['startDate', 'endDate', 'createdAt', 'updatedAt'] },

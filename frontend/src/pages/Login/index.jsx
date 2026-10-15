@@ -103,7 +103,9 @@ function LoginTab({ onSuccess }) {
         finishLogin(data);
       }
     } catch (err) {
-      message.error(err?.response?.data?.error || '아이디 또는 비밀번호를 확인해주세요.');
+      // 중복 로그인 안내 문구는 길어서 오래 보여준다
+      const dup = err?.response?.data?.code === 'ALREADY_LOGGED_IN';
+      message.error(err?.response?.data?.error || '아이디 또는 비밀번호를 확인해주세요.', dup ? 8 : undefined);
     } finally {
       setLoading(false);
     }

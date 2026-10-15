@@ -91,6 +91,9 @@ const login = async (req, res, next) => {
       return res.status(401).json({ error: '아이디 또는 비밀번호가 올바르지 않습니다.' });
     }
 
+    // 1계정 1로그인: 이미 접속 중이면 OTP 단계로 넘기지 않고 여기서 거부 (비밀번호가 맞은 경우에만 알려줌)
+    if (isSessionActive(user)) return rejectDuplicateLogin(user, req, res, 'auth/login');
+
     // OTP 2단계 인증: 전사 강제(ENFORCE_OTP) 또는 사용자 개별 활성화 시
     // [개발용 임시 제외] .env의 DISABLE_OTP=true 이면 OTP 단계를 통째로 건너뛴다.
     // 운영 배포 전 반드시 DISABLE_OTP를 제거(또는 false)할 것.
@@ -106,16 +109,57 @@ const login = async (req, res, next) => {
     }
 
     const finalUser = await finalizeLogin(user, req);
+    if (!finalUser) return rejectDuplicateLogin(user, req, res, 'auth/login');
     res.json(buildLoginResponse(finalUser));
   } catch (err) {
     next(err);
   }
 };
 
-// 로그인 성공 후처리: 실패카운트 초기화 + 세션 nonce 갱신 + 최종 로그인 기록 + 감사로그
-// 반환값: sessionNonce가 반영된 최신 user 객체 (issueToken에 전달해야 함)
+// ── 1계정 1로그인 ─────────────────────────────────────────
+// 마지막 활동(lastActiveAt)이 SESSION_ACTIVE_WINDOW_SEC 이내면 '접속 중'. 로그아웃/강제 로그아웃은 이를 null 로 만든다.
+function singleLoginPolicy() {
+  const a = settings.auth();
+  return {
+    block: a.SINGLE_LOGIN_BLOCK !== false,
+    windowSec: a.SESSION_ACTIVE_WINDOW_SEC > 0 ? a.SESSION_ACTIVE_WINDOW_SEC : 180,
+  };
+}
+
+function isSessionActive(user) {
+  const { block, windowSec } = singleLoginPolicy();
+  if (!block || !user.lastActiveAt) return false;
+  return Date.now() - new Date(user.lastActiveAt).getTime() < windowSec * 1000;
+}
+
+// 이미 접속 중인 계정으로의 로그인 거부 응답 (409)
+async function rejectDuplicateLogin(user, req, res, resource) {
+  const { windowSec } = singleLoginPolicy();
+  await audit.record({ action: AUDIT_ACTION.LOGIN_FAIL, req, userId: user.id, username: user.username, resource, success: false, detail: 'duplicate-session' });
+  return res.status(409).json({
+    code: 'ALREADY_LOGGED_IN',
+    error: `이미 다른 곳에서 로그인 중인 계정입니다. 기존 접속을 로그아웃한 뒤 다시 로그인해주세요. (로그아웃 없이 창을 닫았다면 약 ${Math.ceil(windowSec / 60)}분 후 다시 시도하거나 관리자에게 강제 로그아웃을 요청하세요.)`,
+  });
+}
+
+// 로그인 성공 후처리: (동시 로그인 선점) + 실패카운트 초기화 + 세션 nonce 갱신 + 최종 로그인 기록 + 감사로그
+// 반환값: sessionNonce가 반영된 최신 user 객체 (issueToken에 전달해야 함).
+//        다른 로그인이 먼저 선점했으면(중복 로그인) null — 호출부가 409 로 응답한다.
 async function finalizeLogin(user, req) {
-  // 기존 소켓 연결 강제 종료 (중복 로그인 차단)
+  const { block, windowSec } = singleLoginPolicy();
+  if (block) {
+    // 두 로그인이 동시에 통과하는 레이스를 막기 위해 DB 에서 원자적으로 '선점'한다:
+    // 마지막 활동이 없거나 윈도우보다 오래된 경우에만 lastActiveAt 을 지금으로 갱신할 수 있다.
+    const claimed = await prisma.user.updateMany({
+      where: {
+        id: user.id,
+        OR: [{ lastActiveAt: null }, { lastActiveAt: { lt: new Date(Date.now() - windowSec * 1000) } }],
+      },
+      data: { lastActiveAt: new Date() },
+    });
+    if (claimed.count === 0) return null;
+  }
+  // 이전 세션이 남긴 소켓 정리 (윈도우가 지난 유령 연결)
   kickUserSockets(user.id);
   const sessionNonce = crypto.randomUUID();
   const updated = await prisma.user.update({
@@ -126,6 +170,7 @@ async function finalizeLogin(user, req) {
       lastLoginAt: new Date(),
       lastLoginIp: audit.getClientIp(req),
       sessionNonce,
+      lastActiveAt: new Date(),
     },
   });
   await audit.record({ action: AUDIT_ACTION.LOGIN_SUCCESS, req, userId: user.id, username: user.username, resource: 'auth/login' });
@@ -188,6 +233,7 @@ const verifyLoginTotp = async (req, res, next) => {
     }
 
     const finalUser = await finalizeLogin(user, req);
+    if (!finalUser) return rejectDuplicateLogin(user, req, res, 'auth/login');
     res.json(buildLoginResponse(finalUser));
   } catch (err) {
     next(err);
@@ -240,6 +286,7 @@ const verifyLoginTotpSetup = async (req, res, next) => {
     await prisma.user.update({ where: { id: user.id }, data: { totpEnabled: true } });
     const enabled = { ...user, totpEnabled: true };
     const finalUser = await finalizeLogin(enabled, req);
+    if (!finalUser) return rejectDuplicateLogin(user, req, res, 'auth/login');
     res.json(buildLoginResponse(finalUser));
   } catch (err) {
     next(err);
@@ -338,7 +385,8 @@ const logout = async (req, res, next) => {
     // 토큰을 실제로 무효화하지 못하고 만료 전까지 계속 유효해지는 버그가 있었다.
     await prisma.user.update({
       where: { id: req.user.id },
-      data: { sessionNonce: crypto.randomUUID() },
+      // lastActiveAt 을 비워 즉시 다시 로그인할 수 있게 한다 (1계정 1로그인)
+      data: { sessionNonce: crypto.randomUUID(), lastActiveAt: null },
     });
     userCache.invalidate(req.user.id);
     await audit.record({ action: AUDIT_ACTION.LOGOUT, req, userId: req.user.id, username: req.user.username, resource: 'auth/logout' });

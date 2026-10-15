@@ -4,6 +4,10 @@ const fs = require('fs');
 
 const prisma = require('../lib/prisma');
 const userCache = require('../lib/userCache');
+const { kickUserSockets } = require('../socket');
+const audit = require('../services/auditService');
+const { AUDIT_ACTION } = require('../config/security');
+const crypto = require('crypto');
 
 const SIGNATURE_DIR = path.join(__dirname, '../../uploads/signatures');
 if (!fs.existsSync(SIGNATURE_DIR)) fs.mkdirSync(SIGNATURE_DIR, { recursive: true });
@@ -17,7 +21,7 @@ const USER_SELECT = {
   department: { select: { id: true, name: true } },
   team: { select: { id: true, name: true } },
   position: true, jobGrade: true, permissions: true, signImagePath: true, sealImagePath: true,
-  lockedUntil: true, failedLoginCount: true, lastLoginAt: true, totpEnabled: true,
+  lockedUntil: true, failedLoginCount: true, lastLoginAt: true, lastActiveAt: true, totpEnabled: true,
 };
 
 const list = async (req, res, next) => {
@@ -112,6 +116,29 @@ const deactivate = async (req, res, next) => {
     });
     userCache.invalidate(user.id);
     res.json(user);
+  } catch (err) {
+    next(err);
+  }
+};
+
+/** PATCH /api/users/:id/force-logout — 관리자가 계정의 현재 접속을 강제 종료 (1계정 1로그인 잠김 해소)
+ *  세션 nonce 를 교체해 기존 토큰을 무효화하고, 접속 중 표시를 지우며, 열려 있는 소켓을 끊는다. */
+const forceLogout = async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const target = await prisma.user.findUnique({ where: { id }, select: { id: true, username: true } });
+    if (!target) return res.status(404).json({ error: '사용자를 찾을 수 없습니다.' });
+    await prisma.user.update({
+      where: { id },
+      data: { sessionNonce: crypto.randomUUID(), lastActiveAt: null },
+    });
+    userCache.invalidate(id);
+    kickUserSockets(id);
+    await audit.record({
+      action: AUDIT_ACTION.LOGOUT, req, userId: req.user.id, username: req.user.username,
+      resource: `users/${id}/force-logout`, detail: `target=${target.username}`,
+    });
+    res.json({ message: `${target.username} 계정의 접속을 종료했습니다.` });
   } catch (err) {
     next(err);
   }
@@ -309,4 +336,4 @@ const workload = async (req, res, next) => {
   }
 };
 
-module.exports = { list, create, update, deactivate, activate, resetPassword, updateAvatarColor, setStatus, workload, uploadSignature, deleteSignature };
+module.exports = { list, create, update, deactivate, forceLogout, activate, resetPassword, updateAvatarColor, setStatus, workload, uploadSignature, deleteSignature };

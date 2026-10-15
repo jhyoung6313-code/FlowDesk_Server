@@ -44,6 +44,7 @@ model User {
   lastLoginAt      DateTime?         @map("last_login_at")
   lastLoginIp      String?           @map("last_login_ip") @db.VarChar(45)
   sessionNonce     String?           @map("session_nonce") @db.VarChar(64)
+  lastActiveAt     DateTime?         @map("last_active_at")   // 1계정 1로그인: 이 시각 이후 일정 시간 내면 '로그인 중'으로 간주
   passwordHistories PasswordHistory[]
   auditLogs        AuditLog[]
   piiBlockLogs     PiiBlockLog[]
@@ -65,6 +66,8 @@ model User {
   timeEntries      TimeEntry[]
   ledgerEntries    LedgerEntry[]
   ledgerRecurrings LedgerRecurring[]
+  ledgerCategories LedgerCategory[]
+  ledgerBudgets    LedgerBudget[]
   wbsIssues         WbsIssue[]             @relation("WbsIssueCreator")
   wbsProjects       WbsProject[]           @relation("WbsProjectCreator")
   chatRoomsCreated  ChatRoom[]             @relation("ChatRoomCreator")
@@ -730,11 +733,14 @@ model LedgerCategory {
   type       LedgerType
   color      String            @default("#1677ff") @db.VarChar(20)
   isDefault  Boolean           @default(false) @map("is_default")
+  userId     Int?              @map("user_id")   // NULL = 시스템 기본(공용), 값 = 개인 카테고리
   createdAt  DateTime          @default(now()) @map("created_at")
   entries    LedgerEntry[]
   budgets    LedgerBudget[]
   recurrings LedgerRecurring[]
+  owner      User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
   @@map("ledger_categories")
 }
 
@@ -758,6 +764,7 @@ model LedgerEntry {
 
 model LedgerBudget {
   id         Int            @id @default(autoincrement())
+  userId     Int            @map("user_id")
   categoryId Int            @map("category_id")
   year       Int
   month      Int
@@ -765,8 +772,9 @@ model LedgerBudget {
   createdAt  DateTime       @default(now()) @map("created_at")
   updatedAt  DateTime       @updatedAt @map("updated_at")
   category   LedgerCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  owner      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([categoryId, year, month])
+  @@unique([userId, categoryId, year, month])
   @@map("ledger_budgets")
 }
 

@@ -5,9 +5,9 @@ import {
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, StopOutlined, CheckCircleOutlined,
-  KeyOutlined, CrownOutlined, UserOutlined, LockOutlined, UnlockOutlined, SafetyOutlined,
+  KeyOutlined, CrownOutlined, UserOutlined, LockOutlined, UnlockOutlined, SafetyOutlined, PoweroffOutlined,
 } from '@ant-design/icons';
-import { getUsers, createUser, updateUser, deactivateUser, activateUser, resetUserPassword } from '../../api/users';
+import { getUsers, createUser, updateUser, deactivateUser, activateUser, resetUserPassword, forceLogoutUser } from '../../api/users';
 import { unlockUser, getPermissions } from '../../api/admin';
 import { getDepartments } from '../../api/org';
 
@@ -126,6 +126,20 @@ export default function UsersAdminPage() {
     }
   };
 
+  // 접속 중 판단(서버 SESSION_ACTIVE_WINDOW_SEC 기본값과 동일)
+  const ACTIVE_WINDOW_MS = 180 * 1000;
+  const isOnline = (r) => r.lastActiveAt && Date.now() - new Date(r.lastActiveAt).getTime() < ACTIVE_WINDOW_MS;
+
+  const handleForceLogout = async (record) => {
+    try {
+      const res = await forceLogoutUser(record.id);
+      message.success(res.message || '접속을 종료했습니다.');
+      load();
+    } catch (err) {
+      message.error(err?.response?.data?.error || '강제 로그아웃에 실패했습니다.');
+    }
+  };
+
   const handleResetPassword = async (record) => {
     try {
       const { tempPassword } = await resetUserPassword(record.id);
@@ -191,6 +205,7 @@ export default function UsersAdminPage() {
         return (
           <Space size={4} wrap>
             <Tag color={r.isActive ? 'green' : 'default'}>{r.isActive ? '활성' : '비활성'}</Tag>
+            {isOnline(r) && <Tag color="processing">접속 중</Tag>}
             {isLocked && <Tag color="red" icon={<LockOutlined />}>잠김</Tag>}
             {r.totpEnabled && <Tag color="geekblue" icon={<SafetyOutlined />}>OTP</Tag>}
           </Space>
@@ -234,6 +249,18 @@ export default function UsersAdminPage() {
               cancelText="취소"
             >
               <Button type="text" size="small" icon={<UnlockOutlined />} title="잠금 해제" style={{ color: '#fa8c16' }} />
+            </Popconfirm>
+          )}
+          {/* 강제 로그아웃 (접속 중인 경우만) — 로그아웃 없이 창을 닫아 로그인이 막힌 계정 해소 */}
+          {isOnline(record) && (
+            <Popconfirm
+              title={`"${record.displayName}" 계정의 접속을 강제로 종료하시겠습니까?`}
+              description="현재 사용 중인 화면은 로그아웃되고, 즉시 다시 로그인할 수 있게 됩니다."
+              onConfirm={() => handleForceLogout(record)}
+              okText="강제 종료"
+              cancelText="취소"
+            >
+              <Button type="text" size="small" danger icon={<PoweroffOutlined />} title="강제 로그아웃" />
             </Popconfirm>
           )}
           {/* 수정 */}

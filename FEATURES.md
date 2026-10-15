@@ -361,6 +361,7 @@
 
 ### F-45. 수입/지출 관리
 - **화면**: 가계부
+- **[v2.15] 개인용**: 거래·예산(`LedgerBudget.userId`)·반복 거래는 **본인에게만** 조회·수정·삭제되며(관리자도 타인 데이터 접근 불가), 요약·Excel 내보내기도 본인 데이터만 집계한다. 카테고리는 시스템 기본(`userId=NULL`, 전원 공용·관리자만 수정)과 개인 카테고리(`userId`=소유자)로 나뉘고, 타인의 개인 카테고리는 거래·예산·반복거래에 사용할 수 없다.
 - **설명**:
   - 수입(income)/지출(expense) 내역 등록·수정·삭제
   - 카테고리별 분류, 예산(월별) 설정
@@ -661,7 +662,8 @@
 ## 22. 보안 강화
 
 ### F-57. 세션 · 비밀번호 · 이상탐지 · 보관정책
-- **단일 세션 강제**: `User.sessionNonce`로 최신 로그인만 유효. 다른 기기/탭에서 로그인 시 이전 세션 무효화(커밋 `89c0375 feat: 단일 세션 강제`)
+- **단일 세션 강제**: `User.sessionNonce`로 최신 로그인만 유효(비밀번호 변경·강제 로그아웃 시 기존 토큰 무효화)
+- **1계정 1로그인 (v2.15)**: 접속 중인 계정으로는 새 로그인을 **거부**한다(409 `ALREADY_LOGGED_IN`). '접속 중' = `User.lastActiveAt`(인증된 요청·알림 스트림 하트비트·소켓 연결 시 30초 간격으로 갱신)이 `SESSION_ACTIVE_WINDOW_SEC`(기본 180초) 이내. 로그인은 DB에서 원자적으로 선점(`updateMany … lastActiveAt null 또는 윈도우 초과`)해 동시 로그인 레이스를 막고, 로그아웃·토큰 만료·관리자 강제 로그아웃(`PATCH /api/users/:id/force-logout`)은 `lastActiveAt`을 비워 즉시 재로그인을 허용한다. 비밀번호가 틀리면 접속 여부를 알려주지 않는다. `.env` `SINGLE_LOGIN_BLOCK=false` 로 예전 방식(새 로그인이 기존 세션 대체)으로 되돌릴 수 있다.
 - **비밀번호 재사용 금지**: `PasswordHistory`에 과거 해시 이력 저장, 변경 시 재사용 차단
 - **비밀번호 정책 단일화**: `config/security.js`의 `PASSWORD` + `utils/passwordPolicy.js`가 단일 기준(최소 8자·문자종류 4종 중 3종 이상, `.env` 조정). 신규/변경/재설정/관리자 계정생성 모두 `validateFormat` 사용
 - **이상징후 탐지**: `services/anomalyService.js` — 비정상 접근 패턴 감지 시 감사로그(`ANOMALY_DETECTED`) 적재

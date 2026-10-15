@@ -387,3 +387,23 @@ WHERE key LIKE 'user_prefs_%'
 -- 19-5. 위젯 데이터 원천 규모 — OKR 활성 주기 / 내가 맡은 목표가 있는 사용자 수
 SELECT (SELECT COUNT(*) FROM okr_cycles WHERE is_active) AS active_cycles,
        (SELECT COUNT(DISTINCT owner_id) FROM objectives WHERE del_yn = '0') AS users_owning_objectives;
+
+-- ============================================================
+-- 라운드 4 (feat/widget-home) — 가계부 개인화 · 1계정 1로그인
+-- ============================================================
+
+-- 20-1. 가계부 거래/반복거래/예산이 소유자 없이 남아 있는지(0이어야 정상) 및 사용자별 건수
+SELECT created_by, COUNT(*) AS entries FROM ledger_entries GROUP BY created_by ORDER BY created_by;
+SELECT COUNT(*) AS budgets_total, COUNT(*) FILTER (WHERE user_id IS NULL) AS budgets_without_owner FROM ledger_budgets;
+
+-- 20-2. 카테고리 소유 현황 (user_id NULL = 시스템 기본)
+SELECT COALESCE(user_id::text, 'SYSTEM') AS owner, COUNT(*) AS categories FROM ledger_categories GROUP BY 1 ORDER BY 1;
+
+-- 20-3. 타인의 개인 카테고리를 쓰는 거래가 있는지(0이어야 정상 — 개인화 이전 데이터 점검)
+SELECT COUNT(*) AS entries_using_foreign_personal_category
+FROM ledger_entries e JOIN ledger_categories c ON c.id = e.category_id
+WHERE c.user_id IS NOT NULL AND c.user_id <> e.created_by;
+
+-- 20-4. 현재 '접속 중'(마지막 활동 180초 이내)으로 표시된 계정 — 1계정 1로그인 점검
+SELECT username, last_active_at FROM users
+WHERE last_active_at > now() - interval '180 seconds' ORDER BY last_active_at DESC;

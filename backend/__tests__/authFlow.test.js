@@ -7,7 +7,7 @@ const jwt = require('jsonwebtoken');
 process.env.JWT_SECRET = 'test-secret-authflow';
 
 jest.mock('@prisma/client', () => {
-  const m = { user: { findUnique: jest.fn(), update: jest.fn() } };
+  const m = { user: { findUnique: jest.fn(), update: jest.fn(), updateMany: jest.fn() } };
   return { PrismaClient: jest.fn(() => m) };
 });
 jest.mock('node-cron', () => ({ schedule: jest.fn() }));
@@ -46,7 +46,7 @@ function app() {
 }
 const tok = (userId, type) => jwt.sign({ userId, type }, process.env.JWT_SECRET, { expiresIn: '5m' });
 
-beforeEach(() => { jest.clearAllMocks(); pwPolicy.validateFormat.mockReturnValue(null); pwPolicy.checkReuse.mockResolvedValue(null); });
+beforeEach(() => { jest.clearAllMocks(); prisma.user.updateMany.mockResolvedValue({ count: 1 }); pwPolicy.validateFormat.mockReturnValue(null); pwPolicy.checkReuse.mockResolvedValue(null); });
 
 describe('verifyLoginTotp (2단계 OTP)', () => {
   test('만료/위조 pre-auth 토큰 → 401', async () => {

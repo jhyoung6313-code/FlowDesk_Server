@@ -115,6 +115,7 @@ function setupSocketIO(server) {
       if (user.sessionNonce && decoded.sn !== user.sessionNonce) {
         return next(new Error('SESSION_REPLACED'));
       }
+      userCache.touchActivity(user.id);   // 1계정 1로그인: 소켓 연결도 접속 중 신호
       socket.user = user;
       next();
     } catch {
