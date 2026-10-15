@@ -185,7 +185,8 @@ const updatePreferences = async (req, res, next) => {
     const key = `user_prefs_${req.user.id}`;
 
     const result = await prisma.$transaction(async (tx) => {
-      await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
+      // pg_advisory_xact_lock 은 void 를 반환하므로 $queryRaw 는 역직렬화에 실패한다 → $executeRaw 사용
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${key}))`;
       const row = await tx.appSetting.findUnique({ where: { key } });
       let cur = {};
       try {

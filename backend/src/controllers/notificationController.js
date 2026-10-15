@@ -61,9 +61,14 @@ const stream = async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, isActive: true },
+      select: { id: true, isActive: true, sessionNonce: true, passwordChangedAt: true },
     });
     if (!user || !user.isActive) return res.status(401).end();
+    // auth 미들웨어와 동일 기준: 다른 곳에서 재로그인(세션 교체)되었거나 비밀번호가 바뀐 뒤의
+    // 옛 토큰으로는 알림 스트림을 열 수 없다 (옛 세션이 새 세션의 알림을 계속 수신하는 것 방지)
+    const pwAt = user.passwordChangedAt ? new Date(user.passwordChangedAt).getTime() : 0;
+    if (decoded.pwAt !== undefined && pwAt > decoded.pwAt) return res.status(401).end();
+    if (user.sessionNonce && decoded.sn !== user.sessionNonce) return res.status(401).end();
   } catch {
     return res.status(401).end();
   }

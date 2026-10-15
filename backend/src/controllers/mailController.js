@@ -128,8 +128,16 @@ exports.get = async (req, res, next) => {
     });
     if (!mail) return res.status(404).json({ error: '메일을 찾을 수 없습니다.' });
 
-    // 수신자인 경우 읽음 처리 (열람 시각 기록)
+    // 발신자 또는 수신자만 열람 가능 (id 열거로 타인 메일을 읽는 것 방지)
     const recip = mail.recipients.find(r => r.userId === me);
+    const isSender = mail.fromUserId === me;
+    if (!isSender && !recip) return res.status(403).json({ error: '권한이 없습니다.' });
+    // 숨은참조(BCC)는 발신자와 본인에게만 보인다
+    if (!isSender) {
+      mail.recipients = mail.recipients.filter(r => r.type !== 'bcc' || r.userId === me);
+    }
+
+    // 수신자인 경우 읽음 처리 (열람 시각 기록)
     if (recip && !recip.isRead) {
       const now = new Date();
       await prisma.internalMailRecipient.update({

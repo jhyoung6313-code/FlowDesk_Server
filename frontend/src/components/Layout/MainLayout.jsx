@@ -100,7 +100,7 @@ export default function MainLayout() {
       esRef.current?.close();
       clearTimeout(reconnectTimer.current);
     };
-  }, []);
+  }, [user?.id]);
 
   return (
     <Layout hasSider style={{ height: '100vh', overflow: 'hidden' }}>

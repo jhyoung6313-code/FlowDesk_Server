@@ -34,6 +34,7 @@ function app(uid = 10, role = 'member') {
   a.post('/mail/bulk', ctrl.bulkAction);
   a.delete('/mail/sent/:id', ctrl.deleteSent);
   a.get('/mail', ctrl.list);
+  a.get('/mail/:id', ctrl.get);
   a.use((err, req, res, next) => res.status(500).json({ error: err.message }));
   return a;
 }
@@ -159,5 +160,59 @@ describe('GET /mail?folder=sent (숨긴 메일 제외)', () => {
     await request(app(10)).get('/mail?folder=sent');
     const where = prisma.internalMail.findMany.mock.calls[0][0].where;
     expect(where.senderDeleted).toBe(false);
+  });
+});
+
+describe('GET /mail/:id (단건 조회 권한)', () => {
+  const mail = (recipients) => ({
+    id: 5, fromUserId: 99, subject: 's', recipients, attachments: [], comments: [], labelLinks: [],
+    from: { id: 99, displayName: '발신' }, threadId: null,
+  });
+  beforeEach(() => {
+    prisma.internalMail.findMany.mockResolvedValue([]);
+    prisma.internalMailRecipient.update.mockResolvedValue({});
+  });
+
+  test('발신자도 수신자도 아니면 403 (타인 메일 열람 차단)', async () => {
+    prisma.internalMail.findUnique.mockResolvedValue(mail([{ id: 1, userId: 20, type: 'to', isRead: false }]));
+    const res = await request(app(10)).get('/mail/5');
+    expect(res.status).toBe(403);
+    expect(prisma.internalMailRecipient.update).not.toHaveBeenCalled();
+  });
+
+  test('없는 메일은 404', async () => {
+    prisma.internalMail.findUnique.mockResolvedValue(null);
+    expect((await request(app(10)).get('/mail/5')).status).toBe(404);
+  });
+
+  test('수신자는 열람 가능하고 다른 수신자의 BCC 는 보이지 않음', async () => {
+    prisma.internalMail.findUnique.mockResolvedValue(mail([
+      { id: 1, userId: 10, type: 'to', isRead: false },
+      { id: 2, userId: 20, type: 'bcc', isRead: false },
+      { id: 3, userId: 30, type: 'cc', isRead: false },
+    ]));
+    const res = await request(app(10)).get('/mail/5');
+    expect(res.status).toBe(200);
+    expect(res.body.recipients.map((r) => r.userId).sort()).toEqual([10, 30]);
+  });
+
+  test('BCC 수신자 본인은 자기 BCC 행이 보인다', async () => {
+    prisma.internalMail.findUnique.mockResolvedValue(mail([
+      { id: 1, userId: 10, type: 'to', isRead: true },
+      { id: 2, userId: 20, type: 'bcc', isRead: false },
+    ]));
+    const res = await request(app(20)).get('/mail/5');
+    expect(res.status).toBe(200);
+    expect(res.body.recipients.map((r) => r.userId).sort()).toEqual([10, 20]);
+  });
+
+  test('발신자는 BCC 포함 전체 수신자를 본다', async () => {
+    prisma.internalMail.findUnique.mockResolvedValue(mail([
+      { id: 1, userId: 10, type: 'to', isRead: true },
+      { id: 2, userId: 20, type: 'bcc', isRead: true },
+    ]));
+    const res = await request(app(99)).get('/mail/5');
+    expect(res.status).toBe(200);
+    expect(res.body.recipients).toHaveLength(2);
   });
 });

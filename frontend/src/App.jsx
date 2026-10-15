@@ -136,11 +136,13 @@ export default function App() {
   }, [user]);
 
   // 로그인 시 서버에 저장된 개인 테마·화면 설정으로 동기화 (기기·재설치 무관 유지)
+  // (user 객체가 아니라 계정 id 에만 반응 — getMe 등으로 user 가 갱신될 때마다 다시 받아 편집을 덮지 않게)
+  const userId = user?.id;
   useEffect(() => {
-    if (!user) return;
-    getThemePrefs().then(hydrateTheme).catch(() => {});
-    getPreferences().then((p) => hydratePrefs(p, user.id)).catch(() => {});
-  }, [user, hydrateTheme, hydratePrefs]);
+    if (userId == null) return;
+    getThemePrefs().then((p) => hydrateTheme(p, userId)).catch(() => {});
+    getPreferences().then((p) => hydratePrefs(p, userId)).catch(() => {});
+  }, [userId, hydrateTheme, hydratePrefs]);
 
   // 로그인 상태가 아니면(토큰 만료 등) 잠금 잔재를 정리한다.
   useEffect(() => {

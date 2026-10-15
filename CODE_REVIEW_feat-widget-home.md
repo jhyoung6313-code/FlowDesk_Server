@@ -92,3 +92,33 @@
 - 브라우저 실화면 검증(로그아웃→다른 계정 로그인 시 레일 초기화, 로그인 직후 편집, 위젯 로딩/오류 표시)은 사용자 확인 단계에서 수행 필요.
 - `themeStore`는 동일한 "서버값 없으면 로컬 유지" 구조를 그대로 가짐(외형 설정이라 이번 범위에서 제외).
 - 기존 부채(Sidebar 미사용 코드, `persistDash`의 updater 내부 호출)는 별도 정리 라운드 권장.
+
+---
+
+# 추가 라운드 (2026-10-15) — 계정 간 설정·알림 혼선 사고 대응 및 전체 재점검
+
+## 증상과 원인 (사용자 보고: admin/member 설정이 같이 바뀜, member 알림 팝업이 admin 에게 표시)
+- **DB 증거**: `dashboard_layout_*`/`theme_prefs_*` 행이 admin(`_1`)에만 있고 member1·member2 행은 0건 → member 화면에서 한 저장이 admin 계정으로 기록됨. 서버 측 알림 조회·SSE·설정 키는 모두 `req.user.id` 기준으로 정상(라이브 검증 11항목 통과).
+- **원인(클라이언트, 기존 설계)**: JWT 가 브라우저 전체가 공유하는 `localStorage.token` 한 곳에 있어, 한 탭에서 다른 계정으로 로그인하면 먼저 열려 있던 탭은 화면은 이전 계정인데 API·SSE 는 새 계정 토큰으로 나감. 같은 브라우저에서 admin/member 를 탭으로 나눠 테스트하면 그대로 재현됨. 테마 로컬 캐시(`flowdesk_skin` 등)도 계정 구분이 없어 "설정이 같아 보임"을 키움.
+- **직전 조치의 결함(제가 만든 회귀)**: 042f813 의 `pg_advisory_xact_lock` 을 `$queryRaw` 로 호출 → 반환 타입 void 역직렬화 실패로 `PUT /settings/preferences` 가 **항상 500**. 단위 테스트는 prisma 를 모킹해 못 잡았고, 라이브 호출로 발견. → `$executeRaw` 로 수정, 라이브 재검증.
+
+## 조치 완료
+| 항목 | 내용 |
+|---|---|
+| ✅ 탭 간 계정 불일치 차단 | `utils/sessionIdentity.js`: 다른 탭에서 토큰이 바뀌면(`storage` 이벤트) 이 탭 새로고침 + 모든 API 요청 직전에 토큰 계정 ≠ 화면 계정이면 요청 취소 후 새로고침 |
+| ✅ 테마 캐시 계정 분리 | `themeStore`: 소유자 id(`flowdesk_theme_owner`) 기록, 계정이 다르면 기본값으로 초기화 후 서버값 적용, 로그아웃 시 `resetToDefaults`, 대기 저장 `flush` |
+| ✅ 로그아웃 시 전체 상태 초기화 | 감사 High: memo/task/chat/unread 등 Zustand 스토어가 로그아웃 후 다음 계정 화면에 남음(예: 메모) → `logout` 끝에서 `/login` 하드 리로드. WBS 스냅샷(`wbs_snapshots_*`)·`dashboard_bbs_cat` 로컬 키 삭제 |
+| ✅ 로그아웃이 타 탭 토큰을 지우던 문제 | 토큰 계정 ≠ 화면 계정이면 `token` 삭제 생략 |
+| ✅ 설정 동기화 트리거 | 계정 id 변경에만 반응(user 객체 갱신마다 재조회하던 것 제거) |
+| ✅ SSE 스트림 세션 검증 | `notificationController.stream` 에 `sn`/`pwAt` 검증 추가(옛 세션이 알림 수신 지속 방지) + 프론트 SSE `[user?.id]` 재연결 |
+| ✅ 메일 단건 조회 IDOR (High, 기존 결함) | `GET /mail/:id` 가 참여자 검증 없이 본문·수신자(BCC 포함)를 반환 → 발신자/수신자 외 403, 비발신자에게는 타인 BCC 숨김. 테스트 5건 추가, 라이브 확인(타인 메일 403 / 본인 200) |
+| ✅ preferences 500 | 위 회귀 수정 |
+
+검증: 백엔드 전체 36 스위트/403건 통과, 프론트 빌드 성공, 라이브 계정 분리 검증 스크립트 11항목 통과(테스트 데이터는 삭제).
+
+## 미조치 · 판단 필요
+- **가계부(ledger) 계정 구분 없음** (`ledgerController` list/update/delete 에 `createdBy` 필터 없음, 에이전트 보고·미재확인): 팀 공용 가계부인지 개인용인지 의도 확인 필요. 개인용이면 High.
+- 캘린더 메모는 전원 조회(수정·삭제는 작성자/관리자) — 공유 의도로 보이며 의도 확인만 필요.
+- Socket.IO `join-run`(플레이북 실행 룸) 권한 검사 없음 (Low, 상태성 데이터), `pin-message` 멤버십 미검사 (Low).
+- 동일 브라우저에서 **여러 계정을 동시에 쓰려면** 이제 탭이 아니라 별도 브라우저/프로필/시크릿 창을 써야 함(탭 간 토큰 공유 구조는 유지, 불일치만 차단).
+- 채팅 팝업/RunDetail/CollaborativeEditor 의 장기 연결은 탭 새로고침 경로로만 갱신됨(위 storage 이벤트로 커버).

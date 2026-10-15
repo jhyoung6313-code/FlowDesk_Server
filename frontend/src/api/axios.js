@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { isIdentityMismatch, reloadForIdentityChange } from '../utils/sessionIdentity';
 
 // 탭(브라우저 창)마다 고유한 ID. 업무 변경 소켓 echo에서 "변경을 일으킨 바로 그 탭"만
 // 식별해 중복 조회를 막되, 같은 계정의 다른 탭은 정상적으로 실시간 동기화되도록 한다.
@@ -14,6 +15,11 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
+  // 다른 탭에서 계정이 바뀐 상태라면 이 요청을 보내지 않는다 (엉뚱한 계정으로 저장되는 것 방지)
+  if (isIdentityMismatch(token)) {
+    reloadForIdentityChange();
+    return Promise.reject(new axios.Cancel('identity-changed'));
+  }
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

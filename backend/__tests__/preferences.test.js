@@ -7,7 +7,7 @@ const express = require('express');
 jest.mock('@prisma/client', () => {
   const m = {
     appSetting: { findUnique: jest.fn(), upsert: jest.fn() },
-    $queryRaw: jest.fn(),
+    $executeRaw: jest.fn(),
     $transaction: jest.fn(),
   };
   return { PrismaClient: jest.fn(() => m) };
@@ -31,7 +31,7 @@ function app() {
 beforeEach(() => {
   jest.clearAllMocks();
   prisma.$transaction.mockImplementation((fn) => fn(prisma));
-  prisma.$queryRaw.mockResolvedValue([]);
+  prisma.$executeRaw.mockResolvedValue(0);
   prisma.appSetting.findUnique.mockResolvedValue(null);
   prisma.appSetting.upsert.mockResolvedValue({});
 });
@@ -58,7 +58,7 @@ describe('PUT /settings/preferences', () => {
     const r = await request(app()).put('/prefs').send({ nav: { pinned: ['/tasks'] } });
     expect(r.status).toBe(200);
     expect(r.body).toEqual({ a: 1, nav: { pinned: ['/tasks'] } });
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(1);
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
     expect(prisma.appSetting.upsert).toHaveBeenCalledTimes(1);
   });
 
