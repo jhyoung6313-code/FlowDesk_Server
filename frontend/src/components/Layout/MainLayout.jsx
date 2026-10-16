@@ -14,6 +14,7 @@ import useNotificationStore from '../../store/notificationStore';
 import useThemeStore from '../../store/themeStore';
 import useUnreadStore from '../../store/unreadStore';
 import useAuthStore from '../../store/authStore';
+import usePreferenceStore from '../../store/preferenceStore';
 import { getApprovalPendingCount } from '../../api/approval';
 import { getUnreadCount as getMailUnreadCount } from '../../api/mail';
 
@@ -35,6 +36,9 @@ function useIsMobile() {
 export default function MainLayout() {
   const location = useLocation();
   const isDashboard = location.pathname === '/';
+  // 새 홈 레이아웃(A·C·E·F)은 자체 인사말·요약을 가지므로 상단 요약 바를 숨긴다 (기본 대시보드만 표시)
+  const homeLayout = usePreferenceStore((s) => s.homeLayout);
+  const hideSubHeader = isDashboard && homeLayout !== 'classic';
   // 관리자 하위 화면(콘솔 자체 제외)에서 콘솔 복귀 바 표시
   const isAdminSubpage =
     location.pathname.startsWith('/admin') && location.pathname !== '/admin';
@@ -127,7 +131,7 @@ export default function MainLayout() {
           collapsed={collapsed}
           onCollapse={isMobile ? () => setMobileOpen(true) : handleCollapse}
         />
-        <SubHeader />
+        {!hideSubHeader && <SubHeader />}
         <Content
           style={{
             flex: 1,

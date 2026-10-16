@@ -117,6 +117,7 @@
 - **설명**: Recharts 기반 통계 위젯 (상태별/파트별/우선순위별 도넛·바 차트, D-Day 현황, 최근 활동)
 - **API**: `GET /api/tasks` (필터 조합)
 - **[v2.15 추가] 위젯 카탈로그**: 대시보드는 `react-grid-layout` 블록 그리드(드래그·크기조절·숨김, `GET/PUT /api/settings/dashboard-layout`, 형식 `v:1`)이며, 편집 모드의 "+ 위젯"으로 **추가 위젯 5종**(오늘 한눈에·결재 대기·오늘 회의·내 액션아이템·OKR 진척)을 켤 수 있다(기본 숨김). 정의는 `pages/Dashboard/extraWidgets.jsx`의 `EXTRA_BLOCKS`. 내 하루 집계(`GET /api/me/today`)는 해당 위젯이 켜진 경우에만 호출.
+- **[v2.16 추가] 메인 화면 레이아웃 선택**: 헤더 `테마·화면 모드`(🎨) 팝오버의 **메인 화면**에서 5종 중 선택(개인 설정 `home.layout`, 서버 저장·계정별 분리). `기본 대시보드`(기존 위젯 그리드, 교체 아님) + 추가 4종 — **A 커맨드 센터**(다크 벤토 타일), **C 포커스 모드**(지금 할 일 1건·25분 타이머·완료·빠른 메모), **E 보드 퍼스트**(파스텔 칸반, 카드 드래그로 상태 변경), **F 데일리 브리프**(신문 1면식 4단). 구현: `utils/homeLayouts.js`, `store/preferenceStore.js`(`homeLayout`), `pages/Dashboard/HomeRouter.jsx`(라우터·업무 추가 폼), `pages/Dashboard/layouts/`(`useHomeData` 공유 데이터 훅 + `CommandHome`·`FocusHome`·`BoardHome`·`BriefHome`). 새 서버 API 없음(기존 `/tasks`·`/me/today`·`/mail`·`/bbs`·`/okr` 사용). 새 레이아웃에서는 상단 요약 바(SubHeader)를 숨긴다.
 - **[v2.15 추가] 레일 메뉴 개인화**: 좌측 아이콘 레일의 고정 메뉴를 사용자별로 선택·정렬(`⋯` → 전체 메뉴 / 메뉴 편집). 메뉴 정의는 `utils/navRegistry.jsx`(20개 화면), 상태는 `store/preferenceStore.js`(localStorage 캐시 + 서버). 개인 설정 저장소 API: `GET/PUT /api/settings/preferences`(최상위 키 병합, `null`=삭제, 키 30개·32KB·중첩 깊이 6 제한, `__proto__` 등 예약 키 거부, 사용자별 advisory lock 트랜잭션으로 동시 저장 직렬화, `app_settings.user_prefs_<userId>`). 로그아웃 시 레일 설정 캐시를 초기화하고 계정이 바뀌면 이전 캐시를 버린다.
 
 ### F-20. 디자인 스킨 ~~(구 컬러 테마)~~

@@ -26,6 +26,8 @@ import useThemeStore from '../../store/themeStore';
 import useChatStore from '../../store/chatStore';
 import useUnreadStore from '../../store/unreadStore';
 import { SKIN_LIST } from '../../utils/skins';
+import usePreferenceStore from '../../store/preferenceStore';
+import { HOME_LAYOUTS } from '../../utils/homeLayouts';
 import { NOTIFICATION_LABELS } from '../../utils/colors';
 import { calcDday, getDdayColor } from '../../utils/dday';
 
@@ -55,7 +57,7 @@ const SKIN_PREVIEW = {
   paper:   { radius: 6,  border: '1px solid #e2d8c4',  shadow: 'none',                      bg: '#fbf7ee' },
 };
 
-function ThemePicker({ isDark, toggleDark, density, setDensity, skin, setSkin, onClose }) {
+function ThemePicker({ isDark, toggleDark, density, setDensity, skin, setSkin, homeLayout, setHomeLayout, onClose }) {
   return (
     <div style={{ width: 280, padding: '4px 0' }}>
       {/* ── 라이트/다크 모드 토글 ── */}
@@ -163,6 +165,40 @@ function ThemePicker({ isDark, toggleDark, density, setDensity, skin, setSkin, o
               }}
             >
               {d.label}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── 메인 화면 레이아웃 (기본 대시보드 + 추가 레이아웃) ── */}
+      <div style={{
+        fontSize: 13, fontWeight: 700, color: '#94a3b8', letterSpacing: '0.6px',
+        textTransform: 'uppercase', margin: '18px 0 10px', padding: '0 2px',
+      }}>
+        메인 화면
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {HOME_LAYOUTS.map((l) => {
+          const on = homeLayout === l.key;
+          return (
+            <div
+              key={l.key}
+              role="button"
+              tabIndex={0}
+              onClick={() => { setHomeLayout(l.key); onClose?.(); }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setHomeLayout(l.key); onClose?.(); } }}
+              style={{
+                borderRadius: 10, padding: '9px 12px', cursor: 'pointer',
+                border: on ? '2px solid var(--fd-accent-mid, #3b82f6)' : '2px solid #e2e8f0',
+                background: on ? 'rgba(var(--fd-accent-rgb,59,130,246),0.06)' : '#fafafa',
+                display: 'flex', alignItems: 'center', gap: 8,
+              }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', lineHeight: 1.3 }}>{l.name}</div>
+                <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 1 }}>{l.desc}</div>
+              </div>
+              {on && <CheckOutlined style={{ fontSize: 13, color: 'var(--fd-accent-mid,#3b82f6)' }} />}
             </div>
           );
         })}
@@ -298,6 +334,8 @@ export default function AppHeader({ collapsed, onCollapse }) {
   const setDensity = useThemeStore((s) => s.setDensity);
   const skin = useThemeStore((s) => s.skin);
   const setSkin = useThemeStore((s) => s.setSkin);
+  const homeLayout = usePreferenceStore((s) => s.homeLayout);
+  const setHomeLayout = usePreferenceStore((s) => s.setHomeLayout);
   const [themeOpen, setThemeOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   // MainLayout이 한 번만 폴링해 공유 스토어에 반영한 값을 읽기만 한다 (중복 API 호출 방지).
@@ -555,6 +593,8 @@ export default function AppHeader({ collapsed, onCollapse }) {
               setDensity={setDensity}
               skin={skin}
               setSkin={setSkin}
+              homeLayout={homeLayout}
+              setHomeLayout={setHomeLayout}
               onClose={() => setThemeOpen(false)}
             />
           }

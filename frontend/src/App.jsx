@@ -20,7 +20,8 @@ import NotFound from './pages/Error/NotFound';
 import Forbidden from './pages/Error/Forbidden';
 
 // 페이지는 라우트 단위 코드 스플리팅 (무거운 라이브러리—캘린더/간트/차트/PDF—를 각 청크로 분리)
-const DashboardPage = lazy(() => import('./pages/Dashboard'));
+// 메인(/) — 사용자가 고른 홈 레이아웃(기본 대시보드 + A·C·E·F)을 렌더하는 라우터
+const HomePage = lazy(() => import('./pages/Dashboard/HomeRouter'));
 const MyDayPage = lazy(() => import('./pages/MyDay'));
 const FormsPage = lazy(() => import('./pages/Forms'));
 const DocumentsPage = lazy(() => import('./pages/Documents'));
@@ -241,7 +242,7 @@ export default function App() {
             </PrivateRoute>
           }
         >
-          <Route index element={<DashboardPage />} />
+          <Route index element={<HomePage />} />
           <Route path="my-day" element={<MyDayPage />} />
           <Route path="forms" element={<FormsPage />} />
           <Route path="documents" element={<DocumentsPage />} />

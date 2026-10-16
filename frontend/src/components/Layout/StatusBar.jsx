@@ -9,7 +9,7 @@ import useChatStore from '../../store/chatStore';
 
 dayjs.locale('ko');
 
-const APP_VERSION = 'v2.15.1';
+const APP_VERSION = 'v2.16.0';
 
 /* 앱 전역 하단 상태바 — 온라인·사용자·알림/채팅·시계·버전 표시 + 하단 경계 제공 */
 export default function StatusBar() {
