@@ -1,581 +1,467 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Form, Input, Button, Typography, message, Tabs, Steps, Result, Alert } from 'antd';
-import { UserOutlined, LockOutlined, SafetyOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { Alert, message } from 'antd';
 import useAuthStore from '../../store/authStore';
 import * as authApi from '../../api/auth';
+import { APP_VERSION } from '../../utils/appVersion';
 import './login.css';
 
-/* ── Flowdesk 로고 아이콘 ── */
-function FlowdeskIcon({ size = 28, color = 'white' }) {
+/* 로그인 — 파스텔 대화형.
+   안내 대화로 아이디 → 비밀번호 → (OTP 등록/인증) → 입장, 그리고 비밀번호 초기화(아이디 → OTP → 새 비밀번호 → 확인)를 진행한다.
+   서버 API·보안 정책(OTP, 1계정 1로그인, 계정 잠금)은 이전 로그인 화면과 동일하다. */
+
+const LOGIN_PILLS = ['아이디', '비밀번호', '인증', '입장'];
+const RESET_PILLS = ['아이디', '인증', '새 비밀번호', '완료'];
+const STEP_INDEX = {
+  id: 0, pw: 1, otp: 2, 'otp-setup': 2, enter: 3,
+  'reset-id': 0, 'reset-otp': 1, 'reset-new': 2, 'reset-confirm': 2, 'reset-done': 3,
+};
+const PW_STEPS = ['pw', 'reset-new', 'reset-confirm'];
+const OTP_STEPS = ['otp', 'otp-setup', 'reset-otp'];
+const FINAL_STEPS = ['enter', 'reset-done'];
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const errText = (err, fallback) => err?.response?.data?.error || fallback;
+
+/* 새 비밀번호 규칙(화면 안내용 — 최종 검증은 서버가 한다) */
+const PW_MIN = 9;
+const pwRules = (v) => [
+  { label: `${PW_MIN}자 이상`, ok: v.length >= PW_MIN },
+  { label: '영문 대문자', ok: /[A-Z]/.test(v) },
+  { label: '영문 소문자', ok: /[a-z]/.test(v) },
+  { label: '숫자', ok: /[0-9]/.test(v) },
+  { label: '특수문자', ok: /[^A-Za-z0-9]/.test(v) },
+];
+const pwValid = (v) => v.length >= PW_MIN && [/[A-Z]/, /[a-z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((re) => re.test(v)).length >= 3;
+
+function Face({ size = 46 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M3 11 Q7.5 5 12 11 Q16.5 17 21 11" stroke={color} strokeWidth="2.5" strokeLinecap="round" fill="none" />
-      <path d="M18.5 8.5 L21.5 11 L18.5 13.5" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <rect x="2" y="19" width="24" height="3.5" rx="1.75" fill={color} />
-      <rect x="11.5" y="15.5" width="5" height="4.5" rx="1" fill={color} opacity="0.55" />
+    <svg width={size} height={size} viewBox="0 0 46 46" role="img" aria-label="Flowdesk 도우미">
+      <circle cx="23" cy="23" r="23" fill="#FFD84D" />
+      <circle cx="16" cy="19" r="3" fill="#1F2430" />
+      <circle cx="30" cy="19" r="3" fill="#1F2430" />
+      <path d="M14 28c3 5 15 5 18 0" fill="none" stroke="#1F2430" strokeWidth="3" strokeLinecap="round" />
     </svg>
   );
 }
 
-
-/* ══════════════════════════════════════════════
-   로그인 탭
-══════════════════════════════════════════════ */
-function LoginTab({ onSuccess }) {
-  const { setAuth } = useAuthStore();
-  const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
-  const [pwWarning, setPwWarning] = useState('');
-  const pwRef = useRef(null);
-  const capsLockRef = useRef(false);
-
-  useEffect(() => {
-    const inputEl = pwRef.current?.input;
-    if (!inputEl) return;
-
-    // Chrome은 type="password"에서 Korean IME를 OS 수준에서 우회
-    // → e.key, value, getLayoutMap() 모두 한글을 반환하지 않아 감지 불가
-    // → type="text"(눈동자 열림) 전환 시에는 IME 정상 작동 → value 기반 감지 가능
-    const updateWarning = () => {
-      const val = inputEl.value;
-      if (/[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(val)) {
-        setPwWarning('한글 입력 감지 — 입력기를 영문으로 전환하세요');
-      } else if (capsLockRef.current) {
-        setPwWarning('Caps Lock이 켜져 있습니다 — 비밀번호를 확인하세요');
-      } else {
-        setPwWarning('');
-      }
-    };
-
-    const onInput = () => updateWarning();
-    const onKey = (e) => {
-      if (typeof e.getModifierState === 'function') {
-        capsLockRef.current = e.getModifierState('CapsLock');
-      }
-      updateWarning();
-    };
-
-    inputEl.addEventListener('input', onInput);
-    inputEl.addEventListener('compositionend', onInput);
-    inputEl.addEventListener('keydown', onKey);
-    inputEl.addEventListener('keyup', onKey);
-    return () => {
-      inputEl.removeEventListener('input', onInput);
-      inputEl.removeEventListener('compositionend', onInput);
-      inputEl.removeEventListener('keydown', onKey);
-      inputEl.removeEventListener('keyup', onKey);
-    };
-  }, []);
-
-  // step: 'login' | 'otp'(기존 OTP 검증) | 'otp-setup'(미등록 사용자 최초 등록)
-  const [step, setStep] = useState('login');
-  const [preAuthToken, setPreAuthToken] = useState('');
-  const [otpCode, setOtpCode] = useState('');
-  const [otpLoading, setOtpLoading] = useState(false);
-  const [qrDataUrl, setQrDataUrl] = useState('');
-
-  // 로그인 성공 후처리: 비밀번호 변경 강제 여부 확인
-  const finishLogin = (data) => {
-    setAuth(data.token, data.user);
-    if (data.mustChangePassword) {
-      message.warning('보안 정책에 따라 비밀번호를 변경해야 합니다.');
-      onSuccess('/profile');
-    } else {
-      onSuccess();
-    }
-  };
-
-  const handleLogin = async (values) => {
-    setLoading(true);
-    try {
-      const data = await authApi.login(values.username, values.password);
-      if (data.requireTotpSetup) {
-        // OTP 전사 강제인데 미등록 → 등록 단계로
-        setPreAuthToken(data.preAuthToken);
-        const setup = await authApi.setupLoginTotp(data.preAuthToken);
-        setQrDataUrl(setup.qrDataUrl);
-        setStep('otp-setup');
-      } else if (data.requireTotp) {
-        setPreAuthToken(data.preAuthToken);
-        setStep('otp');
-      } else {
-        finishLogin(data);
-      }
-    } catch (err) {
-      // 중복 로그인 안내 문구는 길어서 오래 보여준다
-      const dup = err?.response?.data?.code === 'ALREADY_LOGGED_IN';
-      message.error(err?.response?.data?.error || '아이디 또는 비밀번호를 확인해주세요.', dup ? 8 : undefined);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleOtpVerify = async () => {
-    if (!otpCode || otpCode.length !== 6) {
-      message.warning('6자리 OTP 코드를 입력하세요.');
-      return;
-    }
-    setOtpLoading(true);
-    try {
-      const data = step === 'otp-setup'
-        ? await authApi.enrollLoginTotp(preAuthToken, otpCode)
-        : await authApi.verifyLoginTotp(preAuthToken, otpCode);
-      finishLogin(data);
-    } catch (err) {
-      message.error(err?.response?.data?.error || 'OTP 코드가 올바르지 않습니다.');
-      setOtpCode('');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  const handleBackToLogin = () => {
-    setStep('login');
-    setPreAuthToken('');
-    setOtpCode('');
-    setQrDataUrl('');
-    form.resetFields();
-  };
-
-  if (step === 'otp-setup') {
-    return (
-      <>
-        <div className="login-heading">
-          <div className="login-eyebrow">2FA 등록</div>
-          <Typography.Title level={2} className="login-title">2단계 인증 등록</Typography.Title>
-          <Typography.Text className="login-sub">보안 정책상 OTP 등록이 필요합니다</Typography.Text>
-        </div>
-        <div className="login-form">
-          <Typography.Paragraph className="login-sub" style={{ marginBottom: 12 }}>
-            Google Authenticator 등 OTP 앱으로 아래 QR을 스캔한 뒤, 표시되는 6자리 코드를 입력하세요.
-          </Typography.Paragraph>
-          {qrDataUrl && (
-            <div style={{ textAlign: 'center', marginBottom: 16 }}>
-              <img src={qrDataUrl} alt="OTP QR" style={{ width: 180, height: 180, background: 'var(--fd-surface)', borderRadius: 8, padding: 8 }} />
-            </div>
-          )}
-          <Input
-            prefix={<SafetyOutlined className="input-icon" />}
-            placeholder="6자리 코드 입력"
-            className="login-input"
-            value={otpCode}
-            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            onPressEnter={handleOtpVerify}
-            maxLength={6}
-            autoFocus
-            style={{ marginBottom: 12 }}
-          />
-          <Button block loading={otpLoading} className="login-btn" onClick={handleOtpVerify} style={{ marginBottom: 12 }}>
-            등록 후 로그인
-          </Button>
-          <Button block type="text" icon={<ArrowLeftOutlined />} onClick={handleBackToLogin}
-            style={{ color: 'rgba(255,255,255,0.35)' }}>
-            돌아가기
-          </Button>
-        </div>
-      </>
-    );
-  }
-
-  if (step === 'otp') {
-    return (
-      <>
-        <div className="login-heading">
-          <div className="login-eyebrow">2FA</div>
-          <Typography.Title level={2} className="login-title">2단계 인증</Typography.Title>
-          <Typography.Text className="login-sub">OTP 앱의 6자리 코드를 입력하세요</Typography.Text>
-        </div>
-        <div className="login-form">
-          <div style={{ marginBottom: 16 }}>
-            <label className="form-label" style={{ display: 'block', marginBottom: 8 }}>OTP 코드</label>
-            <Input
-              prefix={<SafetyOutlined className="input-icon" />}
-              placeholder="6자리 코드 입력"
-              className="login-input"
-              value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              onPressEnter={handleOtpVerify}
-              maxLength={6}
-              autoFocus
-            />
-          </div>
-          <Button block loading={otpLoading} className="login-btn" onClick={handleOtpVerify}
-            style={{ marginBottom: 12 }}>
-            인증 확인
-          </Button>
-          <Button block type="text" icon={<ArrowLeftOutlined />} onClick={handleBackToLogin}
-            style={{ color: 'rgba(255,255,255,0.35)' }}>
-            돌아가기
-          </Button>
-        </div>
-      </>
-    );
-  }
-
-  return (
-    <>
-      <div className="login-heading">
-        <div className="login-eyebrow">Sign in</div>
-        <Typography.Title level={2} className="login-title">반갑습니다</Typography.Title>
-        <Typography.Text className="login-sub">아이디와 비밀번호를 입력해 주세요</Typography.Text>
-      </div>
-      <Form
-        form={form}
-        onFinish={handleLogin}
-        layout="vertical"
-        size="large"
-        className="login-form"
-      >
-        <Form.Item
-          name="username"
-          label={<span className="form-label">아이디</span>}
-          rules={[{ required: true, message: '아이디를 입력하세요.' }]}
-        >
-          <Input
-            prefix={<UserOutlined className="input-icon" />}
-            placeholder="아이디를 입력하세요"
-            className="login-input"
-            autoComplete="username"
-          />
-        </Form.Item>
-        <Form.Item
-          name="password"
-          label={<span className="form-label">비밀번호</span>}
-          rules={[{ required: true, message: '비밀번호를 입력하세요.' }]}
-        >
-          <Input.Password
-            ref={pwRef}
-            prefix={<LockOutlined className="input-icon" />}
-            placeholder="비밀번호를 입력하세요"
-            className="login-input"
-            autoComplete="current-password"
-          />
-        </Form.Item>
-        {pwWarning && (
-          <div className="pw-warning">
-            <span className="pw-warning-icon">⚠</span>
-            <span className="pw-warning-text">{pwWarning}</span>
-            <button
-              type="button"
-              className="pw-warning-clear"
-              onClick={() => {
-                pwRef.current?.blur();
-                form.setFieldValue('password', '');
-                setPwWarning('');
-                setTimeout(() => pwRef.current?.focus(), 0);
-              }}
-            >
-              지우기
-            </button>
-          </div>
-        )}
-        <Form.Item style={{ marginTop: 8 }}>
-          <Button htmlType="submit" block loading={loading} className="login-btn">
-            로그인
-          </Button>
-        </Form.Item>
-      </Form>
-    </>
-  );
-}
-
-/* ══════════════════════════════════════════════
-   비밀번호 초기화 탭 (3단계)
-══════════════════════════════════════════════ */
-function ResetPasswordTab() {
-  const [step, setStep] = useState(0);
-  const [resetOtpToken, setResetOtpToken] = useState('');
-  const [resetPwToken, setResetPwToken]   = useState('');
-  const [otpCode, setOtpCode]             = useState('');
-  const [otpLoading, setOtpLoading]       = useState(false);
-  const [form0] = Form.useForm();
-  const [form2] = Form.useForm();
-
-  const handleRequestReset = async (values) => {
-    setOtpLoading(true);
-    try {
-      const data = await authApi.requestPasswordReset(values.username);
-      setResetOtpToken(data.resetOtpToken);
-      setStep(1);
-    } catch (err) {
-      message.error(err?.response?.data?.error || '계정을 찾을 수 없습니다.');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async () => {
-    if (!otpCode || otpCode.length !== 6) {
-      message.warning('6자리 OTP 코드를 입력하세요.');
-      return;
-    }
-    setOtpLoading(true);
-    try {
-      const data = await authApi.verifyResetOtp(resetOtpToken, otpCode);
-      setResetPwToken(data.resetPwToken);
-      setOtpCode('');
-      setStep(2);
-    } catch (err) {
-      message.error(err?.response?.data?.error || 'OTP 코드가 올바르지 않습니다.');
-      setOtpCode('');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  const handleConfirmReset = async (values) => {
-    setOtpLoading(true);
-    try {
-      await authApi.confirmPasswordReset(resetPwToken, values.newPassword);
-      setStep('done');
-    } catch (err) {
-      message.error(err?.response?.data?.error || '비밀번호 변경에 실패했습니다.');
-    } finally {
-      setOtpLoading(false);
-    }
-  };
-
-  const handleRestart = () => {
-    setStep(0);
-    setResetOtpToken('');
-    setResetPwToken('');
-    setOtpCode('');
-    form0.resetFields();
-    form2.resetFields();
-  };
-
-  if (step === 'done') {
-    return (
-      <Result
-        status="success"
-        title="비밀번호가 초기화되었습니다"
-        subTitle="새 비밀번호로 로그인하세요."
-        style={{ padding: '24px 0' }}
-      />
-    );
-  }
-
-  const stepItems = [
-    { title: '계정 확인' },
-    { title: 'OTP 인증' },
-    { title: '비밀번호 설정' },
-  ];
-
-  return (
-    <>
-      <div className="login-heading">
-        <div className="login-eyebrow">Reset</div>
-        <Typography.Title level={2} className="login-title">비밀번호 초기화</Typography.Title>
-        <Typography.Text className="login-sub">OTP 인증 후 새 비밀번호를 설정합니다</Typography.Text>
-      </div>
-
-      <Steps current={step} items={stepItems} size="small" style={{ marginBottom: 24 }} />
-
-      {step === 0 && (
-        <Form form={form0} onFinish={handleRequestReset} layout="vertical" size="large" className="login-form">
-          <Form.Item
-            name="username"
-            label={<span className="form-label">아이디</span>}
-            rules={[{ required: true, message: '아이디를 입력하세요.' }]}
-          >
-            <Input
-              prefix={<UserOutlined className="input-icon" />}
-              placeholder="가입한 아이디를 입력하세요"
-              className="login-input"
-              autoComplete="username"
-            />
-          </Form.Item>
-          <Form.Item style={{ marginTop: 8 }}>
-            <Button htmlType="submit" block loading={otpLoading} className="login-btn">
-              다음 · OTP 인증
-            </Button>
-          </Form.Item>
-        </Form>
-      )}
-
-      {step === 1 && (
-        <div className="otp-step">
-          <div className="otp-step-icon"><SafetyOutlined /></div>
-          <Typography.Title level={4} className="otp-step-title">OTP 인증</Typography.Title>
-          <Typography.Text className="otp-step-desc">
-            Google Authenticator 앱의 6자리 코드를 입력하세요.
-          </Typography.Text>
-          <Input
-            className="otp-input"
-            size="large"
-            maxLength={6}
-            placeholder="000000"
-            value={otpCode}
-            onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-            onPressEnter={handleVerifyOtp}
-            autoFocus
-          />
-          <Button block loading={otpLoading} className="login-btn" style={{ marginTop: 16 }} onClick={handleVerifyOtp}>
-            인증 완료
-          </Button>
-          <button className="otp-back-btn" onClick={() => { setStep(0); setOtpCode(''); }}>
-            <ArrowLeftOutlined /> 돌아가기
-          </button>
-        </div>
-      )}
-
-      {step === 2 && (
-        <Form form={form2} onFinish={handleConfirmReset} layout="vertical" size="large" className="login-form">
-          <Form.Item
-            name="newPassword"
-            label={<span className="form-label">새 비밀번호</span>}
-            rules={[
-              { required: true, message: '새 비밀번호를 입력하세요.' },
-              { min: 9, message: '비밀번호는 9자 이상이어야 합니다.' },
-              {
-                validator: (_, value) => {
-                  if (!value) return Promise.resolve();
-                  const classes = [/[A-Z]/, /[a-z]/, /[0-9]/, /[^A-Za-z0-9]/].filter((re) => re.test(value)).length;
-                  return classes >= 3
-                    ? Promise.resolve()
-                    : Promise.reject(new Error('영대문자·영소문자·숫자·특수문자 중 3종류 이상 포함해야 합니다.'));
-                },
-              },
-            ]}
-          >
-            <Input.Password
-              prefix={<LockOutlined className="input-icon" />}
-              placeholder="9자 이상, 영문·숫자·특수문자 조합"
-              className="login-input"
-              autoComplete="new-password"
-              autoFocus
-            />
-          </Form.Item>
-          <Form.Item
-            name="confirmPassword"
-            label={<span className="form-label">새 비밀번호 확인</span>}
-            dependencies={['newPassword']}
-            rules={[
-              { required: true, message: '비밀번호 확인을 입력하세요.' },
-              ({ getFieldValue }) => ({
-                validator(_, value) {
-                  if (!value || getFieldValue('newPassword') === value) return Promise.resolve();
-                  return Promise.reject(new Error('비밀번호가 일치하지 않습니다.'));
-                },
-              }),
-            ]}
-          >
-            <Input.Password
-              prefix={<LockOutlined className="input-icon" />}
-              placeholder="비밀번호를 다시 입력하세요"
-              className="login-input"
-              autoComplete="new-password"
-            />
-          </Form.Item>
-          <Form.Item style={{ marginTop: 8 }}>
-            <Button htmlType="submit" block loading={otpLoading} className="login-btn">
-              비밀번호 변경 완료
-            </Button>
-          </Form.Item>
-          <button className="otp-back-btn" onClick={handleRestart}>
-            <ArrowLeftOutlined /> 처음으로
-          </button>
-        </Form>
-      )}
-    </>
-  );
-}
-
-/* ══════════════════════════════════════════════
-   메인 로그인 페이지
-══════════════════════════════════════════════ */
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { user, setAuth } = useAuthStore();
-  const [loginNotice, setLoginNotice] = useState('');
+  const user = useAuthStore((s) => s.user);
+  const setAuth = useAuthStore((s) => s.setAuth);
 
-  useEffect(() => { if (user) navigate('/'); }, [user]);
+  const [msgs, setMsgs] = useState([]);
+  const [step, setStep] = useState('id');
+  const [typing, setTyping] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [value, setValue] = useState('');
+  const [username, setUsername] = useState('');
+  const [hiddenPw, setHiddenPw] = useState('');   // 비밀번호 관리자 자동 채움 수신용(화면에 보이지 않는 입력창)
+  const [showPw, setShowPw] = useState(false);
+  const [caps, setCaps] = useState(false);
+  const [notice, setNotice] = useState('');
+
+  const ctx = useRef({ preAuthToken: '', resetOtpToken: '', resetPwToken: '', newPw: '' });
+  const alive = useRef(true);
+  const started = useRef(false);
+  const run = useRef(0);            // 처음부터 눌렀을 때 진행 중인 대화 연출을 끊기 위한 세대 번호
+  const seq = useRef(0);
+  const redirect = useRef(null);
+  const logRef = useRef(null);
+  const inputRef = useRef(null);
+
+  const push = useCallback((m) => setMsgs((prev) => [...prev, { id: ++seq.current, ...m }]), []);
+
+  /* 봇 말풍선을 "입력 중…" 연출과 함께 순서대로 출력 */
+  const botSay = useCallback(async (items) => {
+    const mine = run.current;
+    for (const it of items) {
+      setTyping(true);
+      await sleep(360);
+      if (!alive.current || mine !== run.current) { setTyping(false); return false; }
+      setTyping(false);
+      push({ who: 'bot', ...it });
+    }
+    return true;
+  }, [push]);
+
+  const greet = useCallback(() => botSay([
+    { text: '안녕하세요! Flowdesk에 오신 걸 환영해요.', tone: 'hello' },
+    { text: '먼저 아이디를 알려 주세요.', tone: 'id' },
+  ]), [botSay]);
 
   useEffect(() => {
-    const notice = sessionStorage.getItem('loginNotice');
-    if (notice) {
-      setLoginNotice(notice);
-      sessionStorage.removeItem('loginNotice');
-    }
+    alive.current = true;
+    if (!started.current) { started.current = true; greet(); }
+    return () => { alive.current = false; };
+  }, [greet]);
+
+  useEffect(() => { if (user) navigate(redirect.current || '/'); }, [user, navigate]);
+
+  useEffect(() => {
+    const n = sessionStorage.getItem('loginNotice');
+    if (n) { setNotice(n); sessionStorage.removeItem('loginNotice'); }
   }, []);
 
-  const handleSuccess = (path = '/') => navigate(path);
+  // 새 말풍선이 생기면 맨 아래로, 입력 가능해지면 입력창에 포커스
+  useEffect(() => {
+    const el = logRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [msgs, typing]);
+  const disabled = busy || typing || FINAL_STEPS.includes(step);
+  useEffect(() => { if (!disabled) inputRef.current?.focus(); }, [disabled, step]);
 
-  const tabItems = [
-    {
-      key: 'login',
-      label: '로그인',
-      children: <LoginTab onSuccess={handleSuccess} setAuth={setAuth} />,
-    },
-    {
-      key: 'reset',
-      label: '비밀번호 초기화',
-      children: <ResetPasswordTab />,
-    },
-  ];
+  const restart = useCallback(() => {
+    run.current += 1;
+    ctx.current = { preAuthToken: '', resetOtpToken: '', resetPwToken: '', newPw: '' };
+    setMsgs([]); setStep('id'); setValue(''); setUsername(''); setHiddenPw('');
+    setShowPw(false); setTyping(false); setBusy(false);
+    greet();
+  }, [greet]);
+
+  const finish = async (data) => {
+    setStep('enter');
+    await botSay([{ text: `확인됐어요, ${data.user?.displayName || ''} 님! 오늘의 브리프를 준비하고 있어요.`, tone: 'ok' }]);
+    await sleep(450);
+    if (!alive.current) return;
+    if (data.mustChangePassword) {
+      message.warning('보안 정책에 따라 비밀번호를 변경해야 합니다.');
+      redirect.current = '/profile';
+    }
+    setAuth(data.token, data.user);
+  };
+
+  const loginFailed = async (err, name) => {
+    const dup = err?.response?.data?.code === 'ALREADY_LOGGED_IN';
+    const text = errText(err, '아이디 또는 비밀번호를 확인해 주세요.');
+    setStep('id');
+    setValue(name);
+    if (dup) {
+      await botSay([
+        { text: '앗, 이미 다른 곳에서 로그인 중인 계정이에요.', tone: 'warn' },
+        { kind: 'dup', text },
+      ]);
+    } else {
+      await botSay([{ text, tone: 'warn' }, { text: '아이디부터 다시 확인해 볼까요?', tone: 'id' }]);
+    }
+  };
+
+  const doLogin = async (name, pw) => {
+    setBusy(true);
+    try {
+      const data = await authApi.login(name, pw);
+      if (data.requireTotpSetup) {
+        ctx.current.preAuthToken = data.preAuthToken;
+        const setup = await authApi.setupLoginTotp(data.preAuthToken);
+        setStep('otp-setup');
+        await botSay([
+          { text: '보안 정책상 2단계 인증(OTP) 등록이 필요해요. OTP 앱으로 아래 QR을 스캔해 주세요.', tone: 'otp' },
+          { kind: 'qr', qr: setup.qrDataUrl },
+          { text: '앱에 표시된 6자리 코드를 입력해 주세요.', tone: 'otp' },
+        ]);
+      } else if (data.requireTotp) {
+        ctx.current.preAuthToken = data.preAuthToken;
+        setStep('otp');
+        await botSay([{ text: '인증 앱에 표시된 6자리 코드를 입력해 주세요.', tone: 'otp' }]);
+      } else {
+        await finish(data);
+      }
+    } catch (err) {
+      await loginFailed(err, name);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startReset = async () => {
+    if (disabled) return;
+    push({ who: 'me', text: '비밀번호를 잊었어요' });
+    setStep('reset-id'); setValue('');
+    await botSay([{ text: '비밀번호 초기화를 도와드릴게요. 아이디를 알려 주세요.', tone: 'id' }]);
+  };
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    if (disabled) return;
+    const raw = value;
+
+    if (step === 'id') {
+      const name = raw.trim();
+      if (!name) return;
+      push({ who: 'me', text: name });
+      setUsername(name); setValue('');
+      if (hiddenPw) {                       // 비밀번호 관리자가 비밀번호까지 채워 준 경우 바로 진행
+        push({ who: 'me', text: '••••••••••', masked: true });
+        const pw = hiddenPw; setHiddenPw('');
+        await doLogin(name, pw);
+      } else {
+        setStep('pw');
+        await botSay([{ text: `${name} 님, 비밀번호를 입력해 주세요.`, tone: 'pw' }]);
+      }
+      return;
+    }
+
+    if (step === 'pw') {
+      if (!raw) return;
+      push({ who: 'me', text: '•'.repeat(Math.min(raw.length, 12)), masked: true });
+      setValue(''); setHiddenPw(''); setShowPw(false);
+      await doLogin(username, raw);
+      return;
+    }
+
+    if (OTP_STEPS.includes(step)) {
+      const code = raw.replace(/\D/g, '');
+      if (code.length !== 6) { await botSay([{ text: '6자리 숫자를 입력해 주세요.', tone: 'warn' }]); return; }
+      push({ who: 'me', kind: 'otp' });
+      setValue('');
+      setBusy(true);
+      try {
+        if (step === 'reset-otp') {
+          const d = await authApi.verifyResetOtp(ctx.current.resetOtpToken, code);
+          ctx.current.resetPwToken = d.resetPwToken;
+          setStep('reset-new');
+          await botSay([{ text: `새 비밀번호를 정해 주세요. ${PW_MIN}자 이상, 영문 대·소문자·숫자·특수문자 중 3종류 이상이에요.`, tone: 'hello' }]);
+        } else {
+          const d = step === 'otp-setup'
+            ? await authApi.enrollLoginTotp(ctx.current.preAuthToken, code)
+            : await authApi.verifyLoginTotp(ctx.current.preAuthToken, code);
+          await finish(d);
+        }
+      } catch (err) {
+        await botSay([{ text: errText(err, 'OTP 코드가 올바르지 않습니다.'), tone: 'warn' }, { text: '코드를 다시 입력해 주세요.', tone: 'otp' }]);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
+    if (step === 'reset-id') {
+      const name = raw.trim();
+      if (!name) return;
+      push({ who: 'me', text: name }); setValue('');
+      setBusy(true);
+      try {
+        const d = await authApi.requestPasswordReset(name);
+        ctx.current.resetOtpToken = d.resetOtpToken;
+        setStep('reset-otp');
+        await botSay([{ text: '본인 확인을 위해 인증 코드 6자리를 입력해 주세요.', tone: 'otp' }]);
+      } catch (err) {
+        await botSay([{ text: errText(err, '계정을 찾을 수 없습니다.'), tone: 'warn' }, { text: '아이디를 다시 확인해 주세요.', tone: 'id' }]);
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+
+    if (step === 'reset-new') {
+      if (!raw) return;
+      push({ who: 'me', text: '•'.repeat(Math.min(raw.length, 12)), masked: true });
+      setValue('');
+      if (!pwValid(raw)) {
+        await botSay([{ text: `조건을 만족하지 않아요. ${PW_MIN}자 이상, 영문 대·소문자·숫자·특수문자 중 3종류 이상으로 다시 입력해 주세요.`, tone: 'warn' }]);
+        return;
+      }
+      ctx.current.newPw = raw;
+      setStep('reset-confirm');
+      await botSay([{ text: '한 번 더 입력해 주세요.', tone: 'hello' }]);
+      return;
+    }
+
+    if (step === 'reset-confirm') {
+      if (!raw) return;
+      push({ who: 'me', text: '•'.repeat(Math.min(raw.length, 12)), masked: true });
+      setValue('');
+      if (raw !== ctx.current.newPw) {
+        setStep('reset-new');
+        await botSay([{ text: '두 비밀번호가 달라요. 새 비밀번호부터 다시 입력해 주세요.', tone: 'warn' }]);
+        return;
+      }
+      setBusy(true);
+      try {
+        await authApi.confirmPasswordReset(ctx.current.resetPwToken, raw);
+        ctx.current.newPw = '';
+        setStep('reset-done'); setShowPw(false);
+        await botSay([{ text: '비밀번호가 변경됐어요. 새 비밀번호로 다시 로그인해 주세요.', tone: 'ok' }, { kind: 'goLogin' }]);
+      } catch (err) {
+        setStep('reset-new');
+        await botSay([{ text: errText(err, '비밀번호 변경에 실패했습니다.'), tone: 'warn' }, { text: '새 비밀번호를 다시 입력해 주세요.', tone: 'hello' }]);
+      } finally {
+        setBusy(false);
+      }
+    }
+  };
+
+  /* ── 입력창 설정 ── */
+  const isPwStep = PW_STEPS.includes(step);
+  const isReset = step.startsWith('reset-');
+  const cfg = {
+    id: { type: 'text', name: 'username', ac: 'username', ph: '아이디를 입력하세요' },
+    pw: { type: showPw ? 'text' : 'password', name: 'password', ac: 'current-password', ph: '비밀번호를 입력하세요' },
+    otp: { type: 'text', name: 'otp', ac: 'one-time-code', ph: '6자리 코드', numeric: true },
+    'otp-setup': { type: 'text', name: 'otp', ac: 'one-time-code', ph: '6자리 코드', numeric: true },
+    enter: { type: 'text', name: 'x', ac: 'off', ph: '입장하는 중이에요…' },
+    'reset-id': { type: 'text', name: 'username', ac: 'username', ph: '아이디를 입력하세요' },
+    'reset-otp': { type: 'text', name: 'otp', ac: 'one-time-code', ph: '6자리 코드', numeric: true },
+    'reset-new': { type: showPw ? 'text' : 'password', name: 'new-password', ac: 'new-password', ph: `새 비밀번호 (${PW_MIN}자 이상)` },
+    'reset-confirm': { type: showPw ? 'text' : 'password', name: 'confirm-password', ac: 'new-password', ph: '새 비밀번호 확인' },
+    'reset-done': { type: 'text', name: 'x', ac: 'off', ph: '로그인하러 가기를 눌러 주세요' },
+  }[step];
+
+  const hangul = isPwStep && /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(value);
+  const warn = hangul ? '한글 입력 감지 — 입력기를 영문으로 전환하세요'
+    : isPwStep && caps ? 'Caps Lock이 켜져 있습니다 — 비밀번호를 확인하세요' : '';
+  const onKey = (e) => {
+    if (isPwStep && typeof e.getModifierState === 'function') setCaps(e.getModifierState('CapsLock'));
+  };
+
+  const pills = isReset ? RESET_PILLS : LOGIN_PILLS;
+  const idx = STEP_INDEX[step];
+  const finalDone = FINAL_STEPS.includes(step);
+
+  const renderMsg = (m) => {
+    if (m.who === 'me') {
+      return (
+        <div key={m.id} className="fdl-row is-me">
+          {m.kind === 'otp' ? (
+            <div className="fdl-otpbox" aria-label="인증 코드 입력됨">{[0, 1, 2, 3, 4, 5].map((i) => <span key={i}>•</span>)}</div>
+          ) : (
+            <div className={`fdl-bubble is-me${m.masked ? ' is-masked' : ''}`}>{m.text}</div>
+          )}
+        </div>
+      );
+    }
+    if (m.kind === 'qr') {
+      return (
+        <div key={m.id} className="fdl-row"><div className="fdl-avatar" />
+          <div className="fdl-qr"><img src={m.qr} alt="OTP 등록 QR 코드" /></div>
+        </div>
+      );
+    }
+    if (m.kind === 'dup') {
+      return (
+        <div key={m.id} className="fdl-row fdl-indent" role="alert">
+          <div className="fdl-dup">
+            {m.text}
+            <div className="fdl-actions">
+              <button type="button" className="fdl-mini" onClick={restart}>다시 시도</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    if (m.kind === 'goLogin') {
+      return (
+        <div key={m.id} className="fdl-row fdl-indent"><button type="button" className="fdl-cta" onClick={restart}>로그인하러 가기</button></div>
+      );
+    }
+    return (
+      <div key={m.id} className="fdl-row"><div className="fdl-avatar" />
+        <div className={`fdl-bubble is-bot fdl-tone-${m.tone || 'hello'}`}>{m.text}</div>
+      </div>
+    );
+  };
 
   return (
-    <div className="login-root">
-      <div className="login-container">
-        {/* 왼쪽 브랜딩 패널 */}
-        <div className="login-brand-panel">
-          <div className="login-brand-logo">
-            <div className="login-brand-logo-sq">
-              <FlowdeskIcon size={28} color="rgba(255,255,255,0.85)" />
-            </div>
-            <span className="login-brand-name">Flowdesk</span>
-            <span className="login-brand-tagline">소규모 팀을 위한<br />업무 관리 솔루션</span>
+    <div className="fdl-root">
+      {/* 장식(의미 없는 일러스트) */}
+      <div className="fdl-deco fdl-deco-1" aria-hidden="true"><b>대기</b><span className="fdl-num">6</span><i /></div>
+      <div className="fdl-deco fdl-deco-2" aria-hidden="true"><b>완료</b><span className="fdl-num">3</span><i /></div>
+      <div className="fdl-deco fdl-deco-3" aria-hidden="true"><b>진행중</b><span className="fdl-num">1</span><i /></div>
+      <div className="fdl-deco fdl-deco-4" aria-hidden="true"><b>오늘 회의</b><span className="fdl-num">3</span><i /></div>
+
+      <header className="fdl-header">
+        <div className="fdl-brand">
+          <div className="fdl-brand-mark">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFD84D" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 12h6l3-7 3 14 3-7h3" /></svg>
           </div>
-          <div className="login-brand-features">
-            <div className="login-brand-feat">
-              <span className="login-brand-feat-icon">📋</span>
-              <span className="login-brand-feat-text">칸반 보드</span>
+          <span className="fdl-brand-name">Flowdesk</span>
+        </div>
+        <span className="fdl-header-note">사내 전용 · OTP 2단계 인증</span>
+      </header>
+
+      <main className="fdl-main">
+        {notice && (
+          <Alert className="fdl-notice" type="warning" message={notice} showIcon closable onClose={() => setNotice('')} />
+        )}
+        <div className="fdl-card">
+          <div className="fdl-top">
+            <Face />
+            <div className="fdl-top-title">
+              <b>Flowdesk 로그인</b>
+              <span className="fdl-status"><i />서버 정상</span>
             </div>
-            <div className="login-brand-feat">
-              <span className="login-brand-feat-icon">📅</span>
-              <span className="login-brand-feat-text">캘린더 뷰</span>
-            </div>
-            <div className="login-brand-feat">
-              <span className="login-brand-feat-icon">📊</span>
-              <span className="login-brand-feat-text">간트 차트</span>
-            </div>
-            <div className="login-brand-feat">
-              <span className="login-brand-feat-icon">⚡</span>
-              <span className="login-brand-feat-text">자동화 알림</span>
-            </div>
-            <div className="login-brand-feat">
-              <span className="login-brand-feat-icon">💬</span>
-              <span className="login-brand-feat-text">팀 채팅</span>
-            </div>
+            <button type="button" className="fdl-restart" onClick={restart}>처음부터</button>
           </div>
 
-          {/* 제작자 서명 */}
-          <div className="login-brand-credit">
-            <span className="login-brand-credit-line" />
-            <span className="login-brand-credit-text">Crafted by <span className="login-brand-credit-name">Hong&rsquo;s</span></span>
+          <div className="fdl-pills" aria-label="진행 단계">
+            {pills.map((label, i) => {
+              const cls = i < idx || (i === idx && finalDone) ? 'is-done' : i === idx ? 'is-now' : '';
+              return <span key={label} className={`fdl-pill ${cls}`}>{cls === 'is-done' ? '✓ ' : ''}{label}</span>;
+            })}
           </div>
-        </div>
 
-        {/* 오른쪽 폼 패널 */}
-        <div className="login-form-panel">
-          {loginNotice && (
-            <Alert
-              type="warning"
-              message={loginNotice}
-              showIcon
-              closable
-              onClose={() => setLoginNotice('')}
-              style={{ marginBottom: 16 }}
-            />
-          )}
-          <Tabs
-            defaultActiveKey="login"
-            items={tabItems}
-            className="login-tabs"
-          />
+          <div className="fdl-log" ref={logRef} role="log" aria-live="polite">
+            {msgs.map(renderMsg)}
+            {typing && (
+              <div className="fdl-row"><div className="fdl-avatar" /><div className="fdl-dots" aria-label="입력 중"><span className="fdl-dot" /><span className="fdl-dot" /><span className="fdl-dot" /></div></div>
+            )}
+          </div>
+
+          <form className="fdl-composer" onSubmit={onSubmit} autoComplete="on">
+            {/* 비밀번호 관리자 자동 채움용(보이지 않음): 아이디 단계에선 비밀번호 칸, 비밀번호 단계에선 아이디 칸 */}
+            {step === 'id' && (
+              <input className="fdl-hidden" type="password" name="password" autoComplete="current-password" tabIndex={-1} aria-hidden="true"
+                value={hiddenPw} onChange={(e) => setHiddenPw(e.target.value)} />
+            )}
+            {step === 'pw' && (
+              <input className="fdl-hidden" type="text" name="username" autoComplete="username" tabIndex={-1} aria-hidden="true" value={username} readOnly />
+            )}
+
+            {warn && <div className="fdl-warn" role="status">⚠ {warn}</div>}
+            {step === 'reset-new' && (
+              <div className="fdl-rules" aria-label="비밀번호 조건">
+                {pwRules(value).map((r) => <span key={r.label} className={`fdl-rule${r.ok ? ' is-ok' : ''}`}>{r.ok ? '✓ ' : ''}{r.label}</span>)}
+              </div>
+            )}
+
+            <div className="fdl-chips">
+              {isReset
+                ? <button type="button" className="fdl-chip is-sky" onClick={restart}>로그인으로 돌아가기</button>
+                : (step === 'id' || step === 'pw') && (
+                  <button type="button" className="fdl-chip is-peach" onClick={startReset}>비밀번호를 잊었어요</button>
+                )}
+            </div>
+
+            <div className="fdl-field">
+              <input
+                ref={inputRef}
+                type={cfg.type}
+                name={cfg.name}
+                autoComplete={cfg.ac}
+                inputMode={cfg.numeric ? 'numeric' : undefined}
+                maxLength={cfg.numeric ? 6 : undefined}
+                placeholder={cfg.ph}
+                aria-label={cfg.ph}
+                value={value}
+                disabled={disabled}
+                onChange={(e) => setValue(cfg.numeric ? e.target.value.replace(/\D/g, '').slice(0, 6) : e.target.value)}
+                onKeyDown={onKey}
+                onKeyUp={onKey}
+                spellCheck={false}
+                autoCapitalize="off"
+              />
+              {isPwStep && (
+                <button type="button" className="fdl-eye" onClick={() => setShowPw((v) => !v)} aria-pressed={showPw}>{showPw ? '숨기기' : '보기'}</button>
+              )}
+              <button type="submit" className="fdl-send" aria-label="보내기" disabled={disabled || !value}>
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#FFD84D" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+              </button>
+            </div>
+          </form>
         </div>
-      </div>
+      </main>
+
+      <footer className="fdl-footer">Flowdesk {APP_VERSION} · 접속 기록이 보관됩니다</footer>
     </div>
   );
 }
