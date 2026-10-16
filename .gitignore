@@ -62,3 +62,6 @@ npm-debug.log*
 # 에디터
 .vscode/settings.json
 *.swp
+
+# 감시 스크립트 로그
+ops/watchdog.log

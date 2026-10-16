@@ -7,6 +7,18 @@ Types: `Added` / `Changed` / `Fixed` / `Removed`
 
 ---
 
+## [2.17.2] - 2026-10-16
+
+> 검증·운영 도구 정비 (앱 동작 변경 없음).
+
+### Added
+- **`e2e/`**: 실제 브라우저(Edge)·서버·DB 기반 자동 검증 7개 스위트 + 러너(`node run-all.js`, 117건). 로컬 전용 가드, 검증 후 계정 상태 원복. 사용법은 `e2e/README.md`.
+- **`ops/`**: 상시 실행 가이드와 Windows 감시 스크립트(`watchdog.ps1`, 작업 스케줄러 등록/해제). 운영(Docker)은 `restart: unless-stopped` + healthcheck.
+- 환경변수 `API_RATE_LIMIT_MAX`(기본 300/분/IP)·`LOGIN_RATE_LIMIT_MAX`(기본 10/5분)·`DISABLE_SCHEDULERS`(검증용 보조 서버). `VITE_PORT`·`VITE_API_TARGET`(프런트 보조 서버).
+- `docs/PR_feat-m365-gap-features_to_main.md`: main 병합 PR 본문.
+
+---
+
 ## [2.17.1] - 2026-10-16
 
 > v2.16~2.17 코드리뷰(6회차) 조치.
