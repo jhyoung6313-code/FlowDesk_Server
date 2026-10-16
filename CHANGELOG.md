@@ -7,6 +7,32 @@ Types: `Added` / `Changed` / `Fixed` / `Removed`
 
 ---
 
+## [2.15.0] - 2026-10-16
+
+> 화면 개인화 + 계정 분리 보안 보강 — 레일 메뉴 편집, 대시보드 위젯 카탈로그, 가계부 개인용 전환, 1계정 1로그인.
+
+### Added
+- **레일 메뉴 개인화 (F-16)**: 좌측 아이콘 레일의 고정 메뉴를 사용자별로 선택·정렬(`⋯` → 전체 메뉴 20개 / 메뉴 편집). 메일·전자결재 미처리 건수 배지. 개인 설정 저장소 `GET/PUT /api/settings/preferences`(최상위 키 병합, 키 30개·32KB·깊이 6 제한, 사용자별 advisory lock 트랜잭션).
+- **대시보드 위젯 카탈로그 (F-16)**: 편집 모드 "+ 위젯"으로 추가 위젯 5종(오늘 한눈에·결재 대기·오늘 회의·내 액션아이템·OKR 진척, 기본 숨김). 로딩/오류 상태 표시, 5분·포커스 시 갱신.
+- **1계정 1로그인 (F-57)**: 접속 중인 계정으로의 새 로그인을 거부(409 `ALREADY_LOGGED_IN`). `User.lastActiveAt` 기반 접속 판단(`SESSION_ACTIVE_WINDOW_SEC` 기본 180초), 동시 로그인 원자적 선점, 로그아웃·토큰 만료 시 즉시 해제, 관리자 강제 로그아웃(`PATCH /api/users/:id/force-logout`) 및 사용자 관리 화면 "접속 중" 표시. `SINGLE_LOGIN_BLOCK=false` 로 이전 동작 복원.
+- 탭 간 로그인 계정 불일치 방지(`utils/sessionIdentity.js`): 다른 탭에서 계정이 바뀌면 이 탭을 새로고침하고 불일치 상태의 API 요청을 차단.
+
+### Changed
+- **가계부 개인용 전환 (F-45)**: 거래·예산·반복거래·요약·내보내기를 소유자 본인만 접근(관리자 포함 타인 불가). 카테고리는 시스템 기본(공용, 관리자만 수정) + 개인 카테고리. `LedgerBudget.userId`, `LedgerCategory.userId` 추가.
+- 테마·스킨·밀도 로컬 캐시를 계정별로 분리하고 로그아웃 시 초기화. 로그아웃은 페이지를 새로 불러와 이전 계정의 화면 상태를 모두 비움.
+- 알림 스트림(SSE)도 세션 교체·비밀번호 변경 후 옛 토큰을 거부.
+
+### Fixed
+- 같은 브라우저에서 계정을 바꾸면 설정 저장·알림이 다른 계정으로 섞이던 문제(공유 `localStorage.token`).
+- **보안**: `GET /api/mail/:id`가 참여자 확인 없이 타인 메일(숨은참조 포함)을 반환하던 문제.
+- 로그아웃 후 다음 계정에 이전 계정의 메모·채팅 등 화면 데이터가 남던 문제.
+
+### Migration
+- `20261015050000_ledger_personal_and_last_active`: `ledger_budgets.user_id`(NOT NULL), `ledger_categories.user_id`, `users.last_active_at`. **가계부 예산 행이 있는 환경은 적용 전 정리/소유자 지정 필요.**
+- `.env` 신규 항목: `SINGLE_LOGIN_BLOCK`, `SESSION_ACTIVE_WINDOW_SEC` (`backend/.env.example` 참조).
+
+---
+
 ## [2.14.1] - 2026-07-30
 
 > 스킨 시스템(2.14.0) 후속 — 전자결재 결재종류 트리, 업무목록 담당팀 컬럼, 전역 텍스트 크기 통일, 스킨 완성도 보강.
