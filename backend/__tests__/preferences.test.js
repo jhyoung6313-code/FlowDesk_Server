@@ -116,4 +116,26 @@ describe('PUT /settings/preferences', () => {
     expect(r.status).toBe(500);
     expect(r.body.error).toBe('db down');
   });
+
+  test.each([
+    [{ home: { layout: 'evil' } }, '알 수 없는 메인 화면'],
+    [{ home: { layout: 'focus', scope: 'everyone' } }, '알 수 없는 업무 범위'],
+    [{ home: 'focus' }, 'home 설정 형식'],
+    [{ nav: { pinned: 'x' } }, 'nav 설정 형식'],
+    [{ nav: { pinned: [1, 2] } }, 'nav 설정 형식'],
+  ])('알려진 키의 잘못된 값 %j → 400', async (body, msg) => {
+    const r = await request(app()).put('/prefs').send(body);
+    expect(r.status).toBe(400);
+    expect(r.body.error).toContain(msg);
+    expect(prisma.appSetting.upsert).not.toHaveBeenCalled();
+  });
+
+  test('올바른 home·nav 값은 저장, null 은 삭제', async () => {
+    prisma.appSetting.findUnique.mockResolvedValue({ value: JSON.stringify({ home: { layout: 'focus' } }) });
+    const r = await request(app()).put('/prefs').send({ home: { layout: 'board', scope: 'mine' }, nav: { pinned: ['/', '/tasks'] } });
+    expect(r.status).toBe(200);
+    expect(r.body.home).toEqual({ layout: 'board', scope: 'mine' });
+    const d = await request(app()).put('/prefs').send({ home: null });
+    expect(d.status).toBe(200);
+  });
 });

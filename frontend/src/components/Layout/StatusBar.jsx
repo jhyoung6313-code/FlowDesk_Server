@@ -10,7 +10,6 @@ import { APP_VERSION } from '../../utils/appVersion';
 
 dayjs.locale('ko');
 
-
 /* 앱 전역 하단 상태바 — 온라인·사용자·알림/채팅·시계·버전 표시 + 하단 경계 제공 */
 export default function StatusBar() {
   const navigate    = useNavigate();

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import 'dayjs/locale/ko';
 import relativeTime from 'dayjs/plugin/relativeTime';
@@ -9,6 +9,7 @@ import { getDashboardBbsCategories, getBbsPosts } from '../../../api/bbs';
 import { getCycles, getTree } from '../../../api/okr';
 import useAuthStore from '../../../store/authStore';
 import useTaskStore from '../../../store/taskStore';
+import usePreferenceStore from '../../../store/preferenceStore';
 import { isOverdue } from '../../../utils/dday';
 
 dayjs.extend(relativeTime);
@@ -35,6 +36,17 @@ export function dueText(dueDate, status) {
   return `${d.format('MM.DD')} 마감`;
 }
 
+/* 클릭 가능한 div/article 등에 붙이는 접근성 속성 — 키보드(Enter/Space)로도 동작하고 버튼으로 읽힌다 */
+export const clickable = (fn) => ({
+  role: 'button',
+  tabIndex: 0,
+  onClick: fn,
+  onKeyDown: (e) => {
+    if (e.target !== e.currentTarget) return;           // 안쪽 버튼/입력의 키 입력은 가로채지 않는다
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fn(e); }
+  },
+});
+
 /* 새 홈 레이아웃(A·C·E·F)이 공유하는 데이터 — 기존 API 만 사용한다 (새 서버 엔드포인트 없음) */
 export default function useHomeData() {
   const user = useAuthStore((s) => s.user);
@@ -46,11 +58,20 @@ export default function useHomeData() {
   const [okr, setOkr] = useState(null);       // { cycle, objs, progress } | null
   const [loading, setLoading] = useState(true);
   const [dayKey, setDayKey] = useState(() => dayjs().format('YYYY-MM-DD'));
+  const scope = usePreferenceStore((s) => s.homeScope);        // 'all' | 'mine'
+  const setScope = usePreferenceStore((s) => s.setHomeScope);
+  const reqSeq = useRef({ tasks: 0, today: 0, mails: 0 });
 
+  // 요청마다 번호를 매겨, 늦게 도착한 오래된 응답이 최신 응답(예: 방금 한 상태 변경)을 덮지 않게 한다
   const reload = useCallback(() => {
-    getTasks().then((t) => setTasks(Array.isArray(t) ? t : [])).catch(() => {}).finally(() => setLoading(false));
-    getMyToday().then(setToday).catch(() => {});
-    getMailList({ folder: 'inbox', page: 1, limit: 5 }).then((d) => setMails(d.mails || [])).catch(() => {});
+    const seq = reqSeq.current;
+    const a = ++seq.tasks; const b = ++seq.today; const c = ++seq.mails;
+    // 세 요청이 모두 끝나면 이행되는 Promise 를 돌려줘, 호출부(드롭 직후 등)가 갱신 완료를 기다릴 수 있다
+    return Promise.all([
+      getTasks().then((t) => { if (a === seq.tasks) setTasks(Array.isArray(t) ? t : []); }).catch(() => {}).finally(() => setLoading(false)),
+      getMyToday().then((d) => { if (b === seq.today) setToday(d); }).catch(() => {}),
+      getMailList({ folder: 'inbox', page: 1, limit: 5 }).then((d) => { if (c === seq.mails) setMails(d.mails || []); }).catch(() => {}),
+    ]);
   }, []);
 
   // 업무 변경(calVer)·창 포커스·5분 주기로 갱신, 자정이 지나면 "오늘" 기준도 갱신
@@ -100,7 +121,9 @@ export default function useHomeData() {
   }, [user]);
 
   const derived = useMemo(() => {
-    const active = tasks.filter((t) => t.delYn !== '1');
+    const uid = user?.id;
+    const mine = (t) => t.createdBy === uid || (t.assignees || []).some((a) => (a.userId ?? a.user?.id) === uid);
+    const active = tasks.filter((t) => t.delYn !== '1' && (scope === 'all' || mine(t)));
     const startToday = dayjs().startOf('day');
     const isToday = (d) => d && dayjs(d).startOf('day').isSame(startToday);
     const rank = (t) => (isOverdue(t.dueDate, t.status) ? 0 : isToday(t.dueDate) ? 1 : 2);
@@ -113,6 +136,8 @@ export default function useHomeData() {
       .filter((t) => t.status === 'in_progress')
       .concat(notDone.filter((t) => t.status === 'pending'));
     const queue = focusList.length ? focusList : fallback;
+    // "오늘 N건" = 마감이 오늘이거나 이미 지난 미완료 업무 (우선순위 '높음'만으로는 세지 않는다)
+    const todayCount = notDone.filter((t) => isOverdue(t.dueDate, t.status) || isToday(t.dueDate)).length;
     const counts = {
       total: active.length,
       pending: active.filter((t) => t.status === 'pending').length,
@@ -121,12 +146,13 @@ export default function useHomeData() {
       done: active.filter((t) => t.status === 'done').length,
       overdue: active.filter((t) => isOverdue(t.dueDate, t.status)).length,
     };
-    return { active, focusList, queue, counts };
+    return { active, focusList, queue, counts, todayCount };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasks, dayKey]);
+  }, [tasks, dayKey, scope, user?.id]);
 
   return {
-    user, loading, reload, tasks, ...derived,
+    user, loading, reload, ...derived,
+    scope, setScope, scopeLabel: scope === 'mine' ? '내 담당 업무' : '전체 업무',
     today, mails, notices, okr,
     meetings: today?.meetings || [],
     approvals: today?.approvals || [],

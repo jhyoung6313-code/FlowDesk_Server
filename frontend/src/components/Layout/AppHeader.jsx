@@ -177,16 +177,17 @@ function ThemePicker({ isDark, toggleDark, density, setDensity, skin, setSkin, h
       }}>
         메인 화면
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div role="radiogroup" aria-label="메인 화면 레이아웃" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {HOME_LAYOUTS.map((l) => {
           const on = homeLayout === l.key;
           return (
             <div
               key={l.key}
-              role="button"
+              role="radio"
+              aria-checked={on}
               tabIndex={0}
               onClick={() => { setHomeLayout(l.key); onClose?.(); }}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setHomeLayout(l.key); onClose?.(); } }}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setHomeLayout(l.key); onClose?.(); } }}
               style={{
                 borderRadius: 10, padding: '9px 12px', cursor: 'pointer',
                 border: on ? '2px solid var(--fd-accent-mid, #3b82f6)' : '2px solid #e2e8f0',
@@ -196,7 +197,7 @@ function ThemePicker({ isDark, toggleDark, density, setDensity, skin, setSkin, h
             >
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: '#1e293b', lineHeight: 1.3 }}>{l.name}</div>
-                <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 1 }}>{l.desc}</div>
+                <div style={{ fontSize: 12, color: '#64748b', marginTop: 1 }}>{l.desc}</div>
               </div>
               {on && <CheckOutlined style={{ fontSize: 13, color: 'var(--fd-accent-mid,#3b82f6)' }} />}
             </div>

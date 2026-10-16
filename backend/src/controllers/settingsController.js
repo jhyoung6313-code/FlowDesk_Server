@@ -143,6 +143,24 @@ const PREF_MAX_KEYS = 30;
 const PREF_MAX_BYTES = 32 * 1024;
 const PREF_MAX_DEPTH = 6;
 
+// 알려진 키는 값의 형태를 검증한다 (클라이언트가 모르는 값을 만나 화면이 깨지거나, 잘못된 값이 영구히 남는 것을 방지)
+const HOME_LAYOUTS = ['classic', 'command', 'focus', 'board', 'brief'];
+const HOME_SCOPES = ['all', 'mine'];
+function validatePrefValue(key, v) {
+  if (v === null) return null;                       // null = 키 삭제
+  if (key === 'home') {
+    if (typeof v !== 'object' || Array.isArray(v)) return 'home 설정 형식이 올바르지 않습니다.';
+    if (v.layout !== undefined && !HOME_LAYOUTS.includes(v.layout)) return '알 수 없는 메인 화면 레이아웃입니다.';
+    if (v.scope !== undefined && !HOME_SCOPES.includes(v.scope)) return '알 수 없는 업무 범위입니다.';
+  }
+  if (key === 'nav') {
+    const p = v && v.pinned;
+    if (typeof v !== 'object' || Array.isArray(v) || !Array.isArray(p) || p.length > 60
+      || p.some((x) => typeof x !== 'string' || x.length > 60)) return 'nav 설정 형식이 올바르지 않습니다.';
+  }
+  return null;
+}
+
 /** JSON 값의 중첩 깊이 (원시값 0, 빈 객체/배열 1) */
 function jsonDepth(v) {
   if (v === null || typeof v !== 'object') return 0;
@@ -181,6 +199,10 @@ const updatePreferences = async (req, res, next) => {
     }
     if (keys.some((k) => jsonDepth(body[k]) > PREF_MAX_DEPTH)) {
       return res.status(400).json({ error: '설정 값의 중첩이 너무 깊습니다.' });
+    }
+    for (const k of keys) {
+      const bad = validatePrefValue(k, body[k]);
+      if (bad) return res.status(400).json({ error: bad });
     }
     const key = `user_prefs_${req.user.id}`;
 

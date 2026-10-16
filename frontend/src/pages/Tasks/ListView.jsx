@@ -14,7 +14,7 @@ import {
 import { exportTasksPdf } from '../../utils/pdf';
 import TimeTracker from '../../components/Task/TimeTracker';
 import ResizableDrawer from '../../components/common/ResizableDrawer';
-import { getTaskHistory, bulkAction } from '../../api/tasks';
+import { getTask, getTaskHistory, bulkAction } from '../../api/tasks';
 import dayjs from 'dayjs';
 import useTaskStore from '../../store/taskStore';
 import useAuthStore from '../../store/authStore';
@@ -133,6 +133,18 @@ export default function ListView() {
     }
     fetchTasks();
   }, [currentTask, detailTask, storeEditTask, addTask, fetchTasks]);
+
+  // 딥링크: /tasks?taskId=N (홈 화면·알림 등에서 업무를 눌러 들어온 경우) → 해당 업무 상세를 연다.
+  // 같은 값에서는 한 번만 열어, 사용자가 닫은 뒤 다시 열리지 않게 한다.
+  const deepLinkId = Number(searchParams.get('taskId')) || null;
+  const openedDeepLink = useRef(null);
+  useEffect(() => {
+    if (!deepLinkId || openedDeepLink.current === deepLinkId) return;
+    openedDeepLink.current = deepLinkId;
+    getTask(deepLinkId)
+      .then((task) => { if (task) setDetailTask(task); })
+      .catch(() => message.error('업무를 찾을 수 없거나 열 권한이 없습니다.'));
+  }, [deepLinkId]);
 
   useEffect(() => {
     if (!detailTask) {

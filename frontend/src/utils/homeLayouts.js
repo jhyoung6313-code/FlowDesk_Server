@@ -11,3 +11,12 @@ export const HOME_LAYOUTS = [
 export const DEFAULT_HOME_LAYOUT = 'classic';
 export const HOME_LAYOUT_KEYS = HOME_LAYOUTS.map((l) => l.key);
 export const isHomeLayout = (k) => HOME_LAYOUT_KEYS.includes(k);
+
+/* 새 레이아웃이 보여 줄 업무 범위: 전체(팀 공용 현황) / 내 담당(내가 담당자이거나 만든 업무)
+   기본은 '전체' — 담당자를 지정하지 않고 쓰는 업무가 많아 '내 담당'만 보면 빈 화면이 되기 쉽다. */
+export const HOME_SCOPES = [
+  { key: 'all', label: '전체 업무' },
+  { key: 'mine', label: '내 담당' },
+];
+export const DEFAULT_HOME_SCOPE = 'all';
+export const isHomeScope = (k) => HOME_SCOPES.some((s) => s.key === k);

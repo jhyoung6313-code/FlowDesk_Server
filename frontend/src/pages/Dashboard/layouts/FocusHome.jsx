@@ -4,7 +4,8 @@ import { message } from 'antd';
 import dayjs from 'dayjs';
 import { updateTaskStatus } from '../../../api/tasks';
 import useMemoStore from '../../../store/memoStore';
-import { PRIO_LABEL, dueText, greet } from './useHomeData';
+import { PRIO_LABEL, clickable, dueText, greet } from './useHomeData';
+import HomeScope from './HomeScope';
 
 /* C · 포커스 모드 — "지금 할 일" 하나에 집중하고 나머지는 한쪽으로 물린다. */
 const C = { green: '#12372F', mint: '#9BE7C4', orange: '#FF8A3D', ink: '#12372F', mute: '#5B7A70', faint: '#B7C9C2', line: '#E7EDEA', bg: '#F4F6F5' };
@@ -20,18 +21,25 @@ const css = `
 function useCountdown() {
   const [left, setLeft] = useState(FOCUS_SECONDS);
   const [running, setRunning] = useState(false);
-  const ref = useRef(null);
+  const endAt = useRef(0);                       // 종료 예정 시각(ms) — 백그라운드 탭에서 타이머가 느려져도 정확
   useEffect(() => {
     if (!running) return undefined;
-    ref.current = setInterval(() => {
-      setLeft((s) => {
-        if (s <= 1) { clearInterval(ref.current); setRunning(false); return 0; }
-        return s - 1;
-      });
-    }, 1000);
-    return () => clearInterval(ref.current);
+    const tick = () => {
+      const rest = Math.max(0, Math.round((endAt.current - Date.now()) / 1000));
+      setLeft(rest);
+      if (rest === 0) setRunning(false);
+    };
+    const id = setInterval(tick, 500);
+    tick();
+    return () => clearInterval(id);
   }, [running]);
-  const toggle = () => { if (left === 0) setLeft(FOCUS_SECONDS); setRunning((r) => !r); };
+  const toggle = () => {
+    if (running) { setRunning(false); return; }
+    const start = left === 0 ? FOCUS_SECONDS : left;
+    endAt.current = Date.now() + start * 1000;
+    setLeft(start);
+    setRunning(true);
+  };
   const reset = () => { setRunning(false); setLeft(FOCUS_SECONDS); };
   return { left, running, toggle, reset };
 }
@@ -41,7 +49,8 @@ const fmt = (s) => `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 
 export default function FocusHome({ data, onAddTask }) {
   const navigate = useNavigate();
   const createMemo = useMemoStore((s) => s.create);
-  const { user, queue, counts, meetings, unreadMail, unreadNotifications, reload } = data;
+  const { user, queue, counts, meetings, unreadMail, unreadNotifications, reload, scope, setScope } = data;
+  const doneBusy = useRef(false);   // 완료 처리 연타 방지
   const approvalCount = data.today?.counts?.approvals ?? data.approvals.length;
   const focus = queue[0];
   const next = queue.slice(1, 4);
@@ -54,12 +63,14 @@ export default function FocusHome({ data, onAddTask }) {
   useEffect(() => { timer.reset(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [focus?.id]);
 
   const done = async () => {
-    if (!focus) return;
+    if (!focus || doneBusy.current) return;
+    doneBusy.current = true;
     try {
       await updateTaskStatus(focus.id, 'done');
       message.success('완료로 표시했습니다.');
-      reload();
+      await reload();
     } catch { message.error('상태 변경에 실패했습니다.'); }
+    finally { doneBusy.current = false; }
   };
   const saveMemo = async () => {
     if (!memo.trim()) return;
@@ -72,7 +83,10 @@ export default function FocusHome({ data, onAddTask }) {
   return (
     <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', background: C.bg, color: C.ink, padding: '20px 32px 32px' }}>
       <style>{css}</style>
-      <div style={{ textAlign: 'center', fontSize: 14, color: C.mute, margin: '0 0 16px' }}>{greet()}, {user?.displayName || ''} 님</div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', margin: '0 0 16px' }}>
+        <span style={{ fontSize: 14, color: C.mute }}>{greet()}, {user?.displayName || ''} 님</span>
+        <HomeScope scope={scope} setScope={setScope} tone="light" />
+      </div>
 
       <div className="fd-c-wrap">
         {/* 히어로 */}
@@ -83,7 +97,7 @@ export default function FocusHome({ data, onAddTask }) {
 
           {focus ? (
             <>
-              <h1 onClick={() => navigate(`/tasks?taskId=${focus.id}`)} style={{ margin: 0, fontSize: 56, lineHeight: 1.14, fontWeight: 900, letterSpacing: -2, maxWidth: 680, cursor: 'pointer', wordBreak: 'keep-all' }}>{focus.title}</h1>
+              <h1 {...clickable(() => navigate(`/tasks?taskId=${focus.id}`))} style={{ margin: 0, fontSize: 56, lineHeight: 1.14, fontWeight: 900, letterSpacing: -2, maxWidth: 680, cursor: 'pointer', wordBreak: 'keep-all' }}>{focus.title}</h1>
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 {focus.part?.name && <span style={{ padding: '7px 14px', borderRadius: 999, background: 'rgba(255,255,255,0.1)', fontSize: 13 }}>{focus.part.name}</span>}
                 <span style={{ padding: '7px 14px', borderRadius: 999, background: 'rgba(255,255,255,0.1)', fontSize: 13 }}>{dueText(focus.dueDate, focus.status)}</span>
@@ -121,7 +135,7 @@ export default function FocusHome({ data, onAddTask }) {
 
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', paddingTop: 22, borderTop: '1px solid rgba(255,255,255,0.12)', fontSize: 13 }}>
             {[['지연', counts.overdue, '/tasks', false], ['결재 대기', approvalCount, '/approvals', true], ['안읽은 메일', unreadMail, '/mail', false], ['알림', unreadNotifications, '/notifications', false]].map(([label, n, to, hl]) => (
-              <span key={label} onClick={() => navigate(to)} style={{ padding: '8px 14px', borderRadius: 999, background: 'rgba(255,255,255,0.08)', cursor: 'pointer' }}>
+              <span key={label} {...clickable(() => navigate(to))} style={{ padding: '8px 14px', borderRadius: 999, background: 'rgba(255,255,255,0.08)', cursor: 'pointer' }}>
                 {label} <b style={{ fontFamily: NUM, color: hl && n > 0 ? C.orange : '#fff' }}>{n}</b>
               </span>
             ))}
@@ -136,7 +150,7 @@ export default function FocusHome({ data, onAddTask }) {
             </div>
             {next.length === 0 && <div style={{ fontSize: 14, color: C.mute, padding: '8px 0' }}>대기 중인 다음 업무가 없습니다.</div>}
             {next.map((t, i) => (
-              <div key={t.id} onClick={() => navigate(`/tasks?taskId=${t.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderTop: i ? `1px solid ${C.line}` : 'none', cursor: 'pointer' }}>
+              <div key={t.id} {...clickable(() => navigate(`/tasks?taskId=${t.id}`))} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0', borderTop: i ? `1px solid ${C.line}` : 'none', cursor: 'pointer' }}>
                 <span style={{ fontFamily: NUM, fontWeight: 700, fontSize: 22, color: C.faint, width: 26 }}>{i + 2}</span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 15, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.title}</div>
@@ -156,7 +170,7 @@ export default function FocusHome({ data, onAddTask }) {
                 const past = dayjs(m.startAt).isBefore(dayjs());
                 const isNext = upcoming && upcoming.id === m.id;
                 return (
-                  <div key={m.id} onClick={() => navigate(`/meetings?id=${m.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}>
+                  <div key={m.id} {...clickable(() => navigate(`/meetings?id=${m.id}`))} style={{ display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}>
                     <span style={{ fontFamily: NUM, fontWeight: 700, fontSize: 14, width: 50, color: isNext ? '#B4540F' : past ? C.faint : C.mute }}>{dayjs(m.startAt).format('HH:mm')}</span>
                     <span style={{ flex: 1, fontSize: 14, fontWeight: isNext ? 700 : 400, color: past ? '#8AA39A' : C.ink, textDecoration: past ? 'line-through' : 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.title}</span>
                     {isNext && minutesTo != null && <span style={{ fontSize: 12, padding: '3px 10px', borderRadius: 999, background: '#FFE9DA', color: '#A24E0F', fontWeight: 700 }}>{minutesTo >= 60 ? `${Math.floor(minutesTo / 60)}시간 후` : `${minutesTo}분 후`}</span>}

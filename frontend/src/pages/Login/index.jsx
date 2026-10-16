@@ -53,8 +53,12 @@ export default function LoginPage() {
   const [msgs, setMsgs] = useState([]);
   const [step, setStep] = useState('id');
   const [typing, setTyping] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusyState] = useState(false);
+  const busyRef = useRef(false);      // 요청·연출 진행 중에는 "처음부터"를 막아, 늦게 도착한 결과가 새 대화에 끼어드는 것을 방지
+  const setBusy = useCallback((v) => { busyRef.current = v; setBusyState(v); }, []);
   const [value, setValue] = useState('');
+  const valueRef = useRef('');
+  const autofillFor = useRef('');     // 비밀번호 자동 채움이 들어온 시점의 아이디 칸 값
   const [username, setUsername] = useState('');
   const [hiddenPw, setHiddenPw] = useState('');   // 비밀번호 관리자 자동 채움 수신용(화면에 보이지 않는 입력창)
   const [showPw, setShowPw] = useState(false);
@@ -76,9 +80,10 @@ export default function LoginPage() {
   const botSay = useCallback(async (items) => {
     const mine = run.current;
     for (const it of items) {
+      if (!alive.current || mine !== run.current) return false;
       setTyping(true);
       await sleep(360);
-      if (!alive.current || mine !== run.current) { setTyping(false); return false; }
+      if (!alive.current || mine !== run.current) return false;   // 취소됐으면 새 대화의 상태를 건드리지 않는다
       setTyping(false);
       push({ who: 'bot', ...it });
     }
@@ -103,6 +108,8 @@ export default function LoginPage() {
     if (n) { setNotice(n); sessionStorage.removeItem('loginNotice'); }
   }, []);
 
+  useEffect(() => { valueRef.current = value; }, [value]);
+
   // 새 말풍선이 생기면 맨 아래로, 입력 가능해지면 입력창에 포커스
   useEffect(() => {
     const el = logRef.current;
@@ -112,6 +119,7 @@ export default function LoginPage() {
   useEffect(() => { if (!disabled) inputRef.current?.focus(); }, [disabled, step]);
 
   const restart = useCallback(() => {
+    if (busyRef.current) return;      // 로그인·인증 요청이 진행 중이면 끝난 뒤에 다시 시작할 수 있다
     run.current += 1;
     ctx.current = { preAuthToken: '', resetOtpToken: '', resetPwToken: '', newPw: '' };
     setMsgs([]); setStep('id'); setValue(''); setUsername(''); setHiddenPw('');
@@ -133,6 +141,7 @@ export default function LoginPage() {
 
   const loginFailed = async (err, name) => {
     const dup = err?.response?.data?.code === 'ALREADY_LOGGED_IN';
+    const locked = err?.response?.status === 423;
     const text = errText(err, '아이디 또는 비밀번호를 확인해 주세요.');
     setStep('id');
     setValue(name);
@@ -141,6 +150,8 @@ export default function LoginPage() {
         { text: '앗, 이미 다른 곳에서 로그인 중인 계정이에요.', tone: 'warn' },
         { kind: 'dup', text },
       ]);
+    } else if (locked) {
+      await botSay([{ text, tone: 'warn' }]);
     } else {
       await botSay([{ text, tone: 'warn' }, { text: '아이디부터 다시 확인해 볼까요?', tone: 'id' }]);
     }
@@ -190,10 +201,13 @@ export default function LoginPage() {
       if (!name) return;
       push({ who: 'me', text: name });
       setUsername(name); setValue('');
-      if (hiddenPw) {                       // 비밀번호 관리자가 비밀번호까지 채워 준 경우 바로 진행
+      // 비밀번호 관리자가 이 아이디의 비밀번호까지 채워 준 경우에만 바로 진행한다.
+      // (다른 아이디를 직접 입력했다면 자동 채워진 비밀번호는 버린다 — 엉뚱한 계정에 로그인 시도가 쌓여 잠기는 것을 방지)
+      const pwAuto = hiddenPw && autofillFor.current.trim() === name ? hiddenPw : '';
+      setHiddenPw('');
+      if (pwAuto) {
         push({ who: 'me', text: '••••••••••', masked: true });
-        const pw = hiddenPw; setHiddenPw('');
-        await doLogin(name, pw);
+        await doLogin(name, pwAuto);
       } else {
         setStep('pw');
         await botSay([{ text: `${name} 님, 비밀번호를 입력해 주세요.`, tone: 'pw' }]);
@@ -228,7 +242,9 @@ export default function LoginPage() {
           await finish(d);
         }
       } catch (err) {
-        await botSay([{ text: errText(err, 'OTP 코드가 올바르지 않습니다.'), tone: 'warn' }, { text: '코드를 다시 입력해 주세요.', tone: 'otp' }]);
+        const msgs = [{ text: errText(err, 'OTP 코드가 올바르지 않습니다.'), tone: 'warn' }];
+        if (err?.response?.status !== 423) msgs.push({ text: '코드를 다시 입력해 주세요.', tone: 'otp' });
+        await botSay(msgs);
       } finally {
         setBusy(false);
       }
@@ -246,7 +262,7 @@ export default function LoginPage() {
         setStep('reset-otp');
         await botSay([{ text: '본인 확인을 위해 인증 코드 6자리를 입력해 주세요.', tone: 'otp' }]);
       } catch (err) {
-        await botSay([{ text: errText(err, '계정을 찾을 수 없습니다.'), tone: 'warn' }, { text: '아이디를 다시 확인해 주세요.', tone: 'id' }]);
+        await botSay([{ text: errText(err, '요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.'), tone: 'warn' }, { text: '아이디를 다시 입력해 주세요.', tone: 'id' }]);
       } finally {
         setBusy(false);
       }
@@ -272,6 +288,7 @@ export default function LoginPage() {
       push({ who: 'me', text: '•'.repeat(Math.min(raw.length, 12)), masked: true });
       setValue('');
       if (raw !== ctx.current.newPw) {
+        ctx.current.newPw = '';
         setStep('reset-new');
         await botSay([{ text: '두 비밀번호가 달라요. 새 비밀번호부터 다시 입력해 주세요.', tone: 'warn' }]);
         return;
@@ -283,6 +300,7 @@ export default function LoginPage() {
         setStep('reset-done'); setShowPw(false);
         await botSay([{ text: '비밀번호가 변경됐어요. 새 비밀번호로 다시 로그인해 주세요.', tone: 'ok' }, { kind: 'goLogin' }]);
       } catch (err) {
+        ctx.current.newPw = '';
         setStep('reset-new');
         await botSay([{ text: errText(err, '비밀번호 변경에 실패했습니다.'), tone: 'warn' }, { text: '새 비밀번호를 다시 입력해 주세요.', tone: 'hello' }]);
       } finally {
@@ -339,7 +357,7 @@ export default function LoginPage() {
     }
     if (m.kind === 'dup') {
       return (
-        <div key={m.id} className="fdl-row fdl-indent" role="alert">
+        <div key={m.id} className="fdl-row fdl-indent">
           <div className="fdl-dup">
             {m.text}
             <div className="fdl-actions">
@@ -390,20 +408,20 @@ export default function LoginPage() {
               <b>Flowdesk 로그인</b>
               <span className="fdl-status"><i />서버 정상</span>
             </div>
-            <button type="button" className="fdl-restart" onClick={restart}>처음부터</button>
+            <button type="button" className="fdl-restart" onClick={restart} disabled={busy || step === 'enter'}>처음부터</button>
           </div>
 
-          <div className="fdl-pills" aria-label="진행 단계">
+          <div className="fdl-pills" role="list" aria-label="진행 단계">
             {pills.map((label, i) => {
               const cls = i < idx || (i === idx && finalDone) ? 'is-done' : i === idx ? 'is-now' : '';
-              return <span key={label} className={`fdl-pill ${cls}`}>{cls === 'is-done' ? '✓ ' : ''}{label}</span>;
+              return <span key={label} role="listitem" aria-current={cls === 'is-now' ? 'step' : undefined} className={`fdl-pill ${cls}`}>{cls === 'is-done' ? '✓ ' : ''}{label}</span>;
             })}
           </div>
 
           <div className="fdl-log" ref={logRef} role="log" aria-live="polite">
             {msgs.map(renderMsg)}
             {typing && (
-              <div className="fdl-row"><div className="fdl-avatar" /><div className="fdl-dots" aria-label="입력 중"><span className="fdl-dot" /><span className="fdl-dot" /><span className="fdl-dot" /></div></div>
+              <div className="fdl-row"><div className="fdl-avatar" /><div className="fdl-dots" role="status" aria-label="입력 중"><span className="fdl-dot" /><span className="fdl-dot" /><span className="fdl-dot" /></div></div>
             )}
           </div>
 
@@ -411,7 +429,7 @@ export default function LoginPage() {
             {/* 비밀번호 관리자 자동 채움용(보이지 않음): 아이디 단계에선 비밀번호 칸, 비밀번호 단계에선 아이디 칸 */}
             {step === 'id' && (
               <input className="fdl-hidden" type="password" name="password" autoComplete="current-password" tabIndex={-1} aria-hidden="true"
-                value={hiddenPw} onChange={(e) => setHiddenPw(e.target.value)} />
+                value={hiddenPw} onChange={(e) => { autofillFor.current = valueRef.current; setHiddenPw(e.target.value); }} />
             )}
             {step === 'pw' && (
               <input className="fdl-hidden" type="text" name="username" autoComplete="username" tabIndex={-1} aria-hidden="true" value={username} readOnly />
@@ -426,10 +444,12 @@ export default function LoginPage() {
 
             <div className="fdl-chips">
               {isReset
-                ? <button type="button" className="fdl-chip is-sky" onClick={restart}>로그인으로 돌아가기</button>
-                : (step === 'id' || step === 'pw') && (
-                  <button type="button" className="fdl-chip is-peach" onClick={startReset}>비밀번호를 잊었어요</button>
-                )}
+                ? <button type="button" className="fdl-chip is-sky" onClick={restart} disabled={busy}>로그인으로 돌아가기</button>
+                : OTP_STEPS.includes(step)
+                  ? <button type="button" className="fdl-chip is-sky" onClick={restart} disabled={busy}>다른 계정으로 로그인</button>
+                  : (step === 'id' || step === 'pw') && (
+                    <button type="button" className="fdl-chip is-peach" onClick={startReset}>비밀번호를 잊었어요</button>
+                  )}
             </div>
 
             <div className="fdl-field">
@@ -443,8 +463,9 @@ export default function LoginPage() {
                 placeholder={cfg.ph}
                 aria-label={cfg.ph}
                 value={value}
-                disabled={disabled}
-                onChange={(e) => setValue(cfg.numeric ? e.target.value.replace(/\D/g, '').slice(0, 6) : e.target.value)}
+                readOnly={disabled}
+                aria-disabled={disabled}
+                onChange={(e) => { if (!disabled) setValue(cfg.numeric ? e.target.value.replace(/\D/g, '').slice(0, 6) : e.target.value); }}
                 onKeyDown={onKey}
                 onKeyUp={onKey}
                 spellCheck={false}

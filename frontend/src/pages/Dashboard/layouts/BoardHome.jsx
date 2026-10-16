@@ -1,11 +1,13 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { message } from 'antd';
+import dayjs from 'dayjs';
 import { updateTaskStatus } from '../../../api/tasks';
 import { isOverdue } from '../../../utils/dday';
-import { PRIO_LABEL, dueText, greet } from './useHomeData';
+import { PRIO_LABEL, STATUS_LABEL, clickable, dueText, greet } from './useHomeData';
+import HomeScope from './HomeScope';
 
-/* E · 보드 퍼스트 — 파스텔 칸반이 메인. 카드를 끌어 다른 컬럼에 놓으면 상태가 바뀐다. */
+/* E · 보드 퍼스트 — 파스텔 칸반이 메인. 카드를 끌어 다른 컬럼에 놓거나(터치·키보드는 카드의 "상태" 선택) 상태를 바꾼다. */
 const COLS = [
   { key: 'pending', label: '대기', bg: '#FFE3D6', chip: '#FFE3D6', chipText: '#8A4B2E' },
   { key: 'in_progress', label: '진행중', bg: '#D9E8FF', chip: '#E7F0FF', chipText: '#2A5B86' },
@@ -18,25 +20,38 @@ const DONE_LIMIT = 8;
 
 const css = `
 .fd-e-cols{display:grid;grid-template-columns:repeat(4,minmax(240px,1fr));gap:18px;overflow-x:auto;padding-bottom:6px}
+.fd-e-move{height:26px;border:0;border-radius:999px;background:rgba(31,36,48,0.08);color:${INK};font-size:12px;font-weight:700;padding:0 6px;cursor:pointer}
 `;
 
 export default function BoardHome({ data, onAddTask }) {
   const navigate = useNavigate();
-  const { user, active, counts, reload } = data;
+  const { user, active, counts, reload, todayCount, scope, setScope, scopeLabel } = data;
   const [dragId, setDragId] = useState(null);   // 화면 표시용(흐림 처리)
   const dragRef = useRef(null);                   // 드롭 처리용 — 렌더 전 값도 읽을 수 있게 ref 로 보관
   const [overCol, setOverCol] = useState(null);
+  const [override, setOverride] = useState({});   // 낙관적 갱신: 서버 응답·재조회 전에도 카드를 새 컬럼에 즉시 표시
   const approvalCount = data.today?.counts?.approvals ?? data.approvals.length;
-  const focusN = data.focusList.length;   // 마감 오늘·지연·높음 우선순위만 "오늘 할 일"로 센다
+  const statusOf = (t) => override[t.id] ?? t.status;
 
-  const drop = async (status) => {
+  const move = async (id, status) => {
+    const t = active.find((x) => x.id === id);
+    if (!t || statusOf(t) === status) return;
+    setOverride((o) => ({ ...o, [id]: status }));
+    try {
+      await updateTaskStatus(id, status);
+      await reload();
+    } catch {
+      message.error('상태 변경에 실패했습니다.');
+    } finally {
+      setOverride((o) => { const n = { ...o }; delete n[id]; return n; });   // 실패 시 원위치, 성공 시 서버 값이 이미 반영됨
+    }
+  };
+
+  const drop = (status) => {
     const id = dragRef.current;
     dragRef.current = null;
     setDragId(null); setOverCol(null);
-    const t = active.find((x) => x.id === id);
-    if (!t || t.status === status) return;
-    try { await updateTaskStatus(id, status); reload(); }
-    catch { message.error('상태 변경에 실패했습니다.'); }
+    if (id != null) move(id, status);
   };
 
   const chips = [
@@ -52,16 +67,19 @@ export default function BoardHome({ data, onAddTask }) {
 
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 24, flexWrap: 'wrap', marginBottom: 24 }}>
         <div>
-          <div style={{ fontSize: 15, color: MUTE, fontWeight: 500 }}>{greet()}, {user?.displayName || ''} 님</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 15, color: MUTE, fontWeight: 500 }}>{greet()}, {user?.displayName || ''} 님</span>
+            <HomeScope scope={scope} setScope={setScope} tone="light" />
+          </div>
           <h1 style={{ margin: '6px 0 0', fontSize: 38, lineHeight: 1.2, fontWeight: 900, letterSpacing: -1.2 }}>
-            {focusN > 0
-              ? <>오늘 <span style={{ background: '#FFE3D6', padding: '0 12px', borderRadius: 14 }}>{focusN}건</span>만 끝내면 돼요.</>
+            {todayCount > 0
+              ? <>오늘 <span style={{ background: '#FFE3D6', padding: '0 12px', borderRadius: 14 }}>{todayCount}건</span>만 끝내면 돼요.</>
               : '오늘은 여유로운 하루예요.'}
           </h1>
         </div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {chips.map(([label, n, bg, color, to]) => (
-            <div key={label} onClick={() => navigate(to)} style={{ padding: '12px 20px', borderRadius: 20, background: bg, cursor: 'pointer' }}>
+            <div key={label} {...clickable(() => navigate(to))} style={{ padding: '12px 20px', borderRadius: 20, background: bg, cursor: 'pointer' }}>
               <div style={{ fontSize: 12, fontWeight: 700, color }}>{label}</div>
               <div style={{ fontSize: 28, fontWeight: 900, lineHeight: 1.1 }}>{n}</div>
             </div>
@@ -69,9 +87,11 @@ export default function BoardHome({ data, onAddTask }) {
         </div>
       </div>
 
-      <div className="fd-e-cols">
+      <div className="fd-e-cols" aria-label={`${scopeLabel} 칸반`}>
         {COLS.map((col) => {
-          const list = active.filter((t) => t.status === col.key);
+          let list = active.filter((t) => statusOf(t) === col.key);
+          // 완료 컬럼은 최근 완료한 순으로 보여 준다 (마감일 오름차순이면 가장 오래된 것부터 보이게 됨)
+          if (col.key === 'done') list = [...list].sort((a, b) => dayjs(b.updatedAt || 0).valueOf() - dayjs(a.updatedAt || 0).valueOf());
           const shown = col.key === 'done' ? list.slice(0, DONE_LIMIT) : list;
           const isOver = overCol === col.key && dragId != null;
           return (
@@ -88,12 +108,13 @@ export default function BoardHome({ data, onAddTask }) {
               {shown.map((t) => {
                 const late = isOverdue(t.dueDate, t.status);
                 const who = t.assignees?.[0]?.user;
-                const done = t.status === 'done';
+                const done = col.key === 'done';
                 return (
                   <article key={t.id} draggable
                     onDragStart={() => { dragRef.current = t.id; setDragId(t.id); }} onDragEnd={() => { dragRef.current = null; setDragId(null); setOverCol(null); }}
-                    onClick={() => navigate(`/tasks?taskId=${t.id}`)}
-                    style={{ background: done ? 'rgba(255,255,255,0.75)' : '#fff', borderRadius: 20, padding: 16, cursor: 'grab', opacity: dragId === t.id ? 0.4 : 1, boxShadow: t.status === 'in_progress' ? '0 8px 20px rgba(42,91,134,0.18)' : 'none', color: done ? '#4F6B60' : INK }}>
+                    {...clickable(() => navigate(`/tasks?taskId=${t.id}`))}
+                    aria-label={`${t.title} — ${col.label}`}
+                    style={{ background: done ? 'rgba(255,255,255,0.75)' : '#fff', borderRadius: 20, padding: 16, cursor: 'grab', opacity: dragId === t.id ? 0.4 : 1, boxShadow: col.key === 'in_progress' ? '0 8px 20px rgba(42,91,134,0.18)' : 'none', color: done ? '#4F6B60' : INK }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                       <div style={{ fontWeight: 700, fontSize: 15, textDecoration: done ? 'line-through' : 'none', wordBreak: 'keep-all' }}>{t.title}</div>
                       {t.priority === 'high' && !done && <span style={{ flex: 'none', fontSize: 11, fontWeight: 900, padding: '3px 9px', borderRadius: 999, background: '#FF6B57', color: '#fff' }}>{PRIO_LABEL.high}</span>}
@@ -102,6 +123,12 @@ export default function BoardHome({ data, onAddTask }) {
                       {t.part?.name && <span style={{ fontSize: 12, fontWeight: 700, padding: '3px 10px', borderRadius: 999, background: col.chip, color: col.chipText }}>{t.part.name}</span>}
                       <span style={{ fontSize: 12, color: late ? '#D4402F' : MUTE, fontWeight: late ? 700 : 400 }}>{dueText(t.dueDate, t.status)}</span>
                       {who && <span title={who.displayName} style={{ marginLeft: 'auto', width: 26, height: 26, borderRadius: '50%', background: '#FFD84D', fontSize: 11, fontWeight: 900, display: 'flex', alignItems: 'center', justifyContent: 'center', color: INK }}>{who.displayName?.charAt(0)}</span>}
+                    </div>
+                    {/* 터치·키보드용 상태 변경 (드래그 대체) */}
+                    <div style={{ marginTop: 10 }} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+                      <select className="fd-e-move" aria-label={`${t.title} 상태 변경`} value={statusOf(t)} onChange={(e) => move(t.id, e.target.value)}>
+                        {COLS.map((c) => <option key={c.key} value={c.key}>{STATUS_LABEL[c.key]}</option>)}
+                      </select>
                     </div>
                   </article>
                 );
@@ -113,10 +140,10 @@ export default function BoardHome({ data, onAddTask }) {
                 </div>
               )}
               {col.key === 'done' && list.length > DONE_LIMIT && (
-                <div onClick={() => navigate('/tasks?status=done')} style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: col.chipText, cursor: 'pointer' }}>외 {list.length - DONE_LIMIT}건 보기 →</div>
+                <div {...clickable(() => navigate('/tasks?status=done'))} style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: col.chipText, cursor: 'pointer' }}>외 {list.length - DONE_LIMIT}건 보기 →</div>
               )}
               {col.key !== 'done' && (
-                <div onClick={() => onAddTask(col.key)} style={{ border: '2px dashed rgba(31,36,48,0.25)', borderRadius: 20, padding: 14, textAlign: 'center', fontSize: 14, fontWeight: 700, color: 'rgba(31,36,48,0.55)', cursor: 'pointer' }}>+ 카드 추가</div>
+                <button type="button" onClick={() => onAddTask(col.key)} style={{ border: '2px dashed rgba(31,36,48,0.25)', background: 'transparent', borderRadius: 20, padding: 14, textAlign: 'center', fontSize: 14, fontWeight: 700, color: 'rgba(31,36,48,0.6)', cursor: 'pointer' }}>+ 카드 추가</button>
               )}
             </section>
           );

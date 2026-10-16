@@ -1,5 +1,5 @@
-import { lazy, Suspense, useCallback, useState } from 'react';
-import { Spin, message } from 'antd';
+import { Component, lazy, Suspense, useCallback, useState } from 'react';
+import { Button, Result, Spin, message } from 'antd';
 import usePreferenceStore from '../../store/preferenceStore';
 import useTaskStore from '../../store/taskStore';
 import TaskForm from '../../components/Task/TaskForm';
@@ -21,6 +21,29 @@ const Loading = () => (
   </div>
 );
 
+/* 새 레이아웃을 불러오지 못하거나(배포 직후 청크 404·네트워크 오류) 렌더 중 오류가 나도
+   앱 전체가 오류 화면이 되지 않게 하고, 기본 대시보드로 돌아갈 수 있게 한다. */
+class LayoutBoundary extends Component {
+  constructor(props) { super(props); this.state = { failed: false }; }
+  static getDerivedStateFromError() { return { failed: true }; }
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <Result
+          status="warning"
+          title="선택한 메인 화면을 불러오지 못했습니다"
+          subTitle="네트워크 상태를 확인하고 다시 시도하거나, 기본 대시보드로 돌아가세요."
+          extra={[
+            <Button key="retry" onClick={() => window.location.reload()}>다시 시도</Button>,
+            <Button key="classic" type="primary" onClick={this.props.onFallback}>기본 대시보드로</Button>,
+          ]}
+        />
+      </div>
+    );
+  }
+}
+
 /* 새 레이아웃 공통: 데이터 로드 + 업무 추가 폼 */
 function NewHome({ Layout }) {
   const data = useHomeData();
@@ -28,11 +51,11 @@ function NewHome({ Layout }) {
   const [form, setForm] = useState({ open: false, status: 'pending' });
 
   const onAddTask = useCallback((status = 'pending') => setForm({ open: true, status }), []);
+  // addTask 가 calendarVersion 을 올리므로 useHomeData 가 자동으로 다시 불러온다 (명시적 reload 불필요)
   const submit = useCallback(async (values) => {
     await addTask(values);
     message.success('업무가 등록되었습니다.');
-    data.reload();
-  }, [addTask, data]);
+  }, [addTask]);
 
   return (
     <>
@@ -50,10 +73,13 @@ function NewHome({ Layout }) {
 
 export default function HomeRouter() {
   const layout = usePreferenceStore((s) => s.homeLayout);
+  const setHomeLayout = usePreferenceStore((s) => s.setHomeLayout);
   const Layout = LAYOUTS[layout];
   return (
-    <Suspense fallback={<Loading />}>
-      {Layout ? <NewHome key={layout} Layout={Layout} /> : <ClassicDashboard />}
-    </Suspense>
+    <LayoutBoundary key={layout} onFallback={() => setHomeLayout('classic')}>
+      <Suspense fallback={<Loading />}>
+        {Layout ? <NewHome Layout={Layout} /> : <ClassicDashboard />}
+      </Suspense>
+    </LayoutBoundary>
   );
 }

@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import dayjs from 'dayjs';
-import { dueText } from './useHomeData';
+import { clickable, dueText } from './useHomeData';
+import HomeScope from './HomeScope';
 
 /* F · 데일리 브리프 — 카드 없이 굵은 선과 큰 글자만 쓰는 신문 1면식 홈. */
 const ACC = '#E8341C';
@@ -22,7 +23,7 @@ const Head = ({ no, children }) => (
   </div>
 );
 const Row = ({ onClick, last, children }) => (
-  <div className="fd-f-link" onClick={onClick} style={{ padding: '14px 0', borderTop: '1px solid #DDD', borderBottom: last ? '1px solid #DDD' : 'none', cursor: onClick ? 'pointer' : 'default' }}>{children}</div>
+  <div className="fd-f-link" {...(onClick ? clickable(onClick) : {})} style={{ padding: '14px 0', borderTop: '1px solid #DDD', borderBottom: last ? '1px solid #DDD' : 'none', cursor: onClick ? 'pointer' : 'default' }}>{children}</div>
 );
 const Tag = ({ children, hot }) => (
   <div style={{ fontFamily: MONO, fontSize: 11, fontWeight: 600, color: hot ? ACC : '#777', letterSpacing: 0.6 }}>{children}</div>
@@ -30,9 +31,9 @@ const Tag = ({ children, hot }) => (
 
 export default function BriefHome({ data, onAddTask }) {
   const navigate = useNavigate();
-  const { user, queue, focusList, counts, meetings, approvals, mails, notices, okr } = data;
+  const { user, queue, focusList, todayCount, counts, meetings, approvals, mails, notices, okr, scope, setScope } = data;
   const approvalCount = data.today?.counts?.approvals ?? approvals.length;
-  const n = focusList.length;   // 마감 오늘·지연·높음 우선순위만 "오늘"로 센다
+  const n = todayCount;   // 마감이 오늘이거나 이미 지난 미완료 업무만 "오늘"로 센다
   const top = focusList[0];   // 급한 업무(마감 오늘·지연·높음)가 있을 때만 요약 첫 문장에 올린다
   const total = Math.max(counts.total, 1);
   const pct = (v) => `${Math.round((v / total) * 100)}%`;
@@ -64,7 +65,10 @@ export default function BriefHome({ data, onAddTask }) {
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 24, padding: '16px 0', borderBottom: '3px solid #111', flexWrap: 'wrap' }}>
         <span style={{ fontFamily: MONO, fontSize: 12, color: '#666', letterSpacing: 0.3 }}>{dayjs().format('YYYY.MM.DD ddd').toUpperCase()}</span>
-        <span style={{ marginLeft: 'auto', fontFamily: MONO, fontSize: 12, color: '#666' }}>{user?.displayName || ''} 님의 오늘</span>
+        <span style={{ marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 14 }}>
+          <HomeScope scope={scope} setScope={setScope} tone="ink" />
+          <span style={{ fontFamily: MONO, fontSize: 12, color: '#666' }}>{user?.displayName || ''} 님의 오늘</span>
+        </span>
       </div>
 
       <section style={{ display: 'flex', flexWrap: 'wrap', gap: 32, alignItems: 'flex-end', padding: '40px 0 34px', borderBottom: '1px solid #111' }}>
@@ -83,7 +87,7 @@ export default function BriefHome({ data, onAddTask }) {
         <section>
           <Head no="01">포커스</Head>
           {queue.slice(0, 3).map((t, i, arr) => (
-            <Row key={t.id} last={i === arr.length - 1} onClick={() => navigate(`/tasks?taskId=${t.id}`)}>
+            <Row key={t.id} last={i === arr.length - 1} {...clickable(() => navigate(`/tasks?taskId=${t.id}`))}>
               <div style={{ fontSize: 15, fontWeight: i === 0 ? 700 : 500 }}>{t.title}</div>
               <div style={{ fontFamily: MONO, fontSize: 12, color: i === 0 ? ACC : '#777', marginTop: 4 }}>{dueText(t.dueDate, t.status)}</div>
             </Row>
@@ -96,7 +100,7 @@ export default function BriefHome({ data, onAddTask }) {
           {meetings.slice(0, 4).map((m, i, arr) => {
             const past = dayjs(m.startAt).isBefore(dayjs());
             return (
-              <div key={m.id} className="fd-f-link" onClick={() => navigate(`/meetings?id=${m.id}`)} style={{ display: 'flex', gap: 14, padding: '14px 0', borderTop: '1px solid #DDD', borderBottom: i === arr.length - 1 ? '1px solid #DDD' : 'none', cursor: 'pointer' }}>
+              <div key={m.id} className="fd-f-link" {...clickable(() => navigate(`/meetings?id=${m.id}`))} style={{ display: 'flex', gap: 14, padding: '14px 0', borderTop: '1px solid #DDD', borderBottom: i === arr.length - 1 ? '1px solid #DDD' : 'none', cursor: 'pointer' }}>
                 <span style={{ fontFamily: MONO, fontSize: 13, fontWeight: 600, width: 46, color: past ? '#999' : INK }}>{dayjs(m.startAt).format('HH:mm')}</span>
                 <div><div style={{ fontSize: 15, fontWeight: past ? 400 : 700, color: past ? '#999' : INK, textDecoration: past ? 'line-through' : 'none' }}>{m.title}</div>{m.location && <div style={{ fontSize: 12, color: '#777', marginTop: 3 }}>{m.location}</div>}</div>
               </div>
@@ -108,7 +112,7 @@ export default function BriefHome({ data, onAddTask }) {
         <section>
           <Head no="03">받은 항목</Head>
           {inbox.map((it, i) => (
-            <Row key={it.key} last={i === inbox.length - 1} onClick={() => navigate(it.to)}>
+            <Row key={it.key} last={i === inbox.length - 1} {...clickable(() => navigate(it.to))}>
               <Tag hot={it.hot}>{it.tag}</Tag>
               <div style={{ fontSize: 15, fontWeight: it.hot ? 700 : 500, marginTop: 4 }}>{it.title}</div>
             </Row>
