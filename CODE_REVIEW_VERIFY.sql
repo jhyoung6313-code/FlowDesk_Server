@@ -407,3 +407,28 @@ WHERE c.user_id IS NOT NULL AND c.user_id <> e.created_by;
 -- 20-4. 현재 '접속 중'(마지막 활동 180초 이내)으로 표시된 계정 — 1계정 1로그인 점검
 SELECT username, last_active_at FROM users
 WHERE last_active_at > now() - interval '180 seconds' ORDER BY last_active_at DESC;
+
+-- ============================================================
+-- 라운드 6 (v2.16.0 홈 레이아웃 / v2.17.0 로그인 개편)
+-- ============================================================
+
+-- 21-1. 활성 업무 중 담당자가 한 명도 지정되지 않은 업무 수 / 전체 활성 업무 수
+--       ('내 업무'로 표시되는 모든 업무와 실제 내 담당 업무의 차이)
+SELECT COUNT(*) AS active_tasks,
+       COUNT(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM task_assignees ta WHERE ta.task_id = t.id)) AS tasks_without_assignee
+FROM tasks t WHERE t.del_yn = '0';
+
+-- 21-2. 사용자별 담당 활성 업무 수 (새 홈 레이아웃이 '내 업무'로 보여 주는 값 10건과 비교)
+SELECT u.username, COUNT(t.id) AS my_active_tasks
+FROM users u
+LEFT JOIN task_assignees ta ON ta.user_id = u.id
+LEFT JOIN tasks t ON t.id = ta.task_id AND t.del_yn = '0'
+GROUP BY u.username ORDER BY u.username;
+
+-- 21-3. 홈 레이아웃을 저장한 사용자 수와 값 분포 (서버가 값을 검증하지 않으므로 잘못된 값 점검)
+SELECT value::json->'home'->>'layout' AS layout, COUNT(*)
+FROM app_settings WHERE key LIKE 'user_prefs_%' GROUP BY 1;
+
+-- 21-4. 비밀번호 변경 주기(90일)를 넘겨 로그인 직후 변경 화면으로 이동하는 계정
+SELECT username, password_changed_at::date AS changed, (now()::date - password_changed_at::date) AS age_days
+FROM users WHERE password_changed_at < now() - interval '90 days' ORDER BY age_days DESC;
