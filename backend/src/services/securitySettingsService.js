@@ -52,6 +52,8 @@ function auth() {
     JWT_EXPIRES_IN: str('sec_jwt_expires', AUTH.JWT_EXPIRES_IN),
     ENFORCE_OTP: bool('sec_enforce_otp', AUTH.ENFORCE_OTP),
     // 아래는 편집 불가(참고용): .env / config 기준값 그대로
+    SINGLE_LOGIN_BLOCK: AUTH.SINGLE_LOGIN_BLOCK,
+    SESSION_ACTIVE_WINDOW_SEC: AUTH.SESSION_ACTIVE_WINDOW_SEC,
     IDLE_TIMEOUT_MINUTES: AUTH.IDLE_TIMEOUT_MINUTES,
     BCRYPT_ROUNDS: AUTH.BCRYPT_ROUNDS,
   };

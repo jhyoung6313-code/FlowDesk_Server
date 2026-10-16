@@ -35,6 +35,7 @@ import {
 } from '../../api/comments';
 import { buildUserOptions, filterUserOption, getMyDepartment } from '../../utils/userOptions';
 import { getAvatarColor } from '../../utils/colors';
+import { downloadFile } from '../../utils/download';
 import useAuthStore from '../../store/authStore';
 
 const { TextArea } = Input;
@@ -188,17 +189,7 @@ export default function TaskForm({ open, task, onClose, onSubmit, initialStatus 
   }, []);
 
   const downloadCommentAttachment = useCallback((att) => {
-    const token = localStorage.getItem('token');
-    fetch(getAttachmentDownloadUrl(att.id), { headers: { Authorization: `Bearer ${token}` } })
-      .then((r) => r.blob())
-      .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = att.originalName;
-        a.click();
-        URL.revokeObjectURL(url);
-      })
+    downloadFile(getAttachmentDownloadUrl(att.id), att.originalName)
       .catch(() => message.error('다운로드에 실패했습니다.'));
   }, []);
 

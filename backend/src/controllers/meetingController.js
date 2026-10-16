@@ -7,6 +7,7 @@
 const prisma = require('../lib/prisma');
 const ai = require('../services/aiService');
 const audit = require('../services/auditService');
+const automation = require('../services/automationService');
 const { AUDIT_ACTION } = require('../config/security');
 
 const USER_SEL = { id: true, displayName: true, avatarColor: true };
@@ -107,7 +108,7 @@ exports.create = async (req, res, next) => {
 exports.update = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    const { error } = await loadEditable(id, req);
+    const { error, meeting: prevMeeting } = await loadEditable(id, req);
     if (error) return res.status(error).json({ error: error === 404 ? '회의를 찾을 수 없습니다.' : '수정 권한이 없습니다.' });
 
     const { title, startAt, endAt, location, status, minutes, agenda, attendeeUserIds, extAttendees } = req.body || {};
@@ -153,6 +154,12 @@ exports.update = async (req, res, next) => {
     });
 
     const updated = await prisma.meeting.findUnique({ where: { id }, include: DETAIL_INCLUDE });
+    if (status === 'done' && prevMeeting.status !== 'done') {
+      automation.fire('meeting.finished', {
+        title: updated.title, meetingId: updated.id, organizerId: updated.organizerId,
+        link: `/meetings?id=${updated.id}`, actorId: req.user.id,
+      });
+    }
     res.json(updated);
   } catch (err) { next(err); }
 };

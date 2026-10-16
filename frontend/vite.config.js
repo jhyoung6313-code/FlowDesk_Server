@@ -31,14 +31,15 @@ export default defineConfig({
   },
   server: {
     host: true, // IPv4(127.0.0.1)·IPv6 모두 바인딩 — localhost 접속 실패 방지
-    port: 3000,
+    // VITE_PORT / VITE_API_TARGET: 보조 개발 서버(e2e 테스트용 별도 백엔드 등)를 띄울 때만 지정한다. 기본값은 기존과 동일.
+    port: Number(process.env.VITE_PORT) || 3000,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:4000',
+        target: process.env.VITE_API_TARGET || 'http://127.0.0.1:4000',
         changeOrigin: true,
       },
       '/uploads': {
-        target: 'http://127.0.0.1:4000',
+        target: process.env.VITE_API_TARGET || 'http://127.0.0.1:4000',
         changeOrigin: true,
       },
     },

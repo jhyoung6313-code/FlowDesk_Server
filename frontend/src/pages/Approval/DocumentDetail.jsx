@@ -3,19 +3,22 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   Breadcrumb, Button, Space, Typography, Tag, Divider,
   Avatar, Modal, Input, message, Spin, Popconfirm, Card, Descriptions, Select,
-  theme as antTheme,
+  Tooltip, theme as antTheme, Upload,
 } from 'antd';
 import {
   ArrowLeftOutlined, EditOutlined, CheckCircleOutlined, CloseCircleOutlined,
   StopOutlined, PaperClipOutlined, SendOutlined, DeleteOutlined,
   RedoOutlined, ClockCircleOutlined, FileDoneOutlined, UserOutlined,
-  CopyOutlined, FireOutlined,
+  CopyOutlined, FireOutlined, PlusCircleOutlined,
 } from '@ant-design/icons';
 import {
   getApproval, getApprovals, approveApproval, rejectApproval, cancelApproval, delegateApproval, resubmitApproval, resumeApproval,
   getApprovalComments, createApprovalComment, deleteApprovalComment,
-  deleteApprovalAttachment, downloadApprovalAttachmentUrl,
+  deleteApprovalAttachment, downloadApprovalAttachmentUrl, uploadApprovalAttachment,
+  addApprovalStep, removeApprovalStep, getRejectCategories,
 } from '../../api/approval';
+import { groupOrdersOf } from '../../utils/approvalLine';
+import { downloadFile } from '../../utils/download';
 import { getUsers } from '../../api/users';
 import SpellTextArea from '../../components/common/SpellTextArea';
 import useAuthStore from '../../store/authStore';
@@ -43,6 +46,20 @@ const ROLE_CFG = {
 function getAvatarBg(color) { return color || '#1677ff'; }
 function getInitial(name) { return name ? name[0].toUpperCase() : 'U'; }
 
+// 의견 본문의 "@표시이름"을 강조 표시 — 서버의 notifyMentions와 동일한 "@+공백없는 문자열" 규칙
+function MentionText({ text, token }) {
+  const parts = String(text ?? '').split(/(@[^\s@]{1,50})/g);
+  return (
+    <>
+      {parts.map((p, i) => (
+        p.startsWith('@')
+          ? <Text key={i} strong style={{ color: token.colorPrimary }}>{p}</Text>
+          : <span key={i}>{p}</span>
+      ))}
+    </>
+  );
+}
+
 // ── 결재란 (도장 그리드) — 종이 결재 문서 상단의 도장 칸을 재현 ──
 function StampCell({ roleLabel, title, name, status, actingType, signImagePath, dateStr, isCurrent, badge, token }) {
   const done = status === 'approved';
@@ -57,6 +74,7 @@ function StampCell({ roleLabel, title, name, status, actingType, signImagePath, 
   return (
     <div style={{
       flex: '1 0 96px', minWidth: 96, borderRight: `1px solid ${token.colorBorderSecondary}`,
+      borderBottom: `1px solid ${token.colorBorderSecondary}`,
       textAlign: 'center', background: token.colorBgContainer,
       boxShadow: isCurrent ? `inset 0 0 0 2px ${token.colorPrimary}` : 'none',
     }}>
@@ -89,7 +107,7 @@ function StampGrid({ doc, flowSteps, token }) {
   flowSteps.forEach(s => { groupCount[s.stepOrder] = (groupCount[s.stepOrder] || 0) + 1; });
 
   return (
-    <div style={{ display: 'flex', border: `1px solid ${token.colorBorderSecondary}`, borderRadius: token.borderRadius, overflow: 'hidden', overflowX: 'auto' }}>
+    <div style={{ display: 'flex', flexWrap: 'wrap', border: `1px solid ${token.colorBorderSecondary}`, borderRadius: token.borderRadius, overflow: 'hidden' }}>
       {/* 기안 칸 */}
       <StampCell
         roleLabel="기안"
@@ -126,7 +144,7 @@ function StampGrid({ doc, flowSteps, token }) {
 }
 
 // 결재란의 개별 단계 행
-function StepRow({ step, isCurrentGroup, docStatus, token }) {
+function StepRow({ step, isCurrentGroup, docStatus, token, onRemove }) {
   const role = ROLE_CFG[step.type] || ROLE_CFG.approval;
   const done = step.status === 'approved';
   const rejected = step.status === 'rejected';
@@ -141,6 +159,15 @@ function StepRow({ step, isCurrentGroup, docStatus, token }) {
     <div style={{ display: 'flex', gap: 8, padding: '6px 0', alignItems: 'flex-start' }}>
       <Tag color={role.color} style={{ fontSize: 13, margin: 0, lineHeight: '18px', flexShrink: 0 }}>{role.label}</Tag>
       <div style={{ flex: 1, minWidth: 0 }}>
+        {onRemove && (
+          <Tooltip title="추가했던 단계 제거">
+            <Button
+              size="small" type="text" danger icon={<DeleteOutlined />}
+              style={{ float: 'right', width: 20, height: 20, padding: 0 }}
+              onClick={onRemove}
+            />
+          </Tooltip>
+        )}
         <Space size={6} wrap>
           {step.approverTitleSnap && <Text type="secondary" style={{ fontSize: 13 }}>{step.approverTitleSnap}</Text>}
           <Text style={{ fontSize: 13, color: statusColor, fontWeight: isProcessing ? 600 : 400 }}>{name}</Text>
@@ -240,8 +267,11 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
   const [loading, setLoading] = useState(true);
   const [nextPendingId, setNextPendingId] = useState(null);
   const [newComment, setNewComment] = useState('');
+  const [pendingCommentFiles, setPendingCommentFiles] = useState([]);
   const [actionModal, setActionModal] = useState(null);
   const [actionComment, setActionComment] = useState('');
+  const [actionCategory, setActionCategory] = useState(undefined);
+  const [rejectCategories, setRejectCategories] = useState([]);
   const [actioning, setActioning] = useState(false);
   const [submittingComment, setSubmittingComment] = useState(false);
   const [delegateOpen, setDelegateOpen] = useState(false);
@@ -249,8 +279,16 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
   const [delegateComment, setDelegateComment] = useState('');
   const [delegating, setDelegating] = useState(false);
   const [users, setUsers] = useState([]);
+  // 상신 후 참조자/결재자 추가(F-52 자유도 확대) — 참조는 언제나, 승인/합의/전결은 아직 지나지
+  // 않은 미래 차수에만 허용(서버에서도 동일하게 재검증)
+  const [addStepOpen, setAddStepOpen] = useState(false);
+  const [addStepUserId, setAddStepUserId] = useState(null);
+  const [addStepType, setAddStepType] = useState('reference');
+  const [addStepTarget, setAddStepTarget] = useState('new'); // 'new' | 기존 미래 차수 번호
+  const [addingStep, setAddingStep] = useState(false);
 
   useEffect(() => { getUsers().then(u => setUsers((u || []).filter(x => x.isActive !== false))).catch(() => {}); }, []);
+  useEffect(() => { getRejectCategories().then(setRejectCategories).catch(() => {}); }, []);
 
   const handleDelegate = async () => {
     if (!delegateTo) { message.warning('위임할 대상을 선택하세요.'); return; }
@@ -269,6 +307,33 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
     try { const data = await getApproval(id); setDoc(data); }
     catch (e) { message.error(e.response?.data?.error || '문서를 불러오지 못했습니다.'); }
     finally { setLoading(false); }
+  };
+
+  const handleAddStep = async () => {
+    if (!addStepUserId) { message.warning('추가할 사용자를 선택하세요.'); return; }
+    setAddingStep(true);
+    try {
+      const payload = { approverId: addStepUserId, type: addStepType };
+      if (addStepType !== 'reference') {
+        if (addStepTarget === 'new') {
+          // 맨 뒤 새 차수 — 기존 미래 차수 최댓값보다 큰 값을 보내면 서버가 그 값으로 새 그룹을 만든다
+          const futureOrders = groupOrdersOf(doc.steps || []).filter(o => o > doc.currentStep);
+          payload.stepOrder = (futureOrders.length ? Math.max(...futureOrders) : doc.currentStep) + 1;
+        } else {
+          payload.stepOrder = Number(addStepTarget); // 기존 미래 차수에 병렬로 합류
+        }
+      }
+      await addApprovalStep(id, payload);
+      message.success('추가되었습니다.');
+      setAddStepOpen(false); setAddStepUserId(null); setAddStepType('reference'); setAddStepTarget('new');
+      load(); notifyChanged();
+    } catch (e) { message.error(e.response?.data?.error || '추가 실패'); }
+    finally { setAddingStep(false); }
+  };
+
+  const handleRemoveStep = async (stepId) => {
+    try { await removeApprovalStep(id, stepId); message.success('제거되었습니다.'); load(); notifyChanged(); }
+    catch (e) { message.error(e.response?.data?.error || '제거 실패'); }
   };
 
   const loadComments = async () => {
@@ -295,10 +360,10 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
         message.success('승인되었습니다.');
       } else {
         if (!actionComment.trim()) { message.warning('반려 사유를 입력하세요.'); setActioning(false); return; }
-        await rejectApproval(id, actionComment);
+        await rejectApproval(id, actionComment, actionCategory);
         message.success('반려되었습니다.');
       }
-      setActionModal(null); setActionComment(''); notifyChanged();
+      setActionModal(null); setActionComment(''); setActionCategory(undefined); notifyChanged();
       // 연속 결재: 다음 대기 문서가 있으면 이어서 처리
       if (nextPendingId) { message.info('다음 결재 문서로 이동합니다.'); goNext(); }
       else load();
@@ -324,8 +389,13 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
   const handleComment = async () => {
     if (!newComment.trim()) return;
     setSubmittingComment(true);
-    try { await createApprovalComment(id, newComment); setNewComment(''); loadComments(); }
-    catch { message.error('의견 등록 실패'); }
+    try {
+      const comment = await createApprovalComment(id, newComment);
+      for (const file of pendingCommentFiles) {
+        await uploadApprovalAttachment(id, file, comment.id);
+      }
+      setNewComment(''); setPendingCommentFiles([]); loadComments();
+    } catch { message.error('의견 등록 실패'); }
     finally { setSubmittingComment(false); }
   };
 
@@ -344,13 +414,16 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
 
   const statusCfg = STATUS_CONFIG[doc.status] || { color: 'default', label: doc.status, icon: null };
   const isOwner = doc.createdBy === user?.id || isAdmin;
+  const canAddStep = isOwner && doc.status === 'pending';
   const flowSteps = (doc.steps || []).filter(s => s.type !== 'reference');
   const refSteps = (doc.steps || []).filter(s => s.type === 'reference');
   const isCurrentApprover = doc.status === 'pending' && flowSteps.some(
     s => s.stepOrder === doc.currentStep && s.approverId === user?.id && s.status === 'pending'
   );
   // 차수(그룹)별로 묶기 — 같은 stepOrder는 병렬
-  const groupOrders = [...new Set(flowSteps.map(s => s.stepOrder))].sort((a, b) => a - b);
+  const groupOrders = groupOrdersOf(doc.steps || []);
+  // 결재자 추가 모달의 "기존 미래 차수" 선택지 — 아직 아무도 투표하지 않은 차수만 끼워넣을 수 있다
+  const futureOrders = groupOrders.filter(o => o > doc.currentStep);
 
   return (
     <div style={{ maxWidth: embedded ? '100%' : 920, margin: '0 auto', padding: embedded ? 0 : '20px 20px' }}>
@@ -432,7 +505,7 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                 <Button size="small" type="primary" icon={<CheckCircleOutlined />}
                   onClick={() => { setActionModal('approve'); setActionComment(''); }}>승인</Button>
                 <Button size="small" danger icon={<CloseCircleOutlined />}
-                  onClick={() => { setActionModal('reject'); setActionComment(''); }}>반려</Button>
+                  onClick={() => { setActionModal('reject'); setActionComment(''); setActionCategory(undefined); }}>반려</Button>
                 <Button size="small" icon={<UserOutlined />}
                   onClick={() => { setDelegateOpen(true); setDelegateTo(null); setDelegateComment(''); }}>위임</Button>
               </>
@@ -471,7 +544,10 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
             bodyStyle={{ padding: '12px 20px' }}
             size="small"
           >
-            <FormDataView template={doc.template} formData={doc.formData} token={token} />
+            {/* 상신 시점에 고정된 양식(fieldsJsonSnap)을 우선 사용 — 이후 관리자가 템플릿 필드를
+                바꿔도 이미 제출된 문서는 당시 모습 그대로 보여야 하는 기록물이다. 스냅샷이 없으면
+                (이 기능 추가 이전 문서, 또는 아직 상신 전 draft) 현재 템플릿으로 대체 표시한다. */}
+            <FormDataView template={{ fieldsJson: doc.fieldsJsonSnap || doc.template?.fieldsJson }} formData={doc.formData} token={token} />
           </Card>
 
           {/* 첨부파일 */}
@@ -492,7 +568,10 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                     background: token.colorBgLayout, fontSize: 13,
                   }}>
                     <PaperClipOutlined style={{ color: token.colorTextTertiary }} />
-                    <a href={downloadApprovalAttachmentUrl(id, att.id)} download={att.originalName} style={{ color: token.colorText }}>
+                    <a
+                      onClick={() => downloadFile(downloadApprovalAttachmentUrl(id, att.id), att.originalName).catch(() => message.error('다운로드에 실패했습니다.'))}
+                      style={{ color: token.colorText, cursor: 'pointer' }}
+                    >
                       {att.originalName}
                     </a>
                     <Text type="secondary" style={{ fontSize: 13 }}>({(att.size / 1024).toFixed(0)}KB)</Text>
@@ -534,8 +613,23 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                           <Text type="secondary" style={{ fontSize: 13 }}>{dayjs(c.createdAt).format('MM.DD HH:mm')}</Text>
                         </Space>
                         <div style={{ background: token.colorBgLayout, borderRadius: token.borderRadius, padding: '6px 10px', fontSize: 13, whiteSpace: 'pre-wrap', color: token.colorText }}>
-                          {c.content}
+                          <MentionText text={c.content} token={token} />
                         </div>
+                        {c.attachments?.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                            {c.attachments.map(att => (
+                              <a key={att.id}
+                                onClick={() => downloadFile(downloadApprovalAttachmentUrl(id, att.id), att.originalName).catch(() => message.error('다운로드에 실패했습니다.'))}
+                                style={{
+                                  display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13,
+                                  padding: '2px 8px', borderRadius: 6, border: `1px solid ${token.colorBorderSecondary}`,
+                                  color: token.colorText, background: token.colorBgContainer, cursor: 'pointer',
+                                }}>
+                                <PaperClipOutlined style={{ color: token.colorTextTertiary }} />{att.originalName}
+                              </a>
+                            ))}
+                          </div>
+                        )}
                         {(isAdmin || c.userId === user?.id) && (
                           <Popconfirm title="삭제?" onConfirm={() => handleDeleteComment(c.id)} okText="삭제" cancelText="취소">
                             <Button type="link" size="small" danger style={{ padding: 0, fontSize: 13, height: 'auto', marginTop: 4 }}>삭제</Button>
@@ -561,7 +655,35 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                   rows={2}
                   style={{ marginBottom: 6 }}
                 />
-                <div style={{ textAlign: 'right' }}>
+                {pendingCommentFiles.length > 0 && (
+                  <div style={{ marginBottom: 6, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                    {pendingCommentFiles.map(f => (
+                      <Tag key={f.uid || f.name} closable onClose={() => setPendingCommentFiles(prev => prev.filter(x => x !== f))}>
+                        {f.name}
+                      </Tag>
+                    ))}
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Space size={4}>
+                    <Upload
+                      multiple showUploadList={false}
+                      beforeUpload={(file) => { setPendingCommentFiles(prev => [...prev, file]); return false; }}
+                    >
+                      <Button size="small" type="text" icon={<PaperClipOutlined />} />
+                    </Upload>
+                    <Select
+                      size="small" style={{ width: 120 }} placeholder="@멘션" value={null}
+                      showSearch optionFilterProp="children"
+                      onChange={(uid) => {
+                        const u = users.find(x => x.id === uid);
+                        if (!u) return;
+                        setNewComment(prev => `${prev}${prev && !prev.endsWith(' ') ? ' ' : ''}@${u.displayName} `);
+                      }}
+                    >
+                      {users.map(u => <Select.Option key={u.id} value={u.id}>{u.displayName}</Select.Option>)}
+                    </Select>
+                  </Space>
                   <Button type="primary" size="small" icon={<SendOutlined />}
                     loading={submittingComment} onClick={handleComment} disabled={!newComment.trim()}>
                     등록
@@ -576,6 +698,11 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
         <Card
           bordered={false}
           title={<Text strong style={{ fontSize: 13 }}>결재 라인</Text>}
+          extra={canAddStep && (
+            <Tooltip title="참조자 또는 미래 차수 결재자 추가">
+              <Button size="small" type="text" icon={<PlusCircleOutlined />} onClick={() => setAddStepOpen(true)} />
+            </Tooltip>
+          )}
           style={{ boxShadow: `0 1px 4px ${token.colorBorderSecondary}`, position: 'sticky', top: 16 }}
           bodyStyle={{ padding: '12px 16px' }}
           size="small"
@@ -594,7 +721,10 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
                 </div>
                 <div style={{ borderLeft: `2px solid ${isCurrentGroup ? token.colorPrimary : token.colorBorderSecondary}`, paddingLeft: 8 }}>
                   {groupSteps.map(step => (
-                    <StepRow key={step.id} step={step} isCurrentGroup={isCurrentGroup} docStatus={doc.status} token={token} />
+                    <StepRow
+                      key={step.id} step={step} isCurrentGroup={isCurrentGroup} docStatus={doc.status} token={token}
+                      onRemove={canAddStep && step.status === 'pending' && order > doc.currentStep ? () => handleRemoveStep(step.id) : null}
+                    />
                   ))}
                 </div>
               </div>
@@ -606,7 +736,26 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
               <Text style={{ fontSize: 13, fontWeight: 600, color: token.colorTextSecondary }}>참조</Text>
               <div style={{ marginTop: 2 }}>
                 {refSteps.map(step => (
-                  <StepRow key={step.id} step={step} isCurrentGroup={false} docStatus={doc.status} token={token} />
+                  <StepRow
+                    key={step.id} step={step} isCurrentGroup={false} docStatus={doc.status} token={token}
+                    onRemove={canAddStep ? () => handleRemoveStep(step.id) : null}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {doc.histories?.length > 0 && (
+            <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px dashed ${token.colorBorderSecondary}` }}>
+              <Text style={{ fontSize: 13, fontWeight: 600, color: token.colorTextSecondary }}>결재선 변경 이력</Text>
+              <div style={{ marginTop: 4 }}>
+                {doc.histories.map(h => (
+                  <div key={h.id} style={{ fontSize: 13, color: token.colorTextSecondary, padding: '3px 0' }}>
+                    <Text type="secondary">{dayjs(h.createdAt).format('MM.DD HH:mm')}</Text>{' '}
+                    <Text strong style={{ fontSize: 13 }}>{h.user?.displayName}</Text>님이{' '}
+                    <Text strong style={{ fontSize: 13 }}>{h.field}</Text>
+                    {h.action === 'step_added' ? '님을 결재선에 추가' : '님을 결재선에서 제거'}
+                  </div>
                 ))}
               </div>
             </div>
@@ -622,6 +771,9 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
             <div style={{ marginTop: 12, padding: '8px 12px', background: `${token.colorError}12`, borderRadius: token.borderRadius, textAlign: 'center' }}>
               <CloseCircleOutlined style={{ color: token.colorError, marginRight: 6 }} />
               <Text style={{ color: token.colorError, fontSize: 13, fontWeight: 600 }}>반려됨</Text>
+              {doc.rejectReasonCategory && (
+                <Tag color="error" style={{ marginLeft: 8 }}>{doc.rejectReasonCategory}</Tag>
+              )}
             </div>
           )}
         </Card>
@@ -639,7 +791,7 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
         }
         open={!!actionModal}
         onOk={handleAction}
-        onCancel={() => setActionModal(null)}
+        onCancel={() => { setActionModal(null); setActionCategory(undefined); }}
         confirmLoading={actioning}
         okText={actionModal === 'approve' ? '승인' : '반려'}
         okButtonProps={{ danger: actionModal === 'reject', type: actionModal === 'approve' ? 'primary' : 'primary' }}
@@ -650,6 +802,13 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
             {actionModal === 'approve' ? '승인 의견을 입력하세요 (선택).' : '반려 사유를 입력하세요 (필수).'}
           </Text>
         </div>
+        {actionModal === 'reject' && rejectCategories.length > 0 && (
+          <Select
+            allowClear placeholder="반려 사유 분류 (선택, 통계용)" style={{ width: '100%', marginBottom: 10 }}
+            value={actionCategory} onChange={setActionCategory}
+            options={rejectCategories.map(c => ({ value: c, label: c }))}
+          />
+        )}
         <SpellTextArea
           value={actionComment}
           onChange={setActionComment}
@@ -680,7 +839,49 @@ export default function DocumentDetail({ embedded = false, docId = null, onClose
             </Select.Option>
           ))}
         </Select>
-        <TextArea value={delegateComment} onChange={e => setDelegateComment(e.target.value)} rows={2} placeholder="위임 사유 (선택)" />
+        <TextArea value={delegateComment} onChange={e => setDelegateComment(e.target.value)} rows={2} maxLength={150} showCount placeholder="위임 사유 (선택)" />
+      </Modal>
+
+      {/* 참조자/결재자 추가 모달 (상신 후 자유도 확대) */}
+      <Modal
+        title={<Space><PlusCircleOutlined />결재선에 추가</Space>}
+        open={addStepOpen}
+        onOk={handleAddStep}
+        confirmLoading={addingStep}
+        onCancel={() => setAddStepOpen(false)}
+        okText="추가" cancelText="취소"
+      >
+        <div style={{ marginBottom: 10 }}>
+          <Text type="secondary" style={{ fontSize: 13 }}>
+            참조(열람)는 언제든 추가할 수 있고, 승인/합의/전결은 이미 지나간 차수에는 끼워넣을 수 없어 이후 차수에만 추가됩니다.
+          </Text>
+        </div>
+        <Select
+          showSearch optionFilterProp="children" style={{ width: '100%', marginBottom: 10 }}
+          placeholder="추가할 사용자 선택" value={addStepUserId} onChange={setAddStepUserId}
+        >
+          {users.filter(u => u.id !== user?.id).map(u => (
+            <Select.Option key={u.id} value={u.id}>
+              {u.displayName}{u.position ? ` · ${u.position}` : ''} ({u.username})
+            </Select.Option>
+          ))}
+        </Select>
+        <Space style={{ width: '100%', marginBottom: 10 }}>
+          <Select
+            style={{ width: 120 }} value={addStepType}
+            onChange={(v) => { setAddStepType(v); if (v !== 'reference') setAddStepTarget('new'); }}
+          >
+            {Object.entries(ROLE_CFG).map(([v, cfg]) => (
+              <Select.Option key={v} value={v}>{cfg.label}</Select.Option>
+            ))}
+          </Select>
+          {addStepType !== 'reference' && (
+            <Select style={{ width: 160 }} value={addStepTarget} onChange={setAddStepTarget}>
+              <Select.Option value="new">새 차수 (맨 뒤)</Select.Option>
+              {futureOrders.map(o => <Select.Option key={o} value={o}>{o}차에 병렬로 추가</Select.Option>)}
+            </Select>
+          )}
+        </Space>
       </Modal>
     </div>
   );

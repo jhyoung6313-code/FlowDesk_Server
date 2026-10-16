@@ -1,0 +1,15 @@
+{
+  "name": "flowdesk-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "FlowDesk 화면·계정 분리 자동 검증 (헤드리스 Edge/Chrome). 개발 서버·개발 DB 전용",
+  "scripts": {
+    "test": "node run-all.js",
+    "test:api": "node run-all.js --only 05,06",
+    "test:ui": "node run-all.js --only 01,02,03,04",
+    "test:otp": "node run-all.js --only 07"
+  },
+  "devDependencies": {
+    "puppeteer-core": "22.15.0"
+  }
+}

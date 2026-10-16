@@ -1,6 +1,7 @@
 const path = require('path');
 const fs = require('fs');
 const prisma = require('../lib/prisma');
+const automation = require('../services/automationService');
 
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/bbs');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -138,6 +139,10 @@ const create = async (req, res, next) => {
         creator: { select: { id: true, displayName: true, avatarColor: true } },
         category: { select: { id: true, name: true } },
       },
+    });
+    automation.fire('bbs.post_created', {
+      title: post.title, categoryId: post.categoryId, authorId: post.createdBy,
+      link: `/bbs?postId=${post.id}`, actorId: req.user.id,
     });
     res.status(201).json(post);
   } catch (err) {

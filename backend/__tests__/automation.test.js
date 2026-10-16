@@ -12,6 +12,7 @@ jest.mock('@prisma/client', () => {
     automationRule: {
       findMany: jest.fn(),
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),
       delete: jest.fn(),
@@ -135,11 +136,22 @@ describe('automationController', () => {
     expect(Array.isArray(res.body.actions)).toBe(true);
   });
 
-  test('DELETE → 200', async () => {
-    prisma.automationRule.delete.mockResolvedValue({});
+  test('DELETE → 200, 소프트 삭제(delYn)로 처리', async () => {
+    prisma.automationRule.findFirst.mockResolvedValue({ id: 1, delYn: '0' });
+    prisma.automationRule.update.mockResolvedValue({ id: 1, delYn: '1', isActive: false });
     const res = await request(createApp()).delete('/automations/1');
     expect(res.status).toBe(200);
     expect(res.body.message).toMatch(/삭제/);
+    expect(prisma.automationRule.delete).not.toHaveBeenCalled();
+    expect(prisma.automationRule.update).toHaveBeenCalledWith({
+      where: { id: 1 }, data: { delYn: '1', isActive: false },
+    });
+  });
+
+  test('DELETE 이미 삭제된 규칙 → 404', async () => {
+    prisma.automationRule.findFirst.mockResolvedValue(null);
+    const res = await request(createApp()).delete('/automations/1');
+    expect(res.status).toBe(404);
   });
 });
 

@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Card, Form, Input, Button, Typography, message, Divider, Descriptions, Tag,
-  Avatar, Space, Tooltip, Select,
+  Avatar, Space, Tooltip, Select, Switch,
 } from 'antd';
 import {
   LockOutlined, UserOutlined, SafetyOutlined, QrcodeOutlined, CheckCircleOutlined,
   BgColorsOutlined, FieldTimeOutlined, IdcardOutlined, HighlightOutlined, DeleteOutlined,
+  SwapOutlined, MailOutlined,
 } from '@ant-design/icons';
 import { Upload, Popconfirm } from 'antd';
 import { changePassword, setupOtp, verifySetupOtp, disableOtp, updateIdleTimeout, updateMyProfile } from '../../api/auth';
-import { updateMyAvatarColor, uploadMySignature, deleteMySignature } from '../../api/users';
+import { updateMyAvatarColor, uploadMySignature, deleteMySignature, getUsers } from '../../api/users';
+import { getApprovalAutoDelegate, updateApprovalAutoDelegate, getEmailOptOut, updateEmailOptOut } from '../../api/settings';
 import SignaturePad from '../../components/SignaturePad';
 import { getAvatarColor, AVATAR_COLOR_PRESETS } from '../../utils/colors';
 
@@ -138,6 +140,102 @@ export function IdleTimeoutSection({ user, onChange }) {
         options={IDLE_TIMEOUT_OPTIONS}
         style={{ width: 200 }}
       />
+    </Card>
+  );
+}
+
+/* ── 결재 자동위임(휴가 중) 카드 ───────────────────────── */
+export function ApprovalAutoDelegateSection({ user }) {
+  const [toUserId, setToUserId] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    Promise.all([getApprovalAutoDelegate(), getUsers()]).then(([pref, userList]) => {
+      setToUserId(pref?.toUserId ?? null);
+      setUsers((userList || []).filter(u => u.id !== user?.id && u.isActive !== false));
+      setLoaded(true);
+    }).catch(() => setLoaded(true));
+  }, [user?.id]);
+
+  const handleChange = async (next) => {
+    const prev = toUserId;
+    setToUserId(next ?? null);
+    setSaving(true);
+    try {
+      await updateApprovalAutoDelegate(next ?? null);
+      message.success(next ? '자동 위임 대상이 설정되었습니다.' : '자동 위임이 해제되었습니다.');
+    } catch (err) {
+      setToUserId(prev);
+      message.error(err?.response?.data?.error || '설정 변경에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card
+      title={<span><SwapOutlined style={{ marginRight: 8 }} />결재 자동위임 (휴가 중)</span>}
+      style={{ borderRadius: 8, marginBottom: 24 }}
+    >
+      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 12, fontSize: 13 }}>
+        일정에 내가 <b>휴가</b>로 등록된 기간 동안, 새로 내 차례가 된 결재 건을 아래 대상에게 자동으로 넘깁니다.
+        대상을 지정하지 않으면 기존처럼 휴가 중에도 그대로 내게 결재 요청이 옵니다.
+      </Typography.Text>
+      <Select
+        allowClear showSearch optionFilterProp="children"
+        placeholder="자동위임 대상 없음" value={toUserId} onChange={handleChange}
+        loading={!loaded || saving} disabled={!loaded || saving}
+        style={{ width: 260 }}
+      >
+        {users.map(u => (
+          <Select.Option key={u.id} value={u.id}>
+            {u.displayName}{u.position ? ` · ${u.position}` : ''} ({u.username})
+          </Select.Option>
+        ))}
+      </Select>
+    </Card>
+  );
+}
+
+/* ── 알림 이메일 수신 설정 카드 ────────────────────────── */
+export function EmailNotificationSection() {
+  const [optOut, setOptOut] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getEmailOptOut().then(r => setOptOut(!!r.optOut)).catch(() => {}).finally(() => setLoaded(true));
+  }, []);
+
+  const handleChange = async (checked) => {
+    const next = !checked; // 스위치 on = "이메일 받기"이므로 opt-out은 반대값
+    const prev = optOut;
+    setOptOut(next);
+    setSaving(true);
+    try {
+      await updateEmailOptOut(next);
+      message.success(next ? '알림 이메일을 받지 않습니다.' : '알림 이메일을 받습니다.');
+    } catch (err) {
+      setOptOut(prev);
+      message.error(err?.response?.data?.error || '설정 변경에 실패했습니다.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card
+      title={<span><MailOutlined style={{ marginRight: 8 }} />알림 이메일</span>}
+      style={{ borderRadius: 8, marginBottom: 24 }}
+    >
+      <Space align="center" size={10}>
+        <Switch checked={!optOut} onChange={handleChange} loading={!loaded || saving} />
+        <Typography.Text style={{ fontSize: 13 }}>
+          결재 요청·지연·멘션 알림을 이메일로도 받습니다 (인앱 알림은 이 설정과 무관하게 항상 옵니다).
+        </Typography.Text>
+      </Space>
     </Card>
   );
 }

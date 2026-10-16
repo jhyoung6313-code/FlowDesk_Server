@@ -8,6 +8,8 @@ jest.mock('@prisma/client', () => {
     automationLog: { create: jest.fn() },
     notification: { create: jest.fn().mockResolvedValue({ id: 1 }) },
     task: { create: jest.fn().mockResolvedValue({ id: 77 }) },
+    user: { findMany: jest.fn().mockResolvedValue([]) },
+    appSetting: { findUnique: jest.fn().mockResolvedValue(null) },
   };
   return { PrismaClient: jest.fn(() => m) };
 });
@@ -20,6 +22,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const svc = require('../src/services/automationService');
 const { pushNotification } = require('../src/services/sseService');
+const { sendGenericEmail } = require('../src/services/emailService');
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -123,6 +126,23 @@ describe('emit — 규칙 실행 흐름', () => {
     const upd = prisma.automationRule.update.mock.calls[0][0].data;
     expect(upd.lastError).toMatch(/오류:notify/);
     expect(prisma.automationLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: 'failed' }) }));
+  });
+
+  test("email 액션: 이메일 수신거부(isEmailOptedOut) 설정한 사용자는 발송 대상에서 제외", async () => {
+    prisma.automationRule.findMany.mockResolvedValue([
+      { id: 1, name: 'R', createdBy: 1, conditions: null, actions: JSON.stringify([{ type: 'email', config: { toUsernames: 'optout,normal', subject: '알림', body: '본문' } }]) },
+    ]);
+    prisma.automationRule.update.mockResolvedValue({});
+    prisma.user.findMany.mockResolvedValue([
+      { id: 1, username: 'optout' }, { id: 2, username: 'normal' },
+    ]);
+    // id=1(optout)만 수신거부 설정, id=2는 설정 없음(null → 기본값 수신)
+    prisma.appSetting.findUnique.mockImplementation(({ where }) => Promise.resolve(
+      where.key === 'email_opt_out_1' ? { value: 'true' } : null,
+    ));
+    await svc.emit('task.created', {});
+    expect(sendGenericEmail).toHaveBeenCalledTimes(1);
+    expect(sendGenericEmail).toHaveBeenCalledWith('normal', '알림', '본문');
   });
 
   test('create_task 액션: rule.createdBy로 업무 생성', async () => {

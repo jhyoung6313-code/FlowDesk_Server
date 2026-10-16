@@ -7,5 +7,6 @@ router.use(authenticate);
 
 // 통합 문서/첨부 허브 (F-68)
 router.get('/', ctrl.list);
+router.post('/favorite', ctrl.toggleFavorite);
 
 module.exports = router;

@@ -21,6 +21,9 @@ frontend/dist/
 # 업로드 파일 (사용자 데이터, 바이너리)
 backend/uploads/
 
+# 자동 백업 파일 (암호화되어 있지만 전체 DB 스냅샷이라 git 제외)
+backend/backups/
+
 # Claude Code 개인 설정 (settings.local.json·lock 등은 무시)
 .claude/*
 # 단, 기능 문서(Skill)는 팀 공유를 위해 버전관리에 포함
@@ -59,3 +62,6 @@ npm-debug.log*
 # 에디터
 .vscode/settings.json
 *.swp
+
+# 감시 스크립트 로그
+ops/watchdog.log

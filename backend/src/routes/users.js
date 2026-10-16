@@ -36,6 +36,7 @@ router.post('/', adminOnly, userController.create);
 router.put('/:id', adminOnly, userController.update);
 router.patch('/:id/deactivate', adminOnly, userController.deactivate);
 router.patch('/:id/activate', adminOnly, userController.activate);
+router.patch('/:id/force-logout', adminOnly, userController.forceLogout);
 router.patch('/:id/reset-password', adminOnly, userController.resetPassword);
 
 module.exports = router;

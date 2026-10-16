@@ -1,6 +1,6 @@
 # FlowDesk 기능정의서 v2.1
 
-> 소규모 팀(2~10명)을 위한 로컬 전용 풀스택 업무관리 시스템
+> 폐쇄망(사내망) 환경에서 200명 이상 동시접속을 지원하는 로컬 전용 풀스택 업무관리 시스템
 
 ---
 
@@ -42,6 +42,7 @@
 - **화면**: S-01 로그인
 - **설명**: username/password 기반 로그인, JWT 토큰 발급 (유효기간 8시간)
 - **보안**: 로그인 Rate Limit (5분/10회), bcrypt 비밀번호 해싱
+- **[v2.17] 로그인 화면 = 파스텔 대화형**: 안내 대화(마스코트 말풍선)로 아이디 → 비밀번호 → (OTP 등록 QR / OTP 인증) → 입장, 비밀번호 초기화(아이디 → OTP → 새 비밀번호 → 확인)까지 한 대화에서 진행한다. 상단 진행 알약, 입력 중 표시, 중복 로그인(`ALREADY_LOGGED_IN`)·계정 잠금·OTP 오류는 말풍선 안내, "다시 시도"/"처음부터" 버튼. 비밀번호 관리자 자동 채움을 위해 화면에 보이지 않는 실제 로그인 입력창(아이디/비밀번호)을 함께 두며, 자동 채움이 비밀번호까지 채우면 바로 로그인한다. 서버 API·보안 정책은 변경 없음(`/api/auth/login`, `/login/totp`, `/login/totp-setup`, `/login/totp-enroll`, `/reset/*`). 외부 웹폰트 미사용(폐쇄망).
 - **비밀번호 입력 경고**: 한글 입력 또는 대문자(Caps Lock) 감지 시 amber 색상 경고 배너 표시 (실시간)
 - **API**: `POST /api/auth/login`
 
@@ -116,6 +117,9 @@
 - **화면**: S-02 대시보드
 - **설명**: Recharts 기반 통계 위젯 (상태별/파트별/우선순위별 도넛·바 차트, D-Day 현황, 최근 활동)
 - **API**: `GET /api/tasks` (필터 조합)
+- **[v2.15 추가] 위젯 카탈로그**: 대시보드는 `react-grid-layout` 블록 그리드(드래그·크기조절·숨김, `GET/PUT /api/settings/dashboard-layout`, 형식 `v:1`)이며, 편집 모드의 "+ 위젯"으로 **추가 위젯 5종**(오늘 한눈에·결재 대기·오늘 회의·내 액션아이템·OKR 진척)을 켤 수 있다(기본 숨김). 정의는 `pages/Dashboard/extraWidgets.jsx`의 `EXTRA_BLOCKS`. 내 하루 집계(`GET /api/me/today`)는 해당 위젯이 켜진 경우에만 호출.
+- **[v2.16 추가] 메인 화면 레이아웃 선택**: 헤더 `테마·화면 모드`(🎨) 팝오버의 **메인 화면**에서 5종 중 선택(개인 설정 `home.layout`, 서버 저장·계정별 분리). `기본 대시보드`(기존 위젯 그리드, 교체 아님) + 추가 4종 — **A 커맨드 센터**(다크 벤토 타일), **C 포커스 모드**(지금 할 일 1건·25분 타이머·완료·빠른 메모), **E 보드 퍼스트**(파스텔 칸반, 카드 드래그로 상태 변경), **F 데일리 브리프**(신문 1면식 4단). 구현: `utils/homeLayouts.js`, `store/preferenceStore.js`(`homeLayout`), `pages/Dashboard/HomeRouter.jsx`(라우터·업무 추가 폼), `pages/Dashboard/layouts/`(`useHomeData` 공유 데이터 훅 + `CommandHome`·`FocusHome`·`BoardHome`·`BriefHome`). 각 화면 상단의 **전체 업무 / 내 담당** 전환(`home.scope`)으로 범위를 고른다(기본 전체). 칸반(E)은 카드의 상태 선택으로 터치·키보드에서도 이동. `/tasks?taskId=N` 딥링크로 업무 상세가 열린다. 로드 실패 시 "기본 대시보드로" 복구. 새 서버 API 없음(설정 `home`·`nav` 값만 서버가 검증)(기존 `/tasks`·`/me/today`·`/mail`·`/bbs`·`/okr` 사용). 새 레이아웃에서는 상단 요약 바(SubHeader)를 숨긴다.
+- **[v2.15 추가] 레일 메뉴 개인화**: 좌측 아이콘 레일의 고정 메뉴를 사용자별로 선택·정렬(`⋯` → 전체 메뉴 / 메뉴 편집). 메뉴 정의는 `utils/navRegistry.jsx`(20개 화면), 상태는 `store/preferenceStore.js`(localStorage 캐시 + 서버). 개인 설정 저장소 API: `GET/PUT /api/settings/preferences`(최상위 키 병합, `null`=삭제, 키 30개·32KB·중첩 깊이 6 제한, `__proto__` 등 예약 키 거부, 사용자별 advisory lock 트랜잭션으로 동시 저장 직렬화, `app_settings.user_prefs_<userId>`). 로그아웃 시 레일 설정 캐시를 초기화하고 계정이 바뀌면 이전 캐시를 버린다.
 
 ### F-20. 디자인 스킨 ~~(구 컬러 테마)~~
 - **[v2.14 변경]** 색상 테마 선택 기능은 **제거**되고 **디자인 스킨** 시스템으로 대체됨. 스킨은 형태(모서리·테두리·그림자·표면·폰트)와 강조색을 함께 정의하는 단일 커스터마이즈 축이다.
@@ -152,13 +156,16 @@
 - **설명**:
   - 다중 프로젝트 관리 (프로젝트 생성·수정·삭제)
   - 계층형 작업 트리 (레벨 0~4, 드래그앤드롭 순서·계층 변경)
-  - 컬럼: 작업명, 산출물명, 시작일, 종료일, 계획진척률(%), 실적진척률(%), 메모
+  - 컬럼: 작업명, 선행작업, 산출물명, 시작일, 종료일, 계획진척률(%), 실적진척률(%), 메모
   - 산출물 파일 첨부 (업로드/다운로드/삭제)
+  - **[v2.15] 작업 선후행 의존성 + 크리티컬패스**: 작업별 선행작업 다중 선택(시트 컬럼 드롭다운), 간트 차트에 의존성 화살표 표시. 서버가 CPM(순방향 ES/EF·역방향 LS/LF, float=0)으로 크리티컬패스를 계산해 해당 작업을 시트(빨간 "CP" 뱃지)·간트(빨간 막대)에 표시. 순환 의존성은 저장 시 자동 차단(역탐색으로 사이클 감지). `wbs_task_dependencies` 테이블, `backend/src/services/wbsCriticalPath.js`.
+  - **[v2.15] 상위 작업 진척률 자동 집계**: 하위 작업이 있는 상위 항목의 계획/실적 진척률은 더 이상 직접 입력하지 않고, 하위 작업들의 **기간(일수) 가중평균**으로 조회 시점에 자동 계산(저장 없는 read-time rollup, 하위 변경과 즉시 정합). 시트에는 "N% (자동)" 표시 + 비활성 처리, 리프(최하위) 작업만 직접 입력 가능. `backend/src/services/wbsRollup.js`.
   - Excel 내보내기 / Excel 가져오기 (표준 포맷 + 실무 WBS 포맷 자동 감지)
   - 업로드용 샘플 양식 다운로드 (표준 포맷 헤더 + 예시 행 + 작성안내 시트)
   - 간트 차트 뷰 연동
 - **API**: `GET/POST /api/wbs/projects`, `PUT/DELETE /api/wbs/projects/:id`
 - **API**: `GET/POST /api/wbs/projects/:id/tasks`, `PUT/DELETE /api/wbs/tasks/:taskId`
+- **API**: `PUT /api/wbs/tasks/:taskId` body에 `predecessorIds: number[]` 포함 가능 — `GET .../tasks` 응답의 각 노드에 `predecessorIds`·`isCritical` 포함
 - **API**: `GET /api/wbs/tasks/template` (업로드용 샘플 양식)
 
 ### F-14. WBS 이슈사항
@@ -249,8 +256,9 @@
 
 ### F-44. 백업/복원
 - **화면**: S-17 관리자 > 백업
-- **설명**: 전체 데이터 JSON 백업 다운로드, JSON 파일로 복원
-- **API**: `GET /api/admin/backup/export`, `POST /api/admin/backup/import`
+- **설명**: 전체 데이터 암호화(AES-256-GCM) 백업 다운로드, 백업 파일(.enc)로 복원(기존 데이터 유지 + 누락분 추가하는 additive upsert)
+- **[v2.15] 자동 백업 스케줄링**: cron 주기(`BACKUP_AUTO_CRON`, 기본 매일 03:30)로 서버 로컬 디스크(`backend/backups/`)에 자동 백업, 보관 개수(`BACKUP_RETENTION_COUNT`, 기본 14개) 초과분은 오래된 순으로 자동 삭제. 외부 전송 없음(폐쇄망 전제). `BACKUP_AUTO_ENABLED=false`로 비활성화 가능. 관리자 화면에서 보관 목록 확인·개별 다운로드 가능. `backend/src/services/backupScheduler.js`.
+- **API**: `GET /api/admin/backup`(다운로드), `POST /api/admin/restore`(복원), `GET /api/admin/backup/auto`(자동 백업 설정·목록), `GET /api/admin/backup/auto/:filename/download`
 
 ---
 
@@ -355,6 +363,7 @@
 
 ### F-45. 수입/지출 관리
 - **화면**: 가계부
+- **[v2.15] 개인용**: 거래·예산(`LedgerBudget.userId`)·반복 거래는 **본인에게만** 조회·수정·삭제되며(관리자도 타인 데이터 접근 불가), 요약·Excel 내보내기도 본인 데이터만 집계한다. 카테고리는 시스템 기본(`userId=NULL`, 전원 공용·관리자만 수정)과 개인 카테고리(`userId`=소유자)로 나뉘고, 타인의 개인 카테고리는 거래·예산·반복거래에 사용할 수 없다.
 - **설명**:
   - 수입(income)/지출(expense) 내역 등록·수정·삭제
   - 카테고리별 분류, 예산(월별) 설정
@@ -376,7 +385,9 @@
 ### F-41. 업무 템플릿
 - **화면**: S-17 관리자 > 템플릿
 - **설명**: 반복적으로 사용하는 업무 형식 저장. 기간(일수), 담당자 미리 지정. 템플릿으로 업무 즉시 생성
-- **API**: `GET/POST /api/templates`, `PUT/DELETE /api/templates/:id`
+- **[v2.15] 템플릿 세트(프로젝트 킥오프 일괄 생성)**: 여러 업무 템플릿을 "세트"로 묶고, 각 템플릿에 세트 기준일 대비 마감 오프셋(D+n)을 지정. 세트에 기준일(킥오프일) 하나만 입력하면 소속 템플릿 전체가 담당자·기한이 채워진 실제 업무로 한 번에 생성됨("새 프로젝트 시작" 같은 반복 플로우용). 세트 삭제 시 소속 템플릿은 유지되고 세트 소속만 해제(비파괴적). `task_template_sets` 테이블, `backend/src/controllers/templateSetController.js`.
+- **API**: `GET/POST /api/templates`, `PUT/DELETE /api/templates/:id` (body에 `setId`·`dayOffset` 포함 가능)
+- **API**: `GET/POST /api/template-sets`, `PUT/DELETE /api/template-sets/:id`, `POST /api/template-sets/:id/apply { kickoffDate }`
 
 ### F-42. 활동 로그
 - **화면**: 관리자 > 활동 로그
@@ -570,13 +581,16 @@
 - **워크플로 API**: `submit`(상신)·`approve`(승인)·`reject`(반려)·`cancel`(취소)·`resubmit`(재상신)·`resume`(반려 후 재개)
 - **결재선 자동 해석**: `services/approvalLine.js` — 양식의 lineJson을 실제 결재자로 치환(`resolve-line`)
 - **[v2.14.1] 결재종류 트리 네비게이션**: 문서함 좌측 2-pane 트리로 결재종류(자기중첩) → 양식 계층 탐색. 각 노드에 현재 탭·검색 가시성 기준 문서 **건수 롤업** 표시, 노드 선택 시 목록을 `formTypeId`/`templateId`로 필터(탭=역할 축과 직교). `GET /api/approvals/tree`, 목록 API에 `templateId` 필터 추가. 탭은 상단 전체 폭, 트리·결재내역 그리드는 같은 높이로 정렬.
+- **[v2.15] 사용자 자유도 확대 14종**: 결재선 그룹 편집 UI(드래그 병합/분리/순서이동), 자유 양식(제목+본문만, 관리자 사전설정 불필요), 팀 공유 결재선 프리셋, 병렬결재 완료조건(전원/임의1인/과반수), 상신 후 결재자·참조자 추가/제거, 결재 양식 간 결재선 복사, 양식 필드 상신시점 스냅샷(`fieldsJsonSnap`, 소급 변경 방지), 결재 요청·지연 이메일 알림, 휴가 중 자동위임(F-55 연동), 재사용 가능한 결재자 그룹(`ApprovalApproverGroup`), 결재 현황 대시보드(양식별/결재자별/반려사유별 통계), 결재 일일 다이제스트(매일 08:50), 반려 사유 분류, 의견(댓글) 첨부파일·@멘션. 상세: `/tm-approval`.
 - **API**:
   - 양식종류: `GET/POST /api/approval-types`, `PUT /api/approval-types/reorder`, `PUT/DELETE /api/approval-types/:id`
-  - 양식: `GET /api/approval-templates(/:id)`, `POST/PUT/DELETE /api/approval-templates(/:id)`, `GET/POST /api/approval-templates/:id/resolve-line`
-  - 문서: `GET /api/approvals/pending-count`, `GET /api/approvals/tree`, `GET/POST /api/approvals`, `GET/PUT/DELETE /api/approvals/:id`, `POST /api/approvals/:id/{submit,approve,reject,cancel,resubmit,resume}`
-  - 첨부: `POST /api/approvals/:id/attachments`, `GET /api/approvals/:id/attachments/:aid/download`, `DELETE /api/approvals/:id/attachments/:aid`
+  - 양식: `GET /api/approval-templates(/:id)`, `POST/PUT/DELETE /api/approval-templates(/:id)`, `GET/POST /api/approval-templates/:id/resolve-line`, `GET /api/approval-templates/freeform`
+  - 결재자 그룹: `GET /api/approval-approver-groups`, `POST/PUT/DELETE /api/approval-approver-groups(/:id)`
+  - 문서: `GET /api/approvals/{pending-count,tree,stats,reject-categories}`, `GET/POST /api/approvals`, `GET/PUT/DELETE /api/approvals/:id`, `POST /api/approvals/:id/{submit,approve,reject,cancel,resubmit,resume}`, `POST /api/approvals/:id/steps`, `DELETE /api/approvals/:id/steps/:stepId`
+  - 첨부: `POST /api/approvals/:id/attachments`(`commentId` 선택), `GET /api/approvals/:id/attachments/:aid/download`, `DELETE /api/approvals/:id/attachments/:aid`
   - 댓글: `GET/POST /api/approvals/:id/comments`, `PUT/DELETE /api/approvals/:id/comments/:cid`
-- **파일**: `controllers/approvalController.js`·`approvalTemplateController.js`·`approvalFormTypeController.js`, `services/approvalLine.js`, `routes/approvals.js`, `pages/Approval/*`, `pages/Admin/ApprovalAdmin.jsx`
+  - 설정: `GET/PUT /api/settings/approval-lines(/shared)`, `GET/PUT /api/settings/approval-auto-delegate`
+- **파일**: `controllers/approvalController.js`·`approvalTemplateController.js`·`approvalFormTypeController.js`·`approvalApproverGroupController.js`, `services/approvalLine.js`, `routes/approvals.js`, `pages/Approval/*`, `pages/Admin/{ApprovalAdmin,ApprovalLineEditor}.jsx`, `utils/approvalLine.js`, `pages/Profile/sections.jsx`
 
 ---
 
@@ -650,7 +664,8 @@
 ## 22. 보안 강화
 
 ### F-57. 세션 · 비밀번호 · 이상탐지 · 보관정책
-- **단일 세션 강제**: `User.sessionNonce`로 최신 로그인만 유효. 다른 기기/탭에서 로그인 시 이전 세션 무효화(커밋 `89c0375 feat: 단일 세션 강제`)
+- **단일 세션 강제**: `User.sessionNonce`로 최신 로그인만 유효(비밀번호 변경·강제 로그아웃 시 기존 토큰 무효화)
+- **1계정 1로그인 (v2.15)**: 접속 중인 계정으로는 새 로그인을 **거부**한다(409 `ALREADY_LOGGED_IN`). '접속 중' = `User.lastActiveAt`(인증된 요청·알림 스트림 하트비트·소켓 연결 시 30초 간격으로 갱신)이 `SESSION_ACTIVE_WINDOW_SEC`(기본 180초) 이내. 로그인은 DB에서 원자적으로 선점(`updateMany … lastActiveAt null 또는 윈도우 초과`)해 동시 로그인 레이스를 막고, 로그아웃·토큰 만료·관리자 강제 로그아웃(`PATCH /api/users/:id/force-logout`)은 `lastActiveAt`을 비워 즉시 재로그인을 허용한다. 비밀번호가 틀리면 접속 여부를 알려주지 않는다. `.env` `SINGLE_LOGIN_BLOCK=false` 로 예전 방식(새 로그인이 기존 세션 대체)으로 되돌릴 수 있다.
 - **비밀번호 재사용 금지**: `PasswordHistory`에 과거 해시 이력 저장, 변경 시 재사용 차단
 - **비밀번호 정책 단일화**: `config/security.js`의 `PASSWORD` + `utils/passwordPolicy.js`가 단일 기준(최소 8자·문자종류 4종 중 3종 이상, `.env` 조정). 신규/변경/재설정/관리자 계정생성 모두 `validateFormat` 사용
 - **이상징후 탐지**: `services/anomalyService.js` — 비정상 접근 패턴 감지 시 감사로그(`ANOMALY_DETECTED`) 적재
@@ -858,18 +873,21 @@
 ## 33. 통합 문서/첨부 허브
 
 ### F-68. 문서함 (전 도메인 첨부 통합 검색)
-- **개요**: 여러 도메인(업무·보드·게시판·결재·메일)에 흩어진 **기존 첨부 파일을 한 곳에서 검색**. M365 SharePoint 라이브러리 경량판. **polymorphic 마이그레이션 없이** 기존 첨부 테이블만 읽기 전용 집계(무의존·무마이그레이션·additive).
-- **집계 대상**: `task_attachments`·`board_card_attachments`·`bbs_attachments`·`approval_attachments`·`internal_mail_attachments`(공통 필드 originalName·mimeType·size·uploadedBy·createdAt + 부모 FK)를 정규화 병합.
+- **개요**: 여러 도메인(업무·보드·게시판·결재·메일·WBS 산출물)에 흩어진 **기존 첨부 파일을 한 곳에서 검색**. M365 SharePoint 라이브러리 경량판. **polymorphic 마이그레이션 없이** 기존 첨부 테이블만 읽기 전용 집계(무의존·additive, 즐겨찾기만 신규 테이블).
+- **집계 대상**: `task_attachments`·`board_card_attachments`·`bbs_attachments`·`approval_attachments`·`internal_mail_attachments`·`wbs_tasks.deliverable_*`(공통 필드 originalName·mimeType·size·uploadedBy·createdAt + 부모 FK)를 정규화 병합.
 - **접근제어(도메인별 존중)**:
   - 메일: **개인정보라 관리자도 예외 없이** 발신자/수신자만.
   - 결재: 기안자/결재자만(관리자는 전체).
   - 게시판: 민감도 라벨(F-67) 기밀 게이트 적용(비관리자는 기밀 제외).
   - 업무/보드: 팀 공개(기존 전역검색 신뢰모델과 동일).
-- **기능**: 파일명 검색(디바운스), 출처별 필터(세그먼트+카운트), 원본 위치로 이동 링크, 파일유형 아이콘·크기·올린이·등록일.
+  - WBS 산출물: 전역 공개(업무/보드와 동일 신뢰모델, 별도 멤버십 게이트 없음).
+- **기능**:
+  - 파일명 검색(디바운스) + **본문 전문검색(라이트)**: `text/plain`·`text/csv`·`text/markdown` 첨부는 디스크에서 직접 읽어 내용까지 매칭(외부 파서 의존 없이 300KB 이하 파일 대상, 그 외 포맷은 파일명만).
+  - 출처별 필터(세그먼트+카운트), **즐겨찾기**(별표 토글 + "즐겨찾기만" 필터, `DocumentFavorite` 테이블),  **직접 다운로드**(원본 도메인의 기존 다운로드 API로 바로 연결 — 각 도메인의 접근권한 재검증 포함), 원본 위치로 이동 링크, 파일유형 아이콘·크기·올린이·등록일.
 - **화면**: `/documents` — 사이드바 '협업' 그룹 '문서함'.
-- **API** (인증 필요): `GET /api/documents?q=&source=&limit=` → { total, counts, items: [{ source, fileName, mimeType, size, uploaderName, createdAt, contextTitle, contextPath }] }
-- **파일**: `backend/src/controllers/documentController.js`·`routes/documents.js`; `frontend/src/api/documents.js`, `pages/Documents/index.jsx`
-- **미구현(후속 확장 후보)**: 직접 다운로드(현재 원본 위치 이동), 전문검색(파일 본문 tsvector/pg_bigm), 위키 첨부·WBS 산출물 포함, 태그·즐겨찾기
+- **API** (인증 필요): `GET /api/documents?q=&source=&limit=&favorite=1` → { total, counts, items: [{ source, refId, fileName, mimeType, size, uploaderName, createdAt, contextTitle, contextPath, downloadUrl, isFavorite }] }, `POST /api/documents/favorite { source, refId }` → { favorite }
+- **파일**: `backend/src/controllers/documentController.js`·`routes/documents.js`, `controllers/wbsController.js`(산출물 업로더/크기/시각 메타 추가); `frontend/src/api/documents.js`, `pages/Documents/index.jsx`
+- **미구현(후속 확장 후보)**: 위키 첨부 포함(위키는 별도 첨부 테이블 없음), PDF/워드 등 바이너리 본문 전문검색(OCR/파서 신규 의존성 필요), 태그
 
 ---
 

@@ -24,5 +24,7 @@ router.use(authenticate, adminOnly);
 
 router.get('/backup', auditAction(AUDIT_ACTION.DATA_EXPORT), backupController.backup);
 router.post('/restore', auditAction(AUDIT_ACTION.DATA_EXPORT, () => 'admin/restore'), restoreUpload.single('backup'), backupController.restore);
+router.get('/backup/auto', backupController.listAutoBackups);
+router.get('/backup/auto/:filename/download', auditAction(AUDIT_ACTION.DATA_EXPORT), backupController.downloadAutoBackup);
 
 module.exports = router;

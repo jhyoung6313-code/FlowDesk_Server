@@ -6,6 +6,7 @@ import useAuthStore from '../../store/authStore';
 import {
   AccountInfoSection, ProfileFieldsSection, AvatarColorSection,
   IdleTimeoutSection, OtpSection, ChangePasswordForm, SignatureSection,
+  ApprovalAutoDelegateSection, EmailNotificationSection,
 } from './sections';
 
 /* ── 프로필 페이지 (비밀번호 강제 변경 플로우 등에서 사용) ── */
@@ -27,6 +28,8 @@ export default function ProfilePage() {
       <AvatarColorSection user={user} onColorChange={(avatarColor) => patchUser({ avatarColor })} />
       <SignatureSection user={user} onChange={patchUser} />
       <IdleTimeoutSection user={user} onChange={(idleTimeoutMin) => patchUser({ idleTimeoutMin })} />
+      <ApprovalAutoDelegateSection user={user} />
+      <EmailNotificationSection />
 
       <div style={{ marginBottom: 24 }}>
         <OtpSection totpEnabled={user?.totpEnabled ?? false} />

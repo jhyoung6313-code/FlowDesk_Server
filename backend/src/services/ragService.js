@@ -32,7 +32,7 @@ function extractKeywords(question) {
 const strip = (s) => (s || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 
 // 자연어 질문으로 여러 도메인에서 컨텍스트 스니펫 수집. 반환: [{ source, title, path, text }]
-async function gatherContexts({ userId, question, perSource = 5, maxContexts = 18 }) {
+async function gatherContexts({ userId, question, isAdmin = false, perSource = 5, maxContexts = 18 }) {
   const keywords = extractKeywords(question);
   if (keywords.length === 0) return [];
 
@@ -40,6 +40,9 @@ async function gatherContexts({ userId, question, perSource = 5, maxContexts = 1
   const orText = (fields) => ({
     OR: keywords.flatMap((kw) => fields.map((f) => ({ [f]: { contains: kw, mode: 'insensitive' } }))),
   });
+
+  // F-67 민감도 게이트(관리자는 예외) — searchController/bbsPostController/wikiController와 동일 규칙
+  const sensitivityGate = isAdmin ? [] : [{ OR: [{ NOT: { sensitivity: 'confidential' } }, { createdBy: userId }] }];
 
   const [tasks, memos, cards, wikiDocs, meetings, bbsPosts] = await Promise.all([
     prisma.task.findMany({
@@ -53,14 +56,21 @@ async function gatherContexts({ userId, question, perSource = 5, maxContexts = 1
       orderBy: { updatedAt: 'desc' }, take: perSource,
     }),
     prisma.boardCard.findMany({
-      where: orText(['title', 'description']),
+      where: {
+        AND: [orText(['title', 'description']), ...(isAdmin ? [] : [{ board: { members: { some: { userId } } } }])],
+      },
       select: { id: true, title: true, description: true, boardId: true },
       orderBy: { updatedAt: 'desc' }, take: perSource,
     }),
     prisma.wikiDoc.findMany({
       where: {
         delYn: '0',
-        AND: [orText(['title', 'content']), { OR: [{ space: { visibility: 'public' } }, { createdBy: userId }] }],
+        AND: [
+          orText(['title', 'content']),
+          // 관리자는 wikiController.canAccessSpace와 동일하게 비공개 스페이스도 전부 열람 가능.
+          ...(isAdmin ? [] : [{ OR: [{ space: { visibility: 'public' } }, { createdBy: userId }] }]),
+          ...(isAdmin ? [] : [{ OR: [{ NOT: { sensitivity: 'confidential' } }, { createdBy: userId }] }]),
+        ],
       },
       select: { id: true, title: true, content: true },
       orderBy: { updatedAt: 'desc' }, take: perSource,
@@ -77,7 +87,7 @@ async function gatherContexts({ userId, question, perSource = 5, maxContexts = 1
       orderBy: { startAt: 'desc' }, take: perSource,
     }),
     prisma.bbsPost.findMany({
-      where: { delYn: '0', ...orText(['title', 'content']) },
+      where: { delYn: '0', AND: [orText(['title', 'content']), ...sensitivityGate] },
       select: { id: true, title: true, content: true, categoryId: true },
       orderBy: { updatedAt: 'desc' }, take: perSource,
     }),

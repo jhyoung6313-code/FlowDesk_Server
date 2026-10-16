@@ -17,7 +17,7 @@
 | 보안설정 서비스 | `backend/src/services/securitySettingsService.js` |
 | 감사로그 서비스 | `backend/src/services/auditService.js` |
 | 보안 상수/정책 | `backend/src/config/security.js`, `backend/src/utils/passwordPolicy.js` |
-| 스키마 | `PiiBlockLog`, `PasswordHistory`, `User.permissions[]`, `User.sessionNonce` |
+| 스키마 | `PiiBlockLog`, `PasswordHistory`, `User.permissions[]`, `User.sessionNonce`, `User.lastActiveAt` |
 
 ## F-56 개인정보 보호(PII)
 
@@ -37,7 +37,9 @@
 
 ## F-57 보안 강화
 
-- **단일 세션 강제**: `User.sessionNonce`로 최신 로그인만 유효. 다른 기기/탭 로그인 시 이전 세션 무효화
+- **단일 세션 강제**: `User.sessionNonce`로 최신 로그인만 유효(비밀번호 변경·강제 로그아웃 시 기존 토큰 무효화)
+- **1계정 1로그인 (v2.15)**: 접속 중인 계정으로는 새 로그인을 **거부**한다(409 `ALREADY_LOGGED_IN`). '접속 중' = `User.lastActiveAt`(인증된 요청·알림 스트림 하트비트·소켓 연결 시 30초 간격으로 갱신)이 `SESSION_ACTIVE_WINDOW_SEC`(기본 180초) 이내. 로그인은 DB에서 원자적으로 선점(`updateMany … lastActiveAt null 또는 윈도우 초과`)해 동시 로그인 레이스를 막고, 로그아웃·토큰 만료·관리자 강제 로그아웃(`PATCH /api/users/:id/force-logout`)은 `lastActiveAt`을 비워 즉시 재로그인을 허용한다. 비밀번호가 틀리면 접속 여부를 알려주지 않는다. `.env` `SINGLE_LOGIN_BLOCK=false` 로 예전 방식(새 로그인이 기존 세션 대체)으로 되돌릴 수 있다.
+  - 구현: `authController.finalizeLogin`(원자적 선점)·`isSessionActive`·`rejectDuplicateLogin`, `lib/userCache.touchActivity`, `userController.forceLogout`, 관리자 화면 `pages/Admin/Users.jsx`(접속 중 표시·강제 로그아웃)
 - **비밀번호 재사용 금지**: `PasswordHistory`에 과거 해시 이력 저장, 변경 시 재사용 차단
 - **비밀번호 정책 단일화**: `config/security.js`의 `PASSWORD` + `utils/passwordPolicy.js`가 단일 기준(최소 8자·문자종류 4종 중 3종 이상, `.env` 조정). 신규/변경/재설정/관리자 계정생성 모두 `validateFormat` 사용
 - **이상징후 탐지**: `services/anomalyService.js` — 비정상 접근 감지 시 감사로그 `ANOMALY_DETECTED` 적재

@@ -278,7 +278,7 @@ export default function WikiPage() {
                   <CollaborativeEditor
                     room={`wiki-doc-${doc.id}`}
                     initialHTML={doc.content || ''}
-                    user={{ name: user?.displayName || '사용자' }}
+                    user={{ name: user?.displayName || '사용자', id: user?.id, avatarColor: user?.avatarColor }}
                     onChange={setDraftContent}
                     minHeight={360}
                   />

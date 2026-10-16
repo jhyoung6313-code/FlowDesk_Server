@@ -10,6 +10,19 @@ export const downloadBackup = async () => {
   URL.revokeObjectURL(url);
 };
 
+// 백업 자동 스케줄링(F-44) — 서버 로컬 보관 파일 목록 + 설정 조회
+export const getAutoBackups = () => api.get('/admin/backup/auto').then((r) => r.data);
+
+export const downloadAutoBackup = async (filename) => {
+  const res = await api.get(`/admin/backup/auto/${encodeURIComponent(filename)}/download`, { responseType: 'blob' });
+  const url = URL.createObjectURL(res.data);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
 export const restoreBackup = (file) => {
   const form = new FormData();
   form.append('backup', file);

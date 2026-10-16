@@ -12,6 +12,11 @@ import NotificationToast from '../Notification/NotificationToast';
 import CommandPalette from '../common/CommandPalette';
 import useNotificationStore from '../../store/notificationStore';
 import useThemeStore from '../../store/themeStore';
+import useUnreadStore from '../../store/unreadStore';
+import useAuthStore from '../../store/authStore';
+import usePreferenceStore from '../../store/preferenceStore';
+import { getApprovalPendingCount } from '../../api/approval';
+import { getUnreadCount as getMailUnreadCount } from '../../api/mail';
 
 const { Content } = Layout;
 
@@ -31,6 +36,9 @@ function useIsMobile() {
 export default function MainLayout() {
   const location = useLocation();
   const isDashboard = location.pathname === '/';
+  // 새 홈 레이아웃(A·C·E·F)은 자체 인사말·요약을 가지므로 상단 요약 바를 숨긴다 (기본 대시보드만 표시)
+  const homeLayout = usePreferenceStore((s) => s.homeLayout);
+  const hideSubHeader = isDashboard && homeLayout !== 'classic';
   // 관리자 하위 화면(콘솔 자체 제외)에서 콘솔 복귀 바 표시
   const isAdminSubpage =
     location.pathname.startsWith('/admin') && location.pathname !== '/admin';
@@ -50,6 +58,22 @@ export default function MainLayout() {
   const addSSENotification = useNotificationStore((s) => s.addSSENotification);
   const esRef = useRef(null);
   const reconnectTimer = useRef(null);
+  const user = useAuthStore((s) => s.user);
+  const setApprovalPending = useUnreadStore((s) => s.setApprovalPending);
+  const setMailUnread = useUnreadStore((s) => s.setMailUnread);
+
+  // 전자결재 대기건수 / 메일 안읽음 폴링 — AppHeader·Sidebar가 각각 60초마다
+  // 중복 호출하던 것을 레이아웃 최상단에서 한 번만 돌려 공유 스토어에 반영한다.
+  useEffect(() => {
+    if (!user) return;
+    const sync = () => {
+      getApprovalPendingCount().then((r) => setApprovalPending(r.count || 0)).catch(() => {});
+      getMailUnreadCount().then((r) => setMailUnread(r.count || 0)).catch(() => {});
+    };
+    sync();
+    const timer = setInterval(sync, 60000);
+    return () => clearInterval(timer);
+  }, [user, setApprovalPending, setMailUnread]);
 
   useEffect(() => {
     fetchNotifications();
@@ -80,7 +104,7 @@ export default function MainLayout() {
       esRef.current?.close();
       clearTimeout(reconnectTimer.current);
     };
-  }, []);
+  }, [user?.id]);
 
   return (
     <Layout hasSider style={{ height: '100vh', overflow: 'hidden' }}>
@@ -107,7 +131,7 @@ export default function MainLayout() {
           collapsed={collapsed}
           onCollapse={isMobile ? () => setMobileOpen(true) : handleCollapse}
         />
-        <SubHeader />
+        {!hideSubHeader && <SubHeader />}
         <Content
           style={{
             flex: 1,

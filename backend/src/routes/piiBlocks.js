@@ -10,6 +10,8 @@ const router = express.Router();
 const { authenticate } = require('../middlewares/auth');
 const { requirePermission } = require('../middlewares/requirePermission');
 const prisma = require('../lib/prisma');
+const audit = require('../services/auditService');
+const { AUDIT_ACTION } = require('../config/security');
 
 router.use(authenticate, requirePermission('PII_AUDIT'));
 
@@ -40,6 +42,14 @@ router.get('/', async (req, res, next) => {
         skip: offset,
       }),
     ]);
+
+    // 감사자가 PII 검출내역(마스킹본)을 열람한 이력 자체를 개인정보 처리이력으로 기록
+    await audit.record({
+      action: AUDIT_ACTION.PII_READ,
+      req,
+      resource: 'pii_block_logs',
+      detail: `count=${logs.length},filter=${piiType || '-'}/${userId || '-'}`,
+    });
 
     res.json({ total, logs });
   } catch (err) {

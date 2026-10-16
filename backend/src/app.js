@@ -8,6 +8,7 @@ const rateLimit = require('express-rate-limit');
 const routes = require('./routes');
 const { scheduleNotifications } = require('./services/notificationService');
 const { scheduleRetention } = require('./services/retentionService');
+const { scheduleAutoBackup } = require('./services/backupScheduler');
 const { scheduleAnomalyScan } = require('./services/anomalyService');
 const { auditForbidden } = require('./middlewares/auditLogger');
 const { piiGuard } = require('./middlewares/piiGuard');
@@ -46,20 +47,24 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Rate Limiting: 로그인 전용 — 5분에 최대 10회
+// Rate Limiting 한도는 .env 로 조정할 수 있다 (여러 사용자가 프록시/NAT 한 대를 공유하면 같은 IP 로 집계되므로 환경에 맞게 올린다)
+const LOGIN_RATE_MAX = Number(process.env.LOGIN_RATE_LIMIT_MAX) || 10;   // 5분당 로그인 시도
+const API_RATE_MAX = Number(process.env.API_RATE_LIMIT_MAX) || 300;      // 1분당 일반 API 요청 (한 화면 로드가 약 40건)
+
+// Rate Limiting: 로그인 전용 — 5분에 최대 LOGIN_RATE_MAX회
 const loginLimiter = rateLimit({
   windowMs: 5 * 60 * 1000,
-  max: 10,
+  max: LOGIN_RATE_MAX,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: '로그인 시도가 너무 많습니다. 5분 후 다시 시도해주세요.' },
   skip: () => isDev, // 개발 환경에서는 제한 없음
 });
 
-// Rate Limiting: 전체 API — 1분에 최대 300회 (정상 사용 범위)
+// Rate Limiting: 전체 API — 1분에 최대 API_RATE_MAX회 (정상 사용 범위)
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 300,
+  max: API_RATE_MAX,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.' },
@@ -149,9 +154,15 @@ linkedRoomService.setIO(io);
 server.listen(PORT, () => {
   console.log(`백엔드 서버 실행 중: http://localhost:${PORT}`);
   require('./services/securitySettingsService').refresh(); // 보안 설정 DB 오버라이드 로드
+  // DISABLE_SCHEDULERS=true: 같은 DB 를 쓰는 보조 인스턴스(e2e 테스트 등)에서 cron 작업이 중복 실행되지 않게 한다
+  if (process.env.DISABLE_SCHEDULERS === 'true') {
+    console.log('[scheduler] DISABLE_SCHEDULERS=true — 모든 스케줄러를 등록하지 않습니다.');
+    return;
+  }
   scheduleNotifications();
   scheduleRetention();    // 데이터 보유기간 자동 파기
   scheduleAnomalyScan();  // 비정상 접근 탐지
+  scheduleAutoBackup();   // 백업 자동 스케줄링(F-44)
   startScheduledMessageSender(io);
 });
 

@@ -5,6 +5,7 @@ import { updateThemePrefs } from '../api/settings';
 
 const STORAGE_DARK = 'flowdesk_dark';
 const STORAGE_DENS = 'flowdesk_density';   // 'default' | 'compact'
+const STORAGE_OWNER = 'flowdesk_theme_owner';  // 로컬 캐시를 만든 계정 id — 계정이 바뀌면 캐시를 버린다
 const STORAGE_SKIN = 'flowdesk_skin';      // 'default' | 'brutal' | 'clay' | 'mono' | 'glass' | 'pop' | 'slick' | 'paper'
 
 /* 색상 테마 선택 기능은 제거됨 — 강조색·표면은 이제 스킨(skins.js)이 담당한다.
@@ -53,6 +54,7 @@ applyTheme(_initDark, _initSkin);
 
 /* 서버 저장 (디바운스, 로그인 상태가 아니면 401 → 조용히 무시) */
 let _saveTimer = null;
+let _owner = null;
 function persist(get) {
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
@@ -96,8 +98,39 @@ const useThemeStore = create((set, get) => ({
     persist(get);
   },
 
-  /* 로그인 후 서버 저장값으로 동기화 (없으면 로컬 유지) */
-  hydrateFromServer: (prefs) => {
+  /* 대기 중인 저장을 즉시 전송 (로그아웃 직전 — 다른 계정 토큰으로 전송되는 것 방지) */
+  flush: async () => {
+    if (!_saveTimer) return;
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+    const s = get();
+    await updateThemePrefs({ isDark: s.isDark, density: s.density, skin: s.skin }).catch(() => {});
+  },
+
+  /* 로그아웃: 다음 계정에 이전 계정의 테마가 이월되지 않도록 로컬 캐시와 화면을 기본값으로 */
+  resetToDefaults: () => {
+    clearTimeout(_saveTimer);
+    _owner = null;
+    try {
+      [STORAGE_DARK, STORAGE_DENS, STORAGE_SKIN, STORAGE_OWNER].forEach((k) => localStorage.removeItem(k));
+    } catch { /* 무시 */ }
+    applyTheme(false, DEFAULT_SKIN);
+    set({ isDark: false, density: 'default', skin: DEFAULT_SKIN, theme: buildTheme(DEFAULT_SKIN, false) });
+  },
+
+  /* 로그인 후 서버 저장값으로 동기화.
+     로컬 캐시가 다른 계정의 것이면(같은 브라우저에서 계정 전환) 기본값으로 되돌린 뒤 서버값을 적용하고,
+     같은 계정이고 서버값이 없으면 로컬 유지. */
+  hydrateFromServer: (prefs, userId) => {
+    if (userId != null) {
+      let cachedOwner = null;
+      try { cachedOwner = localStorage.getItem(STORAGE_OWNER); } catch { /* 무시 */ }
+      if (cachedOwner !== String(userId)) {
+        get().resetToDefaults();
+      }
+      _owner = userId;
+      try { localStorage.setItem(STORAGE_OWNER, String(userId)); } catch { /* 무시 */ }
+    }
     if (!prefs || typeof prefs !== 'object') return;
     const isDark = typeof prefs.isDark === 'boolean' ? prefs.isDark : get().isDark;
     const density = prefs.density === 'compact' ? 'compact' : 'default';

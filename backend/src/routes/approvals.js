@@ -9,6 +9,7 @@ const { adminOnly } = require('../middlewares/adminOnly');
 const approvalFormTypeController = require('../controllers/approvalFormTypeController');
 const approvalTemplateController = require('../controllers/approvalTemplateController');
 const approvalController = require('../controllers/approvalController');
+const approvalApproverGroupController = require('../controllers/approvalApproverGroupController');
 
 const APPROVAL_UPLOAD_DIR = path.join(__dirname, '../../uploads/approval');
 if (!fs.existsSync(APPROVAL_UPLOAD_DIR)) fs.mkdirSync(APPROVAL_UPLOAD_DIR, { recursive: true });
@@ -54,6 +55,8 @@ router.delete('/approval-types/:id', authenticate, adminOnly, approvalFormTypeCo
 
 // ── 결재 양식 템플릿 (admin only CUD) ────────────────────────
 router.get('/approval-templates', authenticate, approvalTemplateController.list);
+// :id보다 먼저 등록 — 그렇지 않으면 "freeform"이 :id 파라미터로 잡혀버린다
+router.get('/approval-templates/freeform', authenticate, approvalTemplateController.getFreeform);
 router.get('/approval-templates/:id', authenticate, approvalTemplateController.get);
 router.get('/approval-templates/:id/resolve-line', authenticate, approvalTemplateController.resolveLine);
 router.post('/approval-templates/:id/resolve-line', authenticate, approvalTemplateController.resolveLine);
@@ -61,9 +64,17 @@ router.post('/approval-templates', authenticate, adminOnly, approvalTemplateCont
 router.put('/approval-templates/:id', authenticate, adminOnly, approvalTemplateController.update);
 router.delete('/approval-templates/:id', authenticate, adminOnly, approvalTemplateController.remove);
 
+// ── 결재자 그룹 (재사용 가능한 사용자 묶음, 결재선에 끼워넣음) ──────
+router.get('/approval-approver-groups', authenticate, approvalApproverGroupController.list);
+router.post('/approval-approver-groups', authenticate, adminOnly, approvalApproverGroupController.create);
+router.put('/approval-approver-groups/:id', authenticate, adminOnly, approvalApproverGroupController.update);
+router.delete('/approval-approver-groups/:id', authenticate, adminOnly, approvalApproverGroupController.remove);
+
 // ── 결재 문서 ──────────────────────────────────────────────────
 router.get('/approvals/pending-count', authenticate, approvalController.pendingCount);
 router.get('/approvals/tree', authenticate, approvalController.tree);
+router.get('/approvals/stats', authenticate, adminOnly, approvalController.stats);
+router.get('/approvals/reject-categories', authenticate, approvalController.getRejectCategories);
 router.get('/approvals', authenticate, approvalController.list);
 router.post('/approvals', authenticate, approvalController.create);
 router.get('/approvals/:id', authenticate, approvalController.get);
@@ -75,6 +86,8 @@ router.post('/approvals/:id/cancel', authenticate, approvalController.cancel);
 router.post('/approvals/:id/delegate', authenticate, approvalController.delegate);
 router.post('/approvals/:id/resubmit', authenticate, approvalController.resubmit);
 router.post('/approvals/:id/resume', authenticate, approvalController.resume);
+router.post('/approvals/:id/steps', authenticate, approvalController.addStep);
+router.delete('/approvals/:id/steps/:stepId', authenticate, approvalController.removeStep);
 router.delete('/approvals/:id', authenticate, approvalController.remove);
 
 // ── 결재 문서 첨부파일 ────────────────────────────────────────

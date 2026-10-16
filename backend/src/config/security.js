@@ -18,6 +18,11 @@ const AUTH = {
   ENFORCE_OTP: bool('ENFORCE_OTP', true),
   // bcrypt cost (금융권 권장 12 이상)
   BCRYPT_ROUNDS: num('BCRYPT_ROUNDS', 12),
+  // 1계정 1로그인: true 면 이미 접속 중인 계정으로는 새 로그인을 거부한다 (false 면 예전처럼 새 로그인이 기존 세션을 대체).
+  SINGLE_LOGIN_BLOCK: bool('SINGLE_LOGIN_BLOCK', true),
+  // '접속 중' 판단 기준(초): 마지막 서버 요청/스트림 하트비트가 이 시간 이내면 접속 중으로 본다.
+  // 브라우저를 로그아웃 없이 닫은 경우 이 시간이 지나면 다시 로그인할 수 있다. (프론트가 60초마다 폴링하므로 최소 120 이상 권장)
+  SESSION_ACTIVE_WINDOW_SEC: num('SESSION_ACTIVE_WINDOW_SEC', 180),
 };
 
 // ── 계정 잠금 (무차별 대입 방어) ─────────────────────────────

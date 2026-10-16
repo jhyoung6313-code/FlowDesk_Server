@@ -3,12 +3,13 @@ import {
   Tabs, Button, Space, Typography, Tag, Select, message, Popconfirm,
   theme as antTheme, Badge, Tooltip, Avatar, Pagination, Empty, Spin, Drawer, Grid, Input, Modal, Tree,
 } from 'antd';
-import { PlusOutlined, DeleteOutlined, CloseCircleOutlined, FileDoneOutlined, ClockCircleOutlined, CopyOutlined, FireOutlined, CheckOutlined, FolderOutlined, FileTextOutlined, AppstoreOutlined } from '@ant-design/icons';
-import { getApprovals, getApprovalTree, deleteApproval, cancelApproval, approveApproval, rejectApproval } from '../../api/approval';
+import { PlusOutlined, DeleteOutlined, CloseCircleOutlined, FileDoneOutlined, ClockCircleOutlined, CopyOutlined, FireOutlined, CheckOutlined, FolderOutlined, FileTextOutlined, AppstoreOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { getApprovals, getApprovalTree, deleteApproval, cancelApproval, approveApproval, rejectApproval, getRejectCategories } from '../../api/approval';
 import DocumentForm from './DocumentForm';
 import DocumentDetail from './DocumentDetail';
 import SpellTextArea from '../../components/common/SpellTextArea';
-import { avatarColor } from '../../utils/listkit';
+import { getAvatarColor } from '../../utils/colors';
+import { groupOrdersOf } from '../../utils/approvalLine';
 import useAuthStore from '../../store/authStore';
 import dayjs from 'dayjs';
 
@@ -42,7 +43,7 @@ export default function ApprovalPage() {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
-  const [formState, setFormState] = useState({ open: false, docId: null, copyFromId: null });
+  const [formState, setFormState] = useState({ open: false, docId: null, copyFromId: null, freeform: false });
   const [detailId, setDetailId] = useState(null);
   const screens = Grid.useBreakpoint();
   const [q, setQ] = useState('');
@@ -58,6 +59,8 @@ export default function ApprovalPage() {
   const [bulkLoading, setBulkLoading] = useState(false);
   const [rejectModal, setRejectModal] = useState(null); // { id } | null
   const [rejectReason, setRejectReason] = useState('');
+  const [rejectCategory, setRejectCategory] = useState(undefined);
+  const [rejectCategories, setRejectCategories] = useState([]);
 
   // 내 차례(승인 대기) 여부
   const isMyPendingTurn = (d) => d.status === 'pending'
@@ -76,6 +79,7 @@ export default function ApprovalPage() {
   }, [tab, statusFilter, page, q, formTypeId, templateId]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { getRejectCategories().then(setRejectCategories).catch(() => {}); }, []);
 
   // 트리(결재종류→양식 + 건수)는 탭·상태·검색 변경 시 갱신 (선택/페이지와 무관)
   useEffect(() => {
@@ -148,8 +152,8 @@ export default function ApprovalPage() {
   const doReject = async () => {
     if (!rejectReason.trim()) { message.warning('반려 사유를 입력하세요.'); return; }
     try {
-      await rejectApproval(rejectModal.id, rejectReason);
-      message.success('반려되었습니다.'); setRejectModal(null); setRejectReason(''); load();
+      await rejectApproval(rejectModal.id, rejectReason, rejectCategory);
+      message.success('반려되었습니다.'); setRejectModal(null); setRejectReason(''); setRejectCategory(undefined); load();
     } catch (e) { message.error(e.response?.data?.error || '반려 실패'); }
   };
   const handleBulkApprove = async () => {
@@ -164,7 +168,17 @@ export default function ApprovalPage() {
   };
   const myTurnCount = documents.filter(isMyPendingTurn).length;
 
-  const pendingCount = documents.filter(d => d.status === 'pending' && d.steps?.some(s => s.approverId === user?.id && s.stepOrder === d.currentStep)).length;
+  const pendingCount = myTurnCount;
+
+  // doc.currentStep/rejectedStep은 "차수(stepOrder) 원값"이지 순차 순위가 아니다 — 조건부
+  // 결재자용으로 비워둔 차수 등으로 gap이 있으면 원값을 그대로 분자로 쓸 수 없으므로,
+  // 실제 distinct 차수 목록에서 몇 번째인지(순위)를 구해서 써야 totalSteps(= distinct 그룹 수,
+  // 백엔드 countFlowGroups 참조)와 분모·분자 단위가 맞는다.
+  const rankOf = (doc, stepOrderValue) => {
+    const orders = groupOrdersOf(doc.steps || []);
+    const idx = orders.indexOf(stepOrderValue);
+    return idx >= 0 ? idx : 0;
+  };
 
   // 진행 상태 요약 문구
   const progressText = (doc) => {
@@ -172,18 +186,24 @@ export default function ApprovalPage() {
     if (doc.status === 'rejected') return doc.rejectedStep > 1 ? '반려 · 재상신 가능' : '반려됨';
     if (doc.status === 'cancelled') return '취소됨';
     if (doc.status === 'draft') return doc.totalSteps > 0 ? '임시저장' : '결재선 미지정';
-    const cur = doc.steps?.find(s => s.stepOrder === doc.currentStep && s.type !== 'reference');
-    const isMe = cur?.approverId === user?.id;
-    return `${doc.currentStep - 1}/${doc.totalSteps} · ${isMe ? '내 차례' : (cur?.approver?.displayName || '') + ' 결재중'}`;
+    const curGroup = (doc.steps || []).filter(s => s.stepOrder === doc.currentStep && s.type !== 'reference');
+    // 병렬 그룹에서 내가 이미 승인했고 동료만 대기 중이면 "내 차례"가 아니다 — isMyPendingTurn과
+    // 동일하게 내 행 자체가 아직 pending인지까지 확인(그렇지 않으면 버튼은 안 뜨는데 라벨만
+    // "내 차례"로 남는 모순이 생김).
+    const isMe = curGroup.some(s => s.approverId === user?.id && s.status === 'pending');
+    let who = '';
+    if (curGroup.length === 1) who = curGroup[0]?.approver?.displayName || '';
+    else if (curGroup.length > 1) who = `${curGroup[0]?.approver?.displayName || ''} 외 ${curGroup.length - 1}명`;
+    return `${rankOf(doc, doc.currentStep)}/${doc.totalSteps} · ${isMe ? '내 차례' : who + ' 결재중'}`;
   };
 
   // 진행률(0~100) + 바 색상
   const progressPct = (doc) => {
     const total = doc.totalSteps || (doc.steps || []).filter(s => s.type !== 'reference').length || 1;
     if (doc.status === 'approved') return 100;
-    if (doc.status === 'rejected') return Math.round(((doc.rejectedStep || 1) - 1) / total * 100);
+    if (doc.status === 'rejected') return Math.round(rankOf(doc, doc.rejectedStep) / total * 100);
     if (doc.status === 'cancelled' || doc.status === 'draft') return 0;
-    return Math.round((doc.currentStep - 1) / total * 100);
+    return Math.round(rankOf(doc, doc.currentStep) / total * 100);
   };
   const progressColor = (doc) => {
     if (doc.status === 'approved') return token.colorSuccess;
@@ -197,7 +217,7 @@ export default function ApprovalPage() {
   const renderDoc = (doc) => {
     const cfg = STATUS_CONFIG[doc.status] || { color: 'default', label: doc.status };
     const isOwner = doc.createdBy === user?.id || isAdmin;
-    const isMyTurn = doc.status === 'pending' && doc.steps?.some(s => s.stepOrder === doc.currentStep && s.approverId === user?.id && s.type !== 'reference');
+    const isMyTurn = isMyPendingTurn(doc);
 
     const pct = progressPct(doc);
     const over = doc.dueDate && doc.status === 'pending' && dayjs(doc.dueDate).endOf('day').isBefore(dayjs());
@@ -245,7 +265,7 @@ export default function ApprovalPage() {
         {/* 기안자 */}
         <div style={{ textAlign: 'center' }}>
           <Tooltip title={doc.creator?.displayName}>
-            <Avatar size={26} style={{ background: avatarColor(doc.creator?.displayName), fontSize: 13 }}>
+            <Avatar size={26} style={{ background: getAvatarColor(doc.creator?.id, doc.creator?.avatarColor), fontSize: 13 }}>
               {getInitial(doc.creator?.displayName)}
             </Avatar>
           </Tooltip>
@@ -280,7 +300,7 @@ export default function ApprovalPage() {
           {tab === 'pending' && isMyTurn ? (
             <>
               <Button size="small" type="primary" onClick={() => handleApproveOne(doc.id)}>승인</Button>
-              <Button size="small" danger ghost onClick={() => { setRejectModal({ id: doc.id }); setRejectReason(''); }}>반려</Button>
+              <Button size="small" danger ghost onClick={() => { setRejectModal({ id: doc.id }); setRejectReason(''); setRejectCategory(undefined); }}>반려</Button>
             </>
           ) : (
             <>
@@ -351,6 +371,11 @@ export default function ApprovalPage() {
               <Select.Option key={k} value={k}>{v.label}</Select.Option>
             ))}
           </Select>
+          <Tooltip title="양식 선택 없이 제목·본문만으로 즉시 결재를 올립니다">
+            <Button size="small" icon={<ThunderboltOutlined />} onClick={() => setFormState({ open: true, docId: null, copyFromId: null, freeform: true })}>
+              빠른 결재
+            </Button>
+          </Tooltip>
           <Button type="primary" size="small" icon={<PlusOutlined />} onClick={() => setFormState({ open: true, docId: null, copyFromId: null })}>
             결재 요청
           </Button>
@@ -429,7 +454,7 @@ export default function ApprovalPage() {
 
       {/* 결재 기안/수정 Drawer */}
       <Drawer
-        title={formState.docId ? '결재 문서 수정' : (formState.copyFromId ? '결재 요청 (복제)' : '결재 요청')}
+        title={formState.docId ? '결재 문서 수정' : (formState.copyFromId ? '결재 요청 (복제)' : (formState.freeform ? '빠른 결재 (자유 양식)' : '결재 요청'))}
         placement="right"
         width={screens.md ? 720 : '100%'}
         open={formState.open}
@@ -442,6 +467,7 @@ export default function ApprovalPage() {
             embedded
             initialDocId={formState.docId}
             copyFromId={formState.copyFromId}
+            freeform={formState.freeform}
             onClose={() => setFormState({ open: false, docId: null, copyFromId: null })}
             onSaved={() => { setFormState({ open: false, docId: null, copyFromId: null }); load(); }}
           />
@@ -476,12 +502,19 @@ export default function ApprovalPage() {
         title={<Space><CloseCircleOutlined style={{ color: token.colorError }} />반려</Space>}
         open={!!rejectModal}
         onOk={doReject}
-        onCancel={() => { setRejectModal(null); setRejectReason(''); }}
+        onCancel={() => { setRejectModal(null); setRejectReason(''); setRejectCategory(undefined); }}
         okText="반려" okButtonProps={{ danger: true }} cancelText="취소"
       >
         <div style={{ marginBottom: 8 }}>
           <Text type="secondary" style={{ fontSize: 13 }}>반려 사유를 입력하세요 (필수).</Text>
         </div>
+        {rejectCategories.length > 0 && (
+          <Select
+            allowClear placeholder="반려 사유 분류 (선택, 통계용)" style={{ width: '100%', marginBottom: 8 }}
+            value={rejectCategory} onChange={setRejectCategory}
+            options={rejectCategories.map(c => ({ value: c, label: c }))}
+          />
+        )}
         <SpellTextArea value={rejectReason} onChange={setRejectReason} rows={3} placeholder="반려 사유를 반드시 입력하세요." />
       </Modal>
     </div>

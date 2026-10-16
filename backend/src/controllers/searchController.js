@@ -1,4 +1,5 @@
 const prisma = require('../lib/prisma');
+const { approvalVisibilityWhere } = require('../services/approvalAccess');
 
 // GET /api/search?q=...&limit=8
 // 업무·메모·보드카드·플레이북·WBS·채팅을 한 번에 검색해 그룹별로 반환
@@ -76,7 +77,7 @@ const search = async (req, res, next) => {
           delYn: '0',
           AND: [
             { OR: [{ title: contains }, { docNo: contains }] },
-            ...(isAdmin ? [] : [{ OR: [{ createdBy: userId }, { steps: { some: { approverId: userId } } }] }]),
+            ...(isAdmin ? [] : [approvalVisibilityWhere(userId)]),
           ],
         },
         select: { id: true, title: true, docNo: true, status: true },

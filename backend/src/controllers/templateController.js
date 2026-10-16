@@ -8,9 +8,11 @@ const templateInclude = {
 
 const list = async (req, res, next) => {
   try {
+    const { setId } = req.query;
     const items = await prisma.taskTemplate.findMany({
+      where: setId !== undefined ? { setId: setId === 'null' ? null : Number(setId) } : {},
       include: templateInclude,
-      orderBy: { createdAt: 'desc' },
+      orderBy: setId !== undefined ? [{ dayOffset: 'asc' }, { createdAt: 'asc' }] : { createdAt: 'desc' },
     });
     res.json(items.map(parseJsonFields));
   } catch (err) {
@@ -33,7 +35,7 @@ const detail = async (req, res, next) => {
 
 const create = async (req, res, next) => {
   try {
-    const { name, title, description, partId, priority, durationDays, assigneeIds, extraNames } = req.body;
+    const { name, title, description, partId, priority, durationDays, assigneeIds, extraNames, setId, dayOffset } = req.body;
     if (!name) return res.status(400).json({ error: '템플릿명은 필수입니다.' });
     if (!title) return res.status(400).json({ error: '업무 제목은 필수입니다.' });
 
@@ -47,6 +49,8 @@ const create = async (req, res, next) => {
         durationDays: durationDays ? Number(durationDays) : null,
         assigneeIdsJson: assigneeIds ? JSON.stringify(assigneeIds) : null,
         extraNamesJson: extraNames ? JSON.stringify(extraNames) : null,
+        setId: setId ? Number(setId) : null,
+        dayOffset: dayOffset !== undefined ? Number(dayOffset) : 0,
         createdBy: req.user.id,
       },
       include: templateInclude,
@@ -60,7 +64,7 @@ const create = async (req, res, next) => {
 const update = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    const { name, title, description, partId, priority, durationDays, assigneeIds, extraNames } = req.body;
+    const { name, title, description, partId, priority, durationDays, assigneeIds, extraNames, setId, dayOffset } = req.body;
 
     const existing = await prisma.taskTemplate.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: '템플릿을 찾을 수 없습니다.' });
@@ -79,6 +83,8 @@ const update = async (req, res, next) => {
         durationDays: durationDays !== undefined ? (durationDays ? Number(durationDays) : null) : undefined,
         assigneeIdsJson: assigneeIds !== undefined ? (assigneeIds ? JSON.stringify(assigneeIds) : null) : undefined,
         extraNamesJson: extraNames !== undefined ? (extraNames ? JSON.stringify(extraNames) : null) : undefined,
+        setId: setId !== undefined ? (setId ? Number(setId) : null) : undefined,
+        dayOffset: dayOffset !== undefined ? Number(dayOffset) : undefined,
       },
       include: templateInclude,
     });

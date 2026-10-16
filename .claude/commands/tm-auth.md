@@ -31,7 +31,8 @@
 - Rate Limit: 5분/10회 (`express-rate-limit`)
 - bcrypt 비밀번호 해싱
 - `mustChangePassword` 플래그 → 로그인 후 `/profile` 강제 이동
-- **비밀번호 입력 경고** (v1.9.1):
+- **[v2.17] 로그인 화면 = 파스텔 대화형**: 안내 대화(마스코트 말풍선)로 아이디 → 비밀번호 → (OTP 등록 QR / OTP 인증) → 입장, 비밀번호 초기화(아이디 → OTP → 새 비밀번호 → 확인)까지 한 대화에서 진행한다. 상단 진행 알약, 입력 중 표시, 중복 로그인(`ALREADY_LOGGED_IN`)·계정 잠금·OTP 오류는 말풍선 안내, "다시 시도"/"처음부터" 버튼. 비밀번호 관리자 자동 채움을 위해 화면에 보이지 않는 실제 로그인 입력창(아이디/비밀번호)을 함께 두며, 자동 채움이 비밀번호까지 채우면 바로 로그인한다. 서버 API·보안 정책은 변경 없음(`/api/auth/login`, `/login/totp`, `/login/totp-setup`, `/login/totp-enroll`, `/reset/*`). 외부 웹폰트 미사용(폐쇄망).
+- **비밀번호 입력 경고** (v1.9.1, v2.17 에서 대화형 로그인의 입력창 `onKeyDown/onKeyUp` + 값 검사로 재구현 — 아래 `LoginTab`/네이티브 리스너 설명은 이전 화면 기준):
   - 한글 입력 시 → "한글 입력 감지 — 입력기를 영문으로 전환하세요" (amber 배너)
   - Caps Lock 켜져 있을 시 → "Caps Lock이 켜져 있습니다 — 비밀번호를 확인하세요" (amber 배너)
   - 구현: `LoginTab`의 `useEffect`에서 `pwRef.current.input`(DOM 엘리먼트)에 네이티브 이벤트 리스너 직접 부착

@@ -33,13 +33,14 @@ describe('evalCondition', () => {
 });
 
 describe('resolvePresetLine', () => {
-  function mkPrisma({ users = {}, matches = [], formType = null } = {}) {
+  function mkPrisma({ users = {}, matches = [], formType = null, groups = {}, groupMembers = [] } = {}) {
     return {
       user: {
         findUnique: jest.fn(async ({ where }) => users[where.id] ?? null),
-        findMany: jest.fn(async () => matches),
+        findMany: jest.fn(async () => (groupMembers.length ? groupMembers : matches)),
       },
       approvalFormType: { findUnique: jest.fn(async () => formType) },
+      approvalApproverGroup: { findUnique: jest.fn(async ({ where }) => groups[where.id] ?? null) },
     };
   }
 
@@ -84,6 +85,28 @@ describe('resolvePresetLine', () => {
     // team scope → teamId 조건 포함해서 조회
     const where = prisma.user.findMany.mock.calls[0][0].where;
     expect(where.teamId).toBe(20);
+  });
+
+  test('결재자 그룹(group) — 현재 멤버 전원을 같은 차수(병렬)로 확장', async () => {
+    const prisma = mkPrisma({
+      users: { 1: { departmentId: 1, teamId: 1 } },
+      groups: { 7: { id: 7, name: '구매팀', memberIds: [11, 12, 99] } },
+      groupMembers: [{ id: 11, displayName: '김구매' }, { id: 12, displayName: '이구매' }], // 99는 비활성이라 제외됐다고 가정
+    });
+    const template = { lineJson: JSON.stringify([{ stepOrder: 2, type: 'agreement', group: 7 }]) };
+    const { steps, unresolved } = await resolvePresetLine(prisma, template, {}, 1);
+    expect(unresolved).toHaveLength(0);
+    expect(steps).toHaveLength(2);
+    expect(steps.every(s => s.stepOrder === 2 && s.type === 'agreement')).toBe(true);
+    expect(steps.map(s => s.approverId).sort()).toEqual([11, 12]);
+  });
+
+  test('존재하지 않는 그룹 → unresolved', async () => {
+    const prisma = mkPrisma({ users: { 1: { departmentId: 1, teamId: 1 } } });
+    const template = { lineJson: JSON.stringify([{ stepOrder: 1, type: 'approval', group: 999 }]) };
+    const { steps, unresolved } = await resolvePresetLine(prisma, template, {}, 1);
+    expect(steps).toHaveLength(0);
+    expect(unresolved).toHaveLength(1);
   });
 
   test('템플릿 lineJson 없으면 formType 기본 결재선으로 폴백', async () => {

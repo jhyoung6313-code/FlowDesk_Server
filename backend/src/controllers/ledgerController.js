@@ -1,6 +1,9 @@
 const XLSX = require('xlsx');
 const prisma = require('../lib/prisma');
 
+/* 가계부는 개인용이다 — 모든 거래·예산·반복거래는 소유자(본인)에게만 보이고 수정/삭제된다.
+   카테고리: userId = NULL 이면 시스템 기본(전원 공용, 관리자만 수정), 값이 있으면 그 사용자의 개인 카테고리. */
+
 /* ── 기본 카테고리 시드 ── */
 const DEFAULT_CATEGORIES = [
   { name: '급여', type: 'income', color: '#52c41a' },
@@ -26,11 +29,25 @@ async function ensureDefaultCategories() {
   }
 }
 
+/* 사용자가 쓸 수 있는 카테고리: 시스템 기본 + 본인 것 */
+const visibleCategory = (uid) => ({ OR: [{ userId: null }, { userId: uid }] });
+
+/* 카테고리 id 가 본인에게 허용된 것인지 확인 (타인 개인 카테고리를 거래에 쓰는 것 방지) */
+async function findUsableCategory(categoryId, uid) {
+  if (!Number.isInteger(categoryId)) return null;
+  return prisma.ledgerCategory.findFirst({ where: { id: categoryId, ...visibleCategory(uid) } });
+}
+
+const isAdmin = (req) => req.user.role === 'admin';
+
 /* ── 카테고리 ── */
 const listCategories = async (req, res, next) => {
   try {
     await ensureDefaultCategories();
-    const cats = await prisma.ledgerCategory.findMany({ orderBy: [{ type: 'asc' }, { id: 'asc' }] });
+    const cats = await prisma.ledgerCategory.findMany({
+      where: visibleCategory(req.user.id),
+      orderBy: [{ type: 'asc' }, { id: 'asc' }],
+    });
     res.json(cats);
   } catch (err) { next(err); }
 };
@@ -39,15 +56,29 @@ const createCategory = async (req, res, next) => {
   try {
     const { name, type, color } = req.body;
     if (!name || !type) return res.status(400).json({ error: '이름과 유형은 필수입니다.' });
-    const cat = await prisma.ledgerCategory.create({ data: { name, type, color: color || '#1677ff' } });
+    const cat = await prisma.ledgerCategory.create({
+      data: { name, type, color: color || '#1677ff', userId: req.user.id },
+    });
     res.status(201).json(cat);
   } catch (err) { next(err); }
 };
+
+/* 수정/삭제 가능한 카테고리 조회: 본인 개인 카테고리, 또는 (관리자에 한해) 시스템 기본 */
+async function findManageableCategory(id, req) {
+  const cat = await prisma.ledgerCategory.findUnique({ where: { id } });
+  if (!cat) return { status: 404, error: '카테고리를 찾을 수 없습니다.' };
+  const mine = cat.userId === req.user.id;
+  const sharedDefault = cat.userId == null && isAdmin(req);
+  if (!mine && !sharedDefault) return { status: 403, error: '권한이 없습니다.' };
+  return { cat };
+}
 
 const updateCategory = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const { name, color } = req.body;
+    const chk = await findManageableCategory(id, req);
+    if (chk.error) return res.status(chk.status).json({ error: chk.error });
     const cat = await prisma.ledgerCategory.update({ where: { id }, data: { name, color } });
     res.json(cat);
   } catch (err) { next(err); }
@@ -56,8 +87,13 @@ const updateCategory = async (req, res, next) => {
 const deleteCategory = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
+    const chk = await findManageableCategory(id, req);
+    if (chk.error) return res.status(chk.status).json({ error: chk.error });
+    // 시스템 기본 카테고리는 전원이 쓰므로 전체 거래 기준, 개인 카테고리는 본인 거래만 존재
     const entryCount = await prisma.ledgerEntry.count({ where: { categoryId: id } });
     if (entryCount > 0) return res.status(400).json({ error: '해당 카테고리에 거래 내역이 있어 삭제할 수 없습니다.' });
+    const recurringCount = await prisma.ledgerRecurring.count({ where: { categoryId: id } });
+    if (recurringCount > 0) return res.status(400).json({ error: '해당 카테고리를 쓰는 반복 거래가 있어 삭제할 수 없습니다.' });
     await prisma.ledgerCategory.delete({ where: { id } });
     res.json({ message: '삭제되었습니다.' });
   } catch (err) { next(err); }
@@ -67,7 +103,7 @@ const deleteCategory = async (req, res, next) => {
 const listEntries = async (req, res, next) => {
   try {
     const { year, month, type, categoryId, page = 1, limit = 50 } = req.query;
-    const where = {};
+    const where = { createdBy: req.user.id };
     if (type) where.type = type;
     if (categoryId) where.categoryId = Number(categoryId);
     if (year && month) {
@@ -97,6 +133,8 @@ const createEntry = async (req, res, next) => {
     const { type, amount, categoryId, date, memo } = req.body;
     if (!type || !amount || !categoryId || !date)
       return res.status(400).json({ error: '유형, 금액, 카테고리, 날짜는 필수입니다.' });
+    if (!(await findUsableCategory(Number(categoryId), req.user.id)))
+      return res.status(400).json({ error: '사용할 수 없는 카테고리입니다.' });
     const entry = await prisma.ledgerEntry.create({
       data: {
         type,
@@ -116,6 +154,10 @@ const updateEntry = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const { type, amount, categoryId, date, memo } = req.body;
+    const own = await prisma.ledgerEntry.findFirst({ where: { id, createdBy: req.user.id }, select: { id: true } });
+    if (!own) return res.status(404).json({ error: '거래 내역을 찾을 수 없습니다.' });
+    if (categoryId != null && !(await findUsableCategory(Number(categoryId), req.user.id)))
+      return res.status(400).json({ error: '사용할 수 없는 카테고리입니다.' });
     const entry = await prisma.ledgerEntry.update({
       where: { id },
       data: {
@@ -134,7 +176,8 @@ const updateEntry = async (req, res, next) => {
 const deleteEntry = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    await prisma.ledgerEntry.delete({ where: { id } });
+    const { count } = await prisma.ledgerEntry.deleteMany({ where: { id, createdBy: req.user.id } });
+    if (count === 0) return res.status(404).json({ error: '거래 내역을 찾을 수 없습니다.' });
     res.json({ message: '삭제되었습니다.' });
   } catch (err) { next(err); }
 };
@@ -142,6 +185,7 @@ const deleteEntry = async (req, res, next) => {
 /* ── 요약 통계 ── */
 const summary = async (req, res, next) => {
   try {
+    const uid = req.user.id;
     const { year, month } = req.query;
     const y = year ? Number(year) : new Date().getFullYear();
     const targetMonth = month ? Number(month) : new Date().getMonth() + 1;
@@ -152,8 +196,8 @@ const summary = async (req, res, next) => {
       const start = new Date(y, m - 1, 1);
       const end = new Date(y, m, 1);
       const [incomeRes, expenseRes] = await Promise.all([
-        prisma.ledgerEntry.aggregate({ where: { type: 'income', date: { gte: start, lt: end } }, _sum: { amount: true } }),
-        prisma.ledgerEntry.aggregate({ where: { type: 'expense', date: { gte: start, lt: end } }, _sum: { amount: true } }),
+        prisma.ledgerEntry.aggregate({ where: { createdBy: uid, type: 'income', date: { gte: start, lt: end } }, _sum: { amount: true } }),
+        prisma.ledgerEntry.aggregate({ where: { createdBy: uid, type: 'expense', date: { gte: start, lt: end } }, _sum: { amount: true } }),
       ]);
       monthlyData.push({
         month: m,
@@ -168,7 +212,7 @@ const summary = async (req, res, next) => {
     // 이번 달 카테고리별 지출
     const categoryExpense = await prisma.ledgerEntry.groupBy({
       by: ['categoryId'],
-      where: { type: 'expense', date: { gte: start, lt: end } },
+      where: { createdBy: uid, type: 'expense', date: { gte: start, lt: end } },
       _sum: { amount: true },
     });
     const catIds = categoryExpense.map((c) => c.categoryId);
@@ -184,13 +228,16 @@ const summary = async (req, res, next) => {
 
     // 이번 달 합계
     const [thisIncome, thisExpense] = await Promise.all([
-      prisma.ledgerEntry.aggregate({ where: { type: 'income', date: { gte: start, lt: end } }, _sum: { amount: true } }),
-      prisma.ledgerEntry.aggregate({ where: { type: 'expense', date: { gte: start, lt: end } }, _sum: { amount: true } }),
+      prisma.ledgerEntry.aggregate({ where: { createdBy: uid, type: 'income', date: { gte: start, lt: end } }, _sum: { amount: true } }),
+      prisma.ledgerEntry.aggregate({ where: { createdBy: uid, type: 'expense', date: { gte: start, lt: end } }, _sum: { amount: true } }),
     ]);
 
-    // 예산 정보 (지출 카테고리 전체 + 이번 달 예산 설정 + 실제 지출)
-    const allExpenseCats = await prisma.ledgerCategory.findMany({ where: { type: 'expense' }, orderBy: { id: 'asc' } });
-    const budgets = await prisma.ledgerBudget.findMany({ where: { year: y, month: targetMonth } });
+    // 예산 정보 (내가 쓸 수 있는 지출 카테고리 + 내 이번 달 예산 + 내 실제 지출)
+    const allExpenseCats = await prisma.ledgerCategory.findMany({
+      where: { type: 'expense', ...visibleCategory(uid) },
+      orderBy: { id: 'asc' },
+    });
+    const budgets = await prisma.ledgerBudget.findMany({ where: { userId: uid, year: y, month: targetMonth } });
     const budgetMap = Object.fromEntries(budgets.map((b) => [b.categoryId, Number(b.amount)]));
     const actualMap = Object.fromEntries(categoryExpense.map((c) => [c.categoryId, Number(c._sum.amount || 0)]));
 
@@ -223,7 +270,7 @@ const listBudgets = async (req, res, next) => {
     const { year, month } = req.query;
     if (!year || !month) return res.status(400).json({ error: 'year, month 필수입니다.' });
     const budgets = await prisma.ledgerBudget.findMany({
-      where: { year: Number(year), month: Number(month) },
+      where: { userId: req.user.id, year: Number(year), month: Number(month) },
       include: { category: true },
     });
     res.json(budgets);
@@ -232,12 +279,16 @@ const listBudgets = async (req, res, next) => {
 
 const upsertBudget = async (req, res, next) => {
   try {
+    const uid = req.user.id;
     const { categoryId, year, month, amount } = req.body;
     if (!categoryId || !year || !month || amount == null)
       return res.status(400).json({ error: 'categoryId, year, month, amount 필수입니다.' });
+    if (!(await findUsableCategory(Number(categoryId), uid)))
+      return res.status(400).json({ error: '사용할 수 없는 카테고리입니다.' });
+    const key = { userId: uid, categoryId: Number(categoryId), year: Number(year), month: Number(month) };
     const budget = await prisma.ledgerBudget.upsert({
-      where: { categoryId_year_month: { categoryId: Number(categoryId), year: Number(year), month: Number(month) } },
-      create: { categoryId: Number(categoryId), year: Number(year), month: Number(month), amount: Number(amount) },
+      where: { userId_categoryId_year_month: key },
+      create: { ...key, amount: Number(amount) },
       update: { amount: Number(amount) },
     });
     res.json(budget);
@@ -247,7 +298,8 @@ const upsertBudget = async (req, res, next) => {
 const deleteBudget = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    await prisma.ledgerBudget.delete({ where: { id } });
+    const { count } = await prisma.ledgerBudget.deleteMany({ where: { id, userId: req.user.id } });
+    if (count === 0) return res.status(404).json({ error: '예산을 찾을 수 없습니다.' });
     res.json({ message: '삭제되었습니다.' });
   } catch (err) { next(err); }
 };
@@ -256,6 +308,7 @@ const deleteBudget = async (req, res, next) => {
 const listRecurrings = async (req, res, next) => {
   try {
     const recurrings = await prisma.ledgerRecurring.findMany({
+      where: { createdBy: req.user.id },
       include: { category: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -268,6 +321,8 @@ const createRecurring = async (req, res, next) => {
     const { type, amount, categoryId, dayOfMonth, memo } = req.body;
     if (!type || !amount || !categoryId)
       return res.status(400).json({ error: '유형, 금액, 카테고리는 필수입니다.' });
+    if (!(await findUsableCategory(Number(categoryId), req.user.id)))
+      return res.status(400).json({ error: '사용할 수 없는 카테고리입니다.' });
     const rec = await prisma.ledgerRecurring.create({
       data: {
         type,
@@ -287,6 +342,10 @@ const updateRecurring = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
     const { type, amount, categoryId, dayOfMonth, memo, isActive } = req.body;
+    const own = await prisma.ledgerRecurring.findFirst({ where: { id, createdBy: req.user.id }, select: { id: true } });
+    if (!own) return res.status(404).json({ error: '반복 거래를 찾을 수 없습니다.' });
+    if (categoryId != null && !(await findUsableCategory(Number(categoryId), req.user.id)))
+      return res.status(400).json({ error: '사용할 수 없는 카테고리입니다.' });
     const rec = await prisma.ledgerRecurring.update({
       where: { id },
       data: {
@@ -306,19 +365,20 @@ const updateRecurring = async (req, res, next) => {
 const deleteRecurring = async (req, res, next) => {
   try {
     const id = Number(req.params.id);
-    await prisma.ledgerRecurring.delete({ where: { id } });
+    const { count } = await prisma.ledgerRecurring.deleteMany({ where: { id, createdBy: req.user.id } });
+    if (count === 0) return res.status(404).json({ error: '반복 거래를 찾을 수 없습니다.' });
     res.json({ message: '삭제되었습니다.' });
   } catch (err) { next(err); }
 };
 
-// 이번 달(또는 지정 월) 반복 거래 자동 생성
+// 이번 달(또는 지정 월) 내 반복 거래 자동 생성 — 본인 반복 거래만 대상
 const applyRecurring = async (req, res, next) => {
   try {
     const { year, month } = req.body;
     const y = year ? Number(year) : new Date().getFullYear();
     const m = month ? Number(month) : new Date().getMonth() + 1;
 
-    const actives = await prisma.ledgerRecurring.findMany({ where: { isActive: true } });
+    const actives = await prisma.ledgerRecurring.findMany({ where: { isActive: true, createdBy: req.user.id } });
     let created = 0;
 
     for (const rec of actives) {
@@ -348,11 +408,11 @@ const applyRecurring = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
-/* ── Excel 내보내기 ── */
+/* ── Excel 내보내기 (내 거래만) ── */
 const exportExcel = async (req, res, next) => {
   try {
     const { year, month } = req.query;
-    const where = {};
+    const where = { createdBy: req.user.id };
     if (year && month) {
       const y = Number(year), m = Number(month);
       where.date = { gte: new Date(y, m - 1, 1), lt: new Date(y, m, 1) };

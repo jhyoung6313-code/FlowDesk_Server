@@ -10,7 +10,8 @@ import { requestNotificationPermission } from './utils/desktopNotification';
 import { ChatSocketContext } from './contexts/ChatSocketContext';
 import useThemeStore from './store/themeStore';
 import { SKINS, DEFAULT_SKIN } from './utils/skins';
-import { getThemePrefs } from './api/settings';
+import { getThemePrefs, getPreferences } from './api/settings';
+import usePreferenceStore from './store/preferenceStore';
 
 // 즉시 필요한 셸/진입/에러 화면은 eager 로드 (PrivateRoute에서 동기 렌더되는 에러 포함)
 import MainLayout from './components/Layout/MainLayout';
@@ -19,7 +20,8 @@ import NotFound from './pages/Error/NotFound';
 import Forbidden from './pages/Error/Forbidden';
 
 // 페이지는 라우트 단위 코드 스플리팅 (무거운 라이브러리—캘린더/간트/차트/PDF—를 각 청크로 분리)
-const DashboardPage = lazy(() => import('./pages/Dashboard'));
+// 메인(/) — 사용자가 고른 홈 레이아웃(기본 대시보드 + A·C·E·F)을 렌더하는 라우터
+const HomePage = lazy(() => import('./pages/Dashboard/HomeRouter'));
 const MyDayPage = lazy(() => import('./pages/MyDay'));
 const FormsPage = lazy(() => import('./pages/Forms'));
 const DocumentsPage = lazy(() => import('./pages/Documents'));
@@ -89,26 +91,25 @@ export default function App() {
   const density = useThemeStore((s) => s.density);
   const skin = useThemeStore((s) => s.skin);
   const hydrateTheme = useThemeStore((s) => s.hydrateFromServer);
-
-  // 스킨별 AntD 라운드 토큰 (CSS 변수로 못 잡는 체크박스·스위치 등 컴포넌트용)
-  const SKIN_RADII = {
-    default: { borderRadius: 10, borderRadiusLG: 14, borderRadiusSM: 8 },
-    brutal:  { borderRadius: 10, borderRadiusLG: 14, borderRadiusSM: 8 },
-    clay:    { borderRadius: 16, borderRadiusLG: 24, borderRadiusSM: 12 },
-    mono:    { borderRadius: 0,  borderRadiusLG: 0,  borderRadiusSM: 0 },
-    glass:   { borderRadius: 13, borderRadiusLG: 20, borderRadiusSM: 10 },
-    pop:     { borderRadius: 13, borderRadiusLG: 20, borderRadiusSM: 10 },
-    slick:   { borderRadius: 9,  borderRadiusLG: 13, borderRadiusSM: 7 },
-    paper:   { borderRadius: 8,  borderRadiusLG: 10, borderRadiusSM: 6 },
-  };
-  const skinRadii = SKIN_RADII[skin] || SKIN_RADII.default;
+  const hydratePrefs = usePreferenceStore((s) => s.hydrateFromServer);
 
   // 스킨 표면/테두리를 AntD 토큰에 직접 연결 → 인라인 token.* 를 쓰는 화면
   // (메일·게시판·전자결재 등 2-pane)까지 스킨이 자동 반영된다.
   const skinSet = (SKINS[skin] || SKINS[DEFAULT_SKIN])[isDark ? 'dark' : 'light'];
   const pageIsGradient = /gradient/.test(skinSet['page-bg']);
-  const SKIN_LINEW = { brutal: 2, mono: 1 };
-  const skinLineWidth = SKIN_LINEW[skin] || 1;
+
+  // 스킨별 AntD 라운드/선굵기 토큰(CSS 변수로 못 잡는 체크박스·스위치 등 컴포넌트용)은
+  // skins.js의 값을 그대로 파생시킨다 — 별도 하드코딩 테이블을 두면 두 값이 어긋난다
+  // (이전에 실제로 default/clay 등에서 값이 벌어져 있었음).
+  const skinRadii = {
+    borderRadius: parseInt(skinSet['radius'], 10),
+    borderRadiusLG: parseInt(skinSet['radius-lg'], 10),
+    borderRadiusSM: parseInt(skinSet['radius-sm'], 10),
+  };
+  // clay/pop처럼 의도적으로 테두리 없는(border-w: '0px') 스킨도 있으므로 `|| 1`(falsy-0 버그)로
+  // 덮어쓰지 않는다 — NaN(파싱 실패)일 때만 1로 폴백.
+  const parsedLineWidth = parseInt(skinSet['border-w'], 10);
+  const skinLineWidth = Number.isNaN(parsedLineWidth) ? 1 : parsedLineWidth;
 
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
   const socketRef = useChatSocket(user ? token : null);
@@ -136,10 +137,13 @@ export default function App() {
   }, [user]);
 
   // 로그인 시 서버에 저장된 개인 테마·화면 설정으로 동기화 (기기·재설치 무관 유지)
+  // (user 객체가 아니라 계정 id 에만 반응 — getMe 등으로 user 가 갱신될 때마다 다시 받아 편집을 덮지 않게)
+  const userId = user?.id;
   useEffect(() => {
-    if (!user) return;
-    getThemePrefs().then(hydrateTheme).catch(() => {});
-  }, [user, hydrateTheme]);
+    if (userId == null) return;
+    getThemePrefs().then((p) => hydrateTheme(p, userId)).catch(() => {});
+    getPreferences().then((p) => hydratePrefs(p, userId)).catch(() => {});
+  }, [userId, hydrateTheme, hydratePrefs]);
 
   // 로그인 상태가 아니면(토큰 만료 등) 잠금 잔재를 정리한다.
   useEffect(() => {
@@ -179,10 +183,13 @@ export default function App() {
           colorBorder:          skinSet['border-color'],
           colorBorderSecondary: skinSet['border-color'],
           lineWidth:            skinLineWidth,
+          // colorBgElevated(Modal/Drawer/Popover/Dropdown·Select·DatePicker 패널 배경)도
+          // 스킨의 card-bg를 그대로 써야 스킨별로 Card와 어긋나지 않는다(다크 강제 스킨에서
+          // 특히 두드러졌던 불일치).
           ...(isDark
             ? {
                 colorBgBase:          '#1e222c',
-                colorBgElevated:      '#2f3543',
+                colorBgElevated:      skinSet['card-bg'],
               }
             : {
                 colorBgBase:          '#ffffff',
@@ -235,7 +242,7 @@ export default function App() {
             </PrivateRoute>
           }
         >
-          <Route index element={<DashboardPage />} />
+          <Route index element={<HomePage />} />
           <Route path="my-day" element={<MyDayPage />} />
           <Route path="forms" element={<FormsPage />} />
           <Route path="documents" element={<DocumentsPage />} />
