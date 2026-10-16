@@ -219,11 +219,19 @@ export default function DashboardPage() {
   }, []);
 
   const toggleDashBlock = useCallback((id) => {
-    setDashEnabled((prev) => {
-      const next = { ...prev, [id]: !prev[id] };
-      persistDash(dashLayoutRef.current, next);
-      return next;
-    });
+    const turningOn = !dashEnabledRef.current[id];
+    const next = { ...dashEnabledRef.current, [id]: turningOn };
+    let layout = dashLayoutRef.current;
+    if (turningOn && EXTRA_IDS.includes(id)) {
+      // 새로 추가한 위젯은 맨 위에 놓아 바로 눈에 띄게 한다 (그리드가 기존 블록을 아래로 밀어냄).
+      // 기본 위치(맨 아래)에 두면 추가해도 화면에 아무 변화가 없는 것처럼 보였다.
+      layout = layout.map((l) => (l.i === id ? { ...l, x: 0, y: 0 } : l));
+      dashLayoutRef.current = layout;
+      setDashLayout(layout);
+    }
+    dashEnabledRef.current = next;
+    setDashEnabled(next);
+    persistDash(layout, next);
   }, [persistDash]);
 
   const resetDashLayout = useCallback(() => {

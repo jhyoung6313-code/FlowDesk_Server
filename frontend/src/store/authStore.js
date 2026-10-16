@@ -15,12 +15,23 @@ const useAuthStore = create((set) => ({
       set({ loading: false });
       return;
     }
-    try {
-      const user = await getMe();
-      set({ user, loading: false });
-    } catch {
-      localStorage.removeItem('token');
-      set({ user: null, loading: false });
+    // 토큰이 실제로 거부된 경우(401)에만 로그아웃 처리한다. 속도 제한(429)·서버 재시작·네트워크 단절 같은
+    // 일시 오류로는 토큰을 지우지 않고 잠시 후 재시도한다 (예전에는 어떤 오류든 로그인 화면으로 쫓겨났음).
+    const RETRY_DELAYS = [1000, 2500, 5000];
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const user = await getMe();
+        set({ user, loading: false });
+        return;
+      } catch (err) {
+        const status = err?.response?.status;
+        if (status === 401 || status === 403 || attempt >= RETRY_DELAYS.length) {
+          if (status === 401 || status === 403) localStorage.removeItem('token');
+          set({ user: null, loading: false });
+          return;
+        }
+        await new Promise((r) => setTimeout(r, RETRY_DELAYS[attempt]));
+      }
     }
   },
 
